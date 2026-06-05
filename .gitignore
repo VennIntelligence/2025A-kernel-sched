@@ -16,7 +16,9 @@ results/*/schedules/
 results/*/analysis/
 results/**/run_log.txt
 
-# ──── Notebooks checkpoints ────
+# ──── Notebooks ────
+# .ipynb files are build artifacts (generated from fragments/)
+notebooks/**/*.ipynb
 .ipynb_checkpoints/
 
 # ──── Paper build artifacts ────

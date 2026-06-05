@@ -1,4 +1,4 @@
-.PHONY: help setup sync lint test run validate compare clean
+.PHONY: help setup sync lint test run validate compare clean build-nb build-all-nb notebook
 
 # ────────────────────────────────────────
 # Kernel Scheduling — AutoResearch
@@ -33,6 +33,12 @@ compare: ## Compare all experiment results
 
 notebook: ## Launch Jupyter Lab
 	uv run jupyter lab --notebook-dir=notebooks
+
+build-nb: ## Build a single notebook (usage: make build-nb NB=notebooks/01_data_exploration)
+	uv run python scripts/build_notebook.py $(NB) --execute
+
+build-all-nb: ## Build all notebooks (with execution)
+	uv run python scripts/build_all_notebooks.py --execute
 
 clean: ## Remove generated files
 	rm -rf results/*/ data/processed/* output/*

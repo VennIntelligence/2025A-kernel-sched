@@ -2,7 +2,7 @@
 
 本文档定义了团队协作的核心约定。所有成员必须遵守。
 
-> 如有新约定从其他仓库引入（如 CVPR 绘图标准），请放入 `conventions/` 目录并在此文档中添加链接。
+> AI Agent 请同时参阅 [AGENTS.md](AGENTS.md) 获取完整操作规范。
 
 ---
 
@@ -16,11 +16,49 @@
 | `algorithms/<name>/` | 算法实现 | 算法负责人 |
 | `experiments/configs/` | 实验配置 YAML | 实验执行者 |
 | `results/<exp_name>/` | 实验输出 | 自动生成 |
-| `notebooks/` | 可视化 & 分析 | 分析负责人 |
+| `notebooks/<name>/` | Notebook (fragment-based) | 分析负责人 |
+| `output/<notebook_name>/` | Notebook 缓存产物 (CSV, PNG) | cache builder |
 | `paper/` | 论文源文件 | 论文负责人 |
 | `scripts/` | 工具脚本 | 全员 |
-| `output/` | 最终提交物 | 提交前统一生成 |
 | `conventions/` | 约定文档（绘图标准等） | 全员 |
+| `docs/` | 参考文档 | 全员 |
+
+---
+
+## 📓 Notebook 约定
+
+### Fragment 构建系统
+
+**绝不手动编辑 `.ipynb`** — 它是构建产物，被 `.gitignore` 忽略。
+
+Notebook 源码在 `notebooks/<name>/fragments/` 下，使用 jupytext percent 格式：
+
+```
+notebooks/01_data_exploration/
+├── fragments/
+│   ├── manifest.txt          # 片段排列顺序
+│   ├── 01_setup.py           # jupytext percent 格式
+│   ├── 02_case_overview.py
+│   └── ...
+└── 01_data_exploration.ipynb  ← 构建产物
+```
+
+### 构建命令
+
+```bash
+# 单个 notebook
+uv run python scripts/build_notebook.py notebooks/01_data_exploration --execute
+
+# 一键构建所有 notebook
+uv run python scripts/build_all_notebooks.py --execute
+```
+
+### 内容原则
+
+- **Notebook 是「报告」，不是「脚本」**
+- 通用逻辑提取到 `src/ks_core/`，notebook 只保留调用 + 展示 + 解读
+- 每个图表/数值输出后紧跟 Markdown 解读（是什么 → 分布/模式 → 核心发现）
+- 表格用 Markdown/HTML 表格，**不要渲染成图片**
 
 ---
 
@@ -52,7 +90,20 @@ exp{NNN}_{algorithm}_{variant}
 - `exp001_baseline_gpt`
 - `exp002_greedy_v1`
 - `exp003_ilp_small_cases`
-- `exp010_rl_dqn_pretrain`
+
+---
+
+## 🎨 绘图约定
+
+> 🔗 完整标准见 [`docs/plotting_standards.md`](docs/plotting_standards.md)
+
+### 核心要求
+
+- 使用 `ks_core.plotting` 模块的标准 API（`make_figure`, `savefig_academic`）
+- 字体: serif (Times New Roman)，dpi ≥ 300，白色背景
+- 所有轴标签和标题使用**英文**
+- 配色使用 `METHOD_PALETTE` + `MARKER_CYCLE` + `LINESTYLE_CYCLE` 确保色盲安全
+- 禁止 `"jet"` colormap，禁止 legend 覆盖数据
 
 ---
 
@@ -79,37 +130,6 @@ scope 可选值:
 [core] simulator: fix pipe conflict detection
 [paper] add algorithm section first draft
 ```
-
----
-
-## 🎨 绘图约定
-
-> 🔗 CVPR / 学术绘图标准请参见 [`conventions/`](conventions/) 目录中的具体文档。
-
-### 基本要求
-
-- 所有图片使用矢量格式（PDF / SVG）导出
-- 字体大小 ≥ 8pt（打印后可读）
-- 配色方案统一（推荐使用 seaborn 默认 palette 或自定义 palette）
-- 图例 (legend) 不遮挡数据
-- 坐标轴必须有标签和单位
-
-### Notebook 导出
-
-- 图片统一导出到 `paper/figures/`
-- 命名格式：`fig_{section}_{description}.pdf`
-- 示例：`fig_exp_benchmark_comparison.pdf`
-
----
-
-## 🔗 外部约定文档
-
-将从其他仓库引入的约定放在 `conventions/` 目录：
-
-| 文件 | 说明 |
-|------|------|
-| `conventions/cvpr_figures.md` | CVPR 绘图标准 *(待添加)* |
-| `conventions/latex_style.md` | LaTeX 排版约定 *(待添加)* |
 
 ---
 
