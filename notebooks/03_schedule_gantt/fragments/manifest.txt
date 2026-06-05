@@ -1,0 +1,5 @@
+# Fragment files to assemble into 03_schedule_gantt.ipynb
+# Order matters — listed top to bottom
+01_setup.py
+02_gantt_chart.py
+03_pipeline_utilization.py

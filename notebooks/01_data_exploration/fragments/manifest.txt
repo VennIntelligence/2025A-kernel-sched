@@ -1,0 +1,5 @@
+# Fragment files to assemble into 01_data_exploration.ipynb
+# Order matters — listed top to bottom
+01_setup.py
+02_case_overview.py
+03_op_distribution.py

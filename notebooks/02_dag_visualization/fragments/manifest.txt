@@ -1,0 +1,5 @@
+# Fragment files to assemble into 02_dag_visualization.ipynb
+# Order matters — listed top to bottom
+01_setup.py
+02_topology.py
+03_critical_path.py
