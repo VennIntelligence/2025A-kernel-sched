@@ -31,7 +31,7 @@ build-backend = "hatchling.build"
 packages = ["src/ks_core"]
 
 [tool.uv.workspace]
-members = ["algorithms/*"]
+members = ["src", "algorithms/*"]
 
 [tool.uv.sources]
 ks-core = { workspace = true }
