@@ -40,7 +40,11 @@ def load_json(path: Path, case_name: str | None = None, problem_id: int = 1) -> 
 
     edges: list[Edge] = []
     for e in data.get("Edges", []):
-        edges.append(Edge(src=e["Src"], dst=e["Dst"], edge_type=e.get("Type", "data")))
+        if isinstance(e, dict):
+            edges.append(Edge(src=e["Src"], dst=e["Dst"], edge_type=e.get("Type", "data")))
+        else:
+            # Edge stored as [src, dst] list
+            edges.append(Edge(src=e[0], dst=e[1], edge_type="data"))
 
     return ProblemInstance(
         case_name=case_name,
