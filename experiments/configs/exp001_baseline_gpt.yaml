@@ -1,0 +1,24 @@
+experiment:
+  name: "exp001_baseline_gpt"
+  author: "team"
+  date: "2026-06-05"
+  description: "Reproduce GPT first-round baseline results"
+
+algorithm:
+  name: "baseline_gpt"
+  params: {}
+
+cases:
+  - Conv_Case0
+  - Conv_Case1
+  - FlashAttention_Case0
+  - FlashAttention_Case1
+  - Matmul_Case0
+  - Matmul_Case1
+
+problems: [1, 2, 3]
+
+output:
+  dir: "results/exp001_baseline_gpt"
+  save_schedules: true
+  save_memory_trace: false

@@ -1,0 +1,12 @@
+[project]
+name = "ks-baseline-gpt"
+version = "0.1.0"
+description = "GPT first-round baseline solution"
+requires-python = ">=3.12"
+dependencies = [
+    "ks-core",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

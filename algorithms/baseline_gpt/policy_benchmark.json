@@ -1,0 +1,242 @@
+[
+  {
+    "policy": "belady_cost",
+    "case": "Conv_Case0",
+    "spills": 141,
+    "extra": 73500,
+    "time": 535312,
+    "viol": 0
+  },
+  {
+    "policy": "belady_cost",
+    "case": "Conv_Case1",
+    "spills": 1828,
+    "extra": 73240,
+    "time": 1150333,
+    "viol": 0
+  },
+  {
+    "policy": "belady_cost",
+    "case": "FlashAttention_Case0",
+    "spills": 24,
+    "extra": 4128,
+    "time": 46761,
+    "viol": 0
+  },
+  {
+    "policy": "belady_cost",
+    "case": "FlashAttention_Case1",
+    "spills": 146,
+    "extra": 32840,
+    "time": 193059,
+    "viol": 0
+  },
+  {
+    "policy": "belady_cost",
+    "case": "Matmul_Case0",
+    "spills": 273,
+    "extra": 34944,
+    "time": 194331,
+    "viol": 0
+  },
+  {
+    "policy": "belady_cost",
+    "case": "Matmul_Case1",
+    "spills": 3600,
+    "extra": 460800,
+    "time": 1800218,
+    "viol": 0
+  },
+  {
+    "policy": "belady",
+    "case": "Conv_Case0",
+    "spills": 129,
+    "extra": 73980,
+    "time": 537700,
+    "viol": 0
+  },
+  {
+    "policy": "belady",
+    "case": "Conv_Case1",
+    "spills": 2269,
+    "extra": 78724,
+    "time": 1260295,
+    "viol": 0
+  },
+  {
+    "policy": "belady",
+    "case": "FlashAttention_Case0",
+    "spills": 31,
+    "extra": 3904,
+    "time": 50993,
+    "viol": 0
+  },
+  {
+    "policy": "belady",
+    "case": "FlashAttention_Case1",
+    "spills": 224,
+    "extra": 33152,
+    "time": 226085,
+    "viol": 0
+  },
+  {
+    "policy": "belady",
+    "case": "Matmul_Case0",
+    "spills": 273,
+    "extra": 34944,
+    "time": 194331,
+    "viol": 0
+  },
+  {
+    "policy": "belady",
+    "case": "Matmul_Case1",
+    "spills": 3600,
+    "extra": 460800,
+    "time": 1800218,
+    "viol": 0
+  },
+  {
+    "policy": "cheap",
+    "case": "Conv_Case0",
+    "spills": 161,
+    "extra": 84884,
+    "time": 573412,
+    "viol": 0
+  },
+  {
+    "policy": "cheap",
+    "case": "Conv_Case1",
+    "spills": 6303,
+    "extra": 180574,
+    "time": 2274862,
+    "viol": 0
+  },
+  {
+    "policy": "cheap",
+    "case": "FlashAttention_Case0",
+    "spills": 41,
+    "extra": 3692,
+    "time": 53374,
+    "viol": 0
+  },
+  {
+    "policy": "cheap",
+    "case": "FlashAttention_Case1",
+    "spills": 242,
+    "extra": 32972,
+    "time": 234792,
+    "viol": 0
+  },
+  {
+    "policy": "cheap",
+    "case": "Matmul_Case0",
+    "spills": 273,
+    "extra": 34944,
+    "time": 194331,
+    "viol": 0
+  },
+  {
+    "policy": "cheap",
+    "case": "Matmul_Case1",
+    "spills": 3600,
+    "extra": 460800,
+    "time": 1800218,
+    "viol": 0
+  },
+  {
+    "policy": "big",
+    "case": "Conv_Case0",
+    "spills": 137,
+    "extra": 95672,
+    "time": 573861,
+    "viol": 0
+  },
+  {
+    "policy": "big",
+    "case": "Conv_Case1",
+    "spills": 1302,
+    "extra": 98696,
+    "time": 1137397,
+    "viol": 0
+  },
+  {
+    "policy": "big",
+    "case": "FlashAttention_Case0",
+    "spills": 18,
+    "extra": 4608,
+    "time": 42963,
+    "viol": 0
+  },
+  {
+    "policy": "big",
+    "case": "FlashAttention_Case1",
+    "spills": 146,
+    "extra": 36620,
+    "time": 195771,
+    "viol": 0
+  },
+  {
+    "policy": "big",
+    "case": "Matmul_Case0",
+    "spills": 273,
+    "extra": 34944,
+    "time": 194331,
+    "viol": 0
+  },
+  {
+    "policy": "big",
+    "case": "Matmul_Case1",
+    "spills": 3600,
+    "extra": 460800,
+    "time": 1800218,
+    "viol": 0
+  },
+  {
+    "policy": "fragment",
+    "case": "Conv_Case0",
+    "spills": 132,
+    "extra": 88380,
+    "time": 571667,
+    "viol": 0
+  },
+  {
+    "policy": "fragment",
+    "case": "Conv_Case1",
+    "spills": 1290,
+    "extra": 86690,
+    "time": 1073322,
+    "viol": 0
+  },
+  {
+    "policy": "fragment",
+    "case": "FlashAttention_Case0",
+    "spills": 18,
+    "extra": 4608,
+    "time": 42963,
+    "viol": 0
+  },
+  {
+    "policy": "fragment",
+    "case": "FlashAttention_Case1",
+    "spills": 146,
+    "extra": 36620,
+    "time": 195771,
+    "viol": 0
+  },
+  {
+    "policy": "fragment",
+    "case": "Matmul_Case0",
+    "spills": 273,
+    "extra": 34944,
+    "time": 194331,
+    "viol": 0
+  },
+  {
+    "policy": "fragment",
+    "case": "Matmul_Case1",
+    "spills": 3600,
+    "extra": 460800,
+    "time": 1800218,
+    "viol": 0
+  }
+]

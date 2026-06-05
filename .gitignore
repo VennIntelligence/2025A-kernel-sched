@@ -1,0 +1,41 @@
+# ──── Python / UV ────
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# ──── Data (large / generated) ────
+data/processed/
+*.parquet
+
+# ──── Results (re-generatable) ────
+# Track experiment configs but not outputs
+results/*/schedules/
+results/*/analysis/
+results/**/run_log.txt
+
+# ──── Notebooks checkpoints ────
+.ipynb_checkpoints/
+
+# ──── Paper build artifacts ────
+paper/*.aux
+paper/*.log
+paper/*.bbl
+paper/*.blg
+paper/*.out
+paper/*.toc
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+
+# ──── OS ────
+.DS_Store
+Thumbs.db
+
+# ──── IDE ────
+.idea/
+.vscode/
+*.swp
+*.swo
