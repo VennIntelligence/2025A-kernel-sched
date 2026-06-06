@@ -59,8 +59,7 @@ kernel_scheduling/
 | Document | Description |
 |----------|-------------|
 | [CONVENTIONS.md](CONVENTIONS.md) | 团队协作约定（目录、接口、命名、Git、绘图） |
-| [docs/problem_statement.docx](docs/problem_statement.docx) | 原始题目（含图片） |
-| [docs/gpt_algorithm.pdf](docs/gpt_algorithm.pdf) | GPT 第一轮算法方案 |
+| [docs/problem.md](docs/problem.md) | 赛题描述（Markdown 权威版本） |
 | [algorithms/baseline_gpt/README.md](algorithms/baseline_gpt/README.md) | Baseline 算法说明 & benchmark 数据 |
 
 ---

@@ -22,6 +22,34 @@ def write_schedule_txt(order: list[int], path: Path) -> None:
             f.write(f"{node_id}\n")
 
 
+def read_memory_txt(path: Path) -> dict[int, int]:
+    """Read a memory layout file (one BufId:Offset per line)."""
+    with open(path) as f:
+        return {int(k): int(v) for k, v in (line.strip().split(":") for line in f if line.strip())}
+
+
+def write_memory_txt(memory: dict[int, int], path: Path) -> None:
+    """Write a memory layout file (one BufId:Offset per line, sorted by BufId)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        for buf_id in sorted(memory):
+            f.write(f"{buf_id}:{memory[buf_id]}\n")
+
+
+def read_spill_txt(path: Path) -> list[tuple[int, int]]:
+    """Read a spill file (one BufId:NewOffset per line, order matters)."""
+    with open(path) as f:
+        return [(int(k), int(v)) for k, v in (line.strip().split(":") for line in f if line.strip())]
+
+
+def write_spill_txt(spills: list[tuple[int, int]], path: Path) -> None:
+    """Write a spill file (one BufId:NewOffset per line, in list order)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        for buf_id, offset in spills:
+            f.write(f"{buf_id}:{offset}\n")
+
+
 def save_result(schedule: Schedule, output_dir: Path) -> None:
     """Save a complete schedule result to a directory."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -55,10 +83,10 @@ def save_result(schedule: Schedule, output_dir: Path) -> None:
 
 
 def get_project_root() -> Path:
-    """Walk up from this file to find the project root (contains pyproject.toml)."""
+    """Walk up from this file to find the project root (contains pyproject.toml + data/)."""
     current = Path(__file__).resolve().parent
     while current != current.parent:
-        if (current / "pyproject.toml").exists():
+        if (current / "pyproject.toml").exists() and (current / "data").is_dir():
             return current
         current = current.parent
     raise FileNotFoundError("Could not find project root (no pyproject.toml found)")

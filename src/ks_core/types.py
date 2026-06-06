@@ -27,7 +27,17 @@ class OpType(str, Enum):
     CONV = "CONV"
     CONV_ADD = "CONV_ADD"
     MATMUL = "MATMUL"
-    # Extend as needed from the problem statement
+    ADD = "ADD"
+    SUB = "SUB"
+    MUL = "MUL"
+    MAX = "MAX"
+    EXP = "EXP"
+    REC = "REC"
+    ROWMAX = "ROWMAX"
+    ROWSUM = "ROWSUM"
+    COMPACT = "COMPACT"
+    D2S = "D2S"
+    COPY = "COPY"
 
 
 class Pipe(str, Enum):
@@ -37,6 +47,7 @@ class Pipe(str, Enum):
     MTE3 = "MTE3"
     CUBE = "CUBE"
     VECTOR = "VECTOR"
+    FIXP = "FIXP"
 
 
 @dataclass

@@ -26,9 +26,18 @@ kernel_scheduling/
 ├── output/<notebook_name>/    Notebook 缓存产物 (CSV, PNG)
 ├── paper/                     论文源文件
 ├── scripts/                   工具脚本
+├── tmp/                       即用即丢的一次性 Python 脚本
 ├── conventions/               约定文档
 └── docs/                      参考文档
 ```
+
+---
+
+## 🧹 临时脚本
+
+- 即用即丢的一次性 Python 脚本统一放在 `tmp/` 下
+- 不要把临时验证、探索、批处理脚本散落到项目正式目录
+- 可复用的工具脚本才放入 `scripts/`
 
 ---
 

@@ -77,16 +77,16 @@ def load_csv(
         reader = csv.DictReader(f)
         for row in reader:
             bufs_raw = row.get("Bufs", "")
-            bufs = [int(b) for b in bufs_raw.split(";") if b.strip()] if bufs_raw else []
+            bufs = [int(b) for b in bufs_raw.split(",") if b.strip()] if bufs_raw else []
             nodes.append(
                 Node(
                     id=int(row["Id"]),
                     op=row.get("Op", ""),
                     pipe=row.get("Pipe") or None,
-                    cycles=int(row.get("Cycles", 0)),
+                    cycles=int(row.get("Cycles") or 0),
                     bufs=bufs,
                     buf_id=int(row["BufId"]) if row.get("BufId") else None,
-                    size=int(row.get("Size", 0)),
+                    size=int(row.get("Size") or 0),
                     mem_type=row.get("Type") or None,
                 )
             )
@@ -97,8 +97,8 @@ def load_csv(
         for row in reader:
             edges.append(
                 Edge(
-                    src=int(row["Src"]),
-                    dst=int(row["Dst"]),
+                    src=int(row["StartNodeId"]),
+                    dst=int(row["EndNodeId"]),
                     edge_type=row.get("Type", "data"),
                 )
             )
