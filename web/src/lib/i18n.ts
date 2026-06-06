@@ -7,16 +7,22 @@ export type Copy = {
     brand: string
     home: string
     problem: string
-    language: string
   }
   home: {
-    eyebrow: string
     title: string
-    lead: string
-    placeholderTitle: string
-    placeholderBody: string
+    subtitle: string
+    authors: string[]
+    affiliations: string[]
+    links: Array<{ label: string }>
+    abstractTitle: string
+    abstract: string
+    teaserTitle: string
+    teaserBody: string
+    animationTitle: string
+    animationBody: string
     openProblem: string
-    cards: Array<{ label: string; title: string; body: string }>
+    bibtexTitle: string
+    bibtex: string
   }
   problem: {
     eyebrow: string
@@ -30,6 +36,9 @@ export type Copy = {
     exportBody: string
     stages: Array<{ title: string; detail: string }>
     problems: Array<{ label: string; title: string; body: string }>
+    dataFormatTitle: string
+    dataFormatBody: string
+    dataFormatLink: string
   }
 }
 
@@ -39,34 +48,26 @@ export const copy: Record<Language, Copy> = {
       brand: 'Kernel Scheduling',
       home: '首页',
       problem: '赛题动画',
-      language: 'EN',
     },
     home: {
-      eyebrow: 'Kernel Scheduling Research Site',
-      title: '算法与结果展示页',
-      lead:
-        '这里未来会突出我们的调度算法、实验结果、关键指标和论文结论。当前先保留清晰占位，避免在算法内容未定时写死错误叙事。',
-      placeholderTitle: '算法与结果占位',
-      placeholderBody:
-        '后续可以在这里接入 best schedule、peak residency、spill traffic、runtime、benchmark 对比和论文图表。',
+      title: 'Kernel Scheduling for Neural Operator DAGs',
+      subtitle: '通用神经网络处理器下的核内调度、缓存分配与流水执行优化',
+      authors: ['高成志', '黄骏', '叶勤'],
+      affiliations: ['东南大学', '文氏智能基金会', '2025A Kernel Scheduling Challenge'],
+      links: [{ label: 'Paper' }, { label: 'Code' }, { label: 'Data' }, { label: 'Results' }],
+      abstractTitle: 'Abstract',
+      abstract:
+        '本项目研究给定神经算子 computation DAG 时，如何在 dependency、cache capacity、physical offset、spill 和 multi-pipe exclusivity 约束下构造高质量调度。首页未来会展示我们的算法设计、benchmark 结果和论文结论；当前先保留标准 GitHub Pages 学术项目页结构。',
+      teaserTitle: 'Algorithm and Results',
+      teaserBody:
+        '这里预留一张核心 teaser：可以展示 best schedule、maxV_stay、spill traffic、pipeline runtime，以及不同 case 的 benchmark 对比。',
+      animationTitle: 'Problem Animation',
+      animationBody:
+        '赛题动画子页面解释 DAG topological scheduling、buffer residency、cache placement、spill segment 和 pipe timing。它是读者理解算法目标之前的背景页面。',
       openProblem: '查看赛题讲解动画',
-      cards: [
-        {
-          label: 'Algorithm',
-          title: '调度策略',
-          body: '预留算法原理、启发式设计、消融实验入口。',
-        },
-        {
-          label: 'Result',
-          title: '实验结果',
-          body: '预留 maxV_stay、spill cost、pipeline runtime 等核心结果。',
-        },
-        {
-          label: 'Paper',
-          title: '论文材料',
-          body: '预留论文摘要、图表、复现实验和下载入口。',
-        },
-      ],
+      bibtexTitle: 'BibTeX',
+      bibtex:
+        '@misc{kernel_scheduling_2025,\n  title={Kernel Scheduling for Neural Operator DAGs},\n  author={Venn Intelligence Kernel Scheduling Team},\n  year={2025}\n}',
     },
     problem: {
       eyebrow: '赛题问题精确可视化',
@@ -118,6 +119,9 @@ export const copy: Record<Language, Copy> = {
           body: '加入 spill 和 address reuse dependency 后，在多 pipe 串行约束下最小化 T=max E(v)。',
         },
       ],
+      dataFormatTitle: '数据格式与 Benchmark',
+      dataFormatBody: '详细的赛题背景、算子计算图解析、评测数据集（Benchmark）及输入输出 JSON 格式说明，请参考我们的完整赛题文档。',
+      dataFormatLink: '查看完整赛题文档',
     },
   },
   en: {
@@ -125,34 +129,26 @@ export const copy: Record<Language, Copy> = {
       brand: 'Kernel Scheduling',
       home: 'Home',
       problem: 'Problem Animation',
-      language: '中文',
     },
     home: {
-      eyebrow: 'Kernel Scheduling Research Site',
-      title: 'Algorithm and Result Showcase',
-      lead:
-        'This home page will foreground our scheduling algorithm, experimental results, key metrics, and paper findings. It is intentionally a placeholder until the result narrative is fixed.',
-      placeholderTitle: 'Algorithm and result placeholder',
-      placeholderBody:
-        'This area can later host best schedules, peak residency, spill traffic, runtime, benchmark comparisons, and paper figures.',
+      title: 'Kernel Scheduling for Neural Operator DAGs',
+      subtitle: 'In-core scheduling, cache placement, and pipelined execution for general neural processors',
+      authors: ['Chengzhi Gao', 'Jun Huang', 'Qin Ye'],
+      affiliations: ['Southeast University', 'Response by Vennai.org', '2025A Kernel Scheduling Challenge'],
+      links: [{ label: 'Paper' }, { label: 'Code' }, { label: 'Data' }, { label: 'Results' }],
+      abstractTitle: 'Abstract',
+      abstract:
+        'This project studies how to produce high-quality schedules for neural-operator computation DAGs under dependency, cache capacity, physical offset, spill, and multi-pipe exclusivity constraints. The home page will later present our algorithm design, benchmark results, and paper findings; for now it keeps the standard academic GitHub Pages project structure.',
+      teaserTitle: 'Algorithm and Results',
+      teaserBody:
+        'This area is reserved for the main teaser: best schedules, maxV_stay, spill traffic, pipeline runtime, and benchmark comparisons across cases.',
+      animationTitle: 'Problem Animation',
+      animationBody:
+        'The problem animation subpage explains DAG topological scheduling, buffer residency, cache placement, spill segments, and pipe timing before readers dive into the algorithm.',
       openProblem: 'Open problem animation',
-      cards: [
-        {
-          label: 'Algorithm',
-          title: 'Scheduling policy',
-          body: 'Reserved for algorithm principles, heuristics, and ablation links.',
-        },
-        {
-          label: 'Result',
-          title: 'Experiment results',
-          body: 'Reserved for maxV_stay, spill cost, pipeline runtime, and related metrics.',
-        },
-        {
-          label: 'Paper',
-          title: 'Paper assets',
-          body: 'Reserved for abstract, figures, reproducibility notes, and downloads.',
-        },
-      ],
+      bibtexTitle: 'BibTeX',
+      bibtex:
+        '@misc{kernel_scheduling_2025,\n  title={Kernel Scheduling for Neural Operator DAGs},\n  author={Venn Intelligence Kernel Scheduling Team},\n  year={2025}\n}',
     },
     problem: {
       eyebrow: 'Precise Problem Visualization',
@@ -209,6 +205,9 @@ export const copy: Record<Language, Copy> = {
           body: 'After spills and address-reuse dependencies, minimize T=max E(v) under serial same-pipe execution.',
         },
       ],
+      dataFormatTitle: 'Data Format and Benchmark',
+      dataFormatBody: 'For detailed problem background, operator DAG parsing, evaluation benchmark datasets, and JSON I/O format specifications, please refer to our complete problem documentation.',
+      dataFormatLink: 'Read Problem Documentation',
     },
   },
 }

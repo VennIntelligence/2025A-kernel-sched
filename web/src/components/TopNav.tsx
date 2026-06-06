@@ -1,19 +1,20 @@
-import type { PageId } from '../lib/i18n'
+import type { Language, PageId } from '../lib/i18n'
 
 type TopNavCopy = {
   brand: string
   home: string
   problem: string
-  language: string
 }
 
 export function TopNav({
   copy,
+  language,
   page,
   onNavigate,
   onToggleLanguage,
 }: {
   copy: TopNavCopy
+  language: Language
   page: PageId
   onNavigate: (page: PageId) => void
   onToggleLanguage: () => void
@@ -36,9 +37,18 @@ export function TopNav({
             {copy.problem}
           </button>
         </div>
-        <button className="language-toggle" type="button" onClick={onToggleLanguage}>
-          {copy.language}
-        </button>
+        <div className="nav-end">
+          <button
+            className={`language-switch ${language === 'en' ? 'en' : 'zh'}`}
+            type="button"
+            onClick={onToggleLanguage}
+            aria-label="Toggle language"
+          >
+            <div className="switch-thumb" />
+            <span>中</span>
+            <span>EN</span>
+          </button>
+        </div>
       </div>
     </nav>
   )

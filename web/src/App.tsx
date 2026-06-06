@@ -14,6 +14,7 @@ function App() {
     <main className="app-shell">
       <TopNav
         copy={t.nav}
+        language={language}
         page={page}
         onNavigate={setPage}
         onToggleLanguage={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
