@@ -1,45 +1,53 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --text: #576071;
-  --text-h: #111827;
-  --muted: #758092;
-  --bg: #ffffff;
+  /* ink scale */
+  --ink: #181c23;
+  --body: #414956;
+  --muted: #707a88;
+  --faint: #98a0ab;
+
+  /* surfaces */
+  --bg: #fdfdfc;
   --panel: #ffffff;
-  --surface: #f1f4f8;
-  --border: #e5e4e7;
-  --border-strong: #cbd3df;
-  --code-bg: #f4f3ec;
-  --accent: #2458d3;
-  --accent-strong: #1d4fba;
-  --danger: #c65353;
+  --surface: #f5f6f8;
+  --line: #e7e9ee;
+  --line-strong: #d4d9e0;
+
+  /* accent — academic navy */
+  --accent: #21509f;
+  --accent-strong: #18407f;
+  --accent-soft: #eef3fb;
+
+  /* semantic (Okabe–Ito derived) */
+  --ok: #009e73;
+  --warn: #d55e00;
+  --bad: #cf4f3e;
 
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
 
-  font: 16px/145% var(--sans);
-  letter-spacing: 0;
-  color-scheme: light;
-  color: var(--text);
+  font: 16px/1.5 var(--sans);
+  color: var(--body);
   background: var(--bg);
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
 }
 
-#root {
-  min-height: 100svh;
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
 }
 
-* {
-  box-sizing: border-box;
+#root {
+  min-height: 100svh;
 }
 
 button,
@@ -47,8 +55,28 @@ input {
   font: inherit;
 }
 
+button {
+  cursor: pointer;
+}
+
 button:focus-visible,
-input:focus-visible {
-  outline: 3px solid rgba(36, 88, 211, 0.28);
+input:focus-visible,
+a:focus-visible {
+  outline: 2.5px solid rgba(33, 80, 159, 0.45);
   outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: rgba(33, 80, 159, 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
 }

@@ -2,6 +2,10 @@ export type Language = 'zh' | 'en'
 
 export type PageId = 'home' | 'problem'
 
+export type LinkKind = 'paper' | 'code' | 'data' | 'results'
+
+export type StageCopy = { tab: string; title: string; detail: string }
+
 export type Copy = {
   nav: {
     brand: string
@@ -9,36 +13,44 @@ export type Copy = {
     problem: string
   }
   home: {
+    eyebrow: string
     title: string
     subtitle: string
     authors: string[]
     affiliations: string[]
-    links: Array<{ label: string }>
+    links: Array<{ label: string; kind: LinkKind }>
     abstractTitle: string
     abstract: string
-    teaserTitle: string
-    teaserBody: string
+    teaserCaption: string
     animationTitle: string
     animationBody: string
     openProblem: string
     bibtexTitle: string
     bibtex: string
+    copyBibtex: string
+    copied: string
   }
   problem: {
     eyebrow: string
     title: string
     lead: string
-    animationStage: string
+    figureKicker: string
+    stageWord: string
     nextStage: string
-    scheduleCursor: string
-    summaryTitle: string
-    exportTitle: string
-    exportBody: string
-    stages: Array<{ title: string; detail: string }>
-    problems: Array<{ label: string; title: string; body: string }>
+    controls: {
+      play: string
+      pause: string
+      restart: string
+      prevStep: string
+      nextStep: string
+    }
+    legend: { cache: string; op: string; spill: string }
+    stages: StageCopy[]
+    problems: Array<{ label: string; title: string; formula: string; body: string }>
     dataFormatTitle: string
     dataFormatBody: string
     dataFormatLink: string
+    dataFormatHide: string
   }
 }
 
@@ -47,167 +59,222 @@ export const copy: Record<Language, Copy> = {
     nav: {
       brand: 'Kernel Scheduling',
       home: '首页',
-      problem: '赛题动画',
+      problem: '赛题图解',
     },
     home: {
+      eyebrow: '2025A Kernel Scheduling Challenge',
       title: 'Kernel Scheduling for Neural Operator DAGs',
-      subtitle: '通用神经网络处理器下的核内调度、缓存分配与流水执行优化',
+      subtitle: '通用神经网络处理器下的核内调度、缓存分配与多流水线执行优化',
       authors: ['高成志', '黄骏', '叶勤'],
-      affiliations: ['东南大学', '文氏智能基金会', '2025A Kernel Scheduling Challenge'],
-      links: [{ label: 'Paper' }, { label: 'Code' }, { label: 'Data' }, { label: 'Results' }],
+      affiliations: ['东南大学', '文氏智能基金会'],
+      links: [
+        { label: 'Paper', kind: 'paper' },
+        { label: 'Code', kind: 'code' },
+        { label: 'Data', kind: 'data' },
+        { label: 'Results', kind: 'results' },
+      ],
       abstractTitle: 'Abstract',
       abstract:
-        '本项目研究给定神经算子 computation DAG 时，如何在 dependency、cache capacity、physical offset、spill 和 multi-pipe exclusivity 约束下构造高质量调度。首页未来会展示我们的算法设计、benchmark 结果和论文结论；当前先保留标准 GitHub Pages 学术项目页结构。',
-      teaserTitle: 'Algorithm and Results',
-      teaserBody:
-        '这里预留一张核心 teaser：可以展示 best schedule、maxV_stay、spill traffic、pipeline runtime，以及不同 case 的 benchmark 对比。',
-      animationTitle: 'Problem Animation',
+        '本项目研究给定神经算子计算 DAG 时，如何在依赖、缓存容量、物理地址、spill 与多流水线互斥约束下构造高质量调度。我们将问题分解为三个递进目标：最小化峰值驻留 maxV_stay、最小化 spill 额外搬运量、最小化流水线总执行时间 T = max E(v)。本页后续将呈现算法设计、benchmark 结果与论文结论。',
+      teaserCaption: '调度 → 物理放置 → 多流水线执行：一个实例贯穿三个子问题。',
+      animationTitle: '赛题图解',
       animationBody:
-        '赛题动画子页面解释 DAG topological scheduling、buffer residency、cache placement、spill segment 和 pipe timing。它是读者理解算法目标之前的背景页面。',
-      openProblem: '查看赛题讲解动画',
+        '交互式五阶段图解用同一个迷你实例讲清赛题全貌：DAG 拓扑结构、V_stay 前缀扫描、物理地址碎片化、spill 重定位、以及多流水线时序评价。',
+      openProblem: '打开交互式赛题图解',
       bibtexTitle: 'BibTeX',
       bibtex:
-        '@misc{kernel_scheduling_2025,\n  title={Kernel Scheduling for Neural Operator DAGs},\n  author={Venn Intelligence Kernel Scheduling Team},\n  year={2025}\n}',
+        '@misc{kernel_scheduling_2025,\n  title  = {Kernel Scheduling for Neural Operator DAGs},\n  author = {Venn Intelligence Kernel Scheduling Team},\n  year   = {2025}\n}',
+      copyBibtex: '复制',
+      copied: '已复制',
     },
     problem: {
-      eyebrow: '赛题问题精确可视化',
-      title: '从 DAG 到 cache 与 pipe 调度',
+      eyebrow: '交互式赛题图解',
+      title: '从 DAG 到缓存与流水线调度',
       lead:
-        '这个子页面专注解释赛题本身：输入是带 cache event 的 computation DAG，输出是合法 schedule、memory offset 和必要 spill，并在多 pipe 约束下评价执行时间。',
-      animationStage: '动画阶段',
+        '输入是带缓存事件的计算 DAG，输出是合法拓扑调度、物理地址分配与必要的 spill，并在多流水线串行约束下评价总执行时间。下面用一个逻辑自洽的迷你实例走完全部五个阶段。',
+      figureKicker: '交互图',
+      stageWord: '阶段',
       nextStage: '下一阶段',
-      scheduleCursor: 'Schedule cursor',
-      summaryTitle: '三问目标',
-      exportTitle: '静态导出',
-      exportBody: 'Vite build 后可直接发布 dist/。',
+      controls: {
+        play: '播放',
+        pause: '暂停',
+        restart: '重播',
+        prevStep: '上一步',
+        nextStep: '下一步',
+      },
+      legend: {
+        cache: '缓存事件 ALLOC / FREE',
+        op: '算子节点',
+        spill: 'Spill 节点',
+      },
       stages: [
         {
-          title: 'DAG dependency',
-          detail: '节点只能生成合法 topological order；边同时表达计算依赖和 buffer 生命周期约束。',
+          tab: 'DAG',
+          title: 'DAG 依赖结构',
+          detail:
+            '输入 DAG 由缓存事件（ALLOC/FREE）与多流水线算子组成：两次 MATMUL 复用同一个权重块 W（b0，COPY_IN 来源）。动画沿一个合法拓扑序逐节点点亮，角标数字即调度位置——这正是 Problem 1 要输出的 schedule。',
         },
         {
-          title: 'Problem 1: maxV_stay',
-          detail: '沿 schedule 前缀扫描：ALLOC 增加 Size，FREE 减少 Size，operation 对驻留量贡献 0。',
+          tab: 'V_stay',
+          title: 'Problem 1 · V_stay 前缀扫描',
+          detail:
+            '沿调度前缀扫描：ALLOC 计 +Size，FREE 计 −Size，算子贡献 0。该调度的 maxV_stay = 1024，恰好等于 UB 容量——从逻辑驻留看这是一个不需要 spill 的"完美"调度。',
         },
         {
-          title: 'Problem 2: cache offset',
-          detail: '同一 cache type 中，同时 resident 的 buffer 必须占用不重叠的 [Offset, Offset+Size-1]。',
+          tab: 'Memory',
+          title: 'Problem 2 · 物理放置与碎片化',
+          detail:
+            '把逻辑驻留落到物理地址区间后问题出现了：第 10 步要放置 X2（640），空闲总量 896 足够，但驻留在 [384, 512) 的 W 把空闲切成 384 + 512 两段，找不到 640 的连续洞——碎片化迫使 spill。这说明 maxV_stay ≤ 容量并不保证可放置。',
         },
         {
-          title: 'Problem 2/3: spill segment',
-          detail: 'SPILL_OUT / SPILL_IN 移动的是 physical residency，logical BufId 不变。',
+          tab: 'Spill',
+          title: 'Problem 2 · Spill 重定位',
+          detail:
+            '插入 SPILL_OUT / SPILL_IN 对：W 暂存 DDR，X2 占据 [0, 640)，W 以 NewOffset = 640 重载回片上。因为 W 源自 COPY_IN，SPILL_OUT 为 0 cycle，额外 DDR 搬运量仅 Size = 128——这正是 Problem 2 的代价度量。',
         },
         {
-          title: 'Problem 3: pipe timing',
-          detail: '同一 pipe 按 schedule order 串行，不同 pipe 可并行，但仍要等待 predecessor 完成。',
+          tab: 'Pipeline',
+          title: 'Problem 3 · 多流水线时序',
+          detail:
+            '同一 pipe 按调度序串行、不同 pipe 可并行；地址复用与 spill 引入新依赖（虚线）。SPILL_IN 在 MTE2 上排队，使 MATMUL₂ 直到 t=1366 才能发射，最终 T = max E(v) = 1766。Problem 3 要在不显著增加搬运量的前提下压缩 T。',
         },
       ],
       problems: [
         {
           label: 'Problem 1',
-          title: 'Topological schedule',
-          body: '输出所有原始 node id 的合法顺序，最小化 schedule 前缀中的 maxV_stay。',
+          title: '拓扑调度',
+          formula: 'min maxV_stay',
+          body: '输出所有原始节点的合法拓扑序，最小化调度前缀中的峰值逻辑驻留。',
         },
         {
           label: 'Problem 2',
-          title: 'Cache address and spill',
-          body: '为 buffer 分配 physical offset，满足 capacity / non-overlap，必要时输出 spill list。',
+          title: '地址分配与 Spill',
+          formula: 'min Σ spill cost',
+          body: '为 buffer 分配物理偏移，满足容量与不重叠约束；放不下时插入 spill，COPY_IN 来源代价 Size，否则 2×Size。',
         },
         {
           label: 'Problem 3',
-          title: 'Pipelined runtime',
-          body: '加入 spill 和 address reuse dependency 后，在多 pipe 串行约束下最小化 T=max E(v)。',
+          title: '流水线执行时间',
+          formula: 'min T = max E(v)',
+          body: '计入 spill 与地址复用依赖后，在同 pipe 串行约束下最小化总执行时间。',
         },
       ],
       dataFormatTitle: '数据格式与 Benchmark',
-      dataFormatBody: '详细的赛题背景、算子计算图解析、评测数据集（Benchmark）及输入输出 JSON 格式说明，请参考我们的完整赛题文档。',
-      dataFormatLink: '查看完整赛题文档',
+      dataFormatBody:
+        '完整的赛题背景、算子计算图解析、六个评测算例（Matmul / FlashAttention / Conv）与输入输出 JSON/CSV 格式规范，见完整赛题文档。',
+      dataFormatLink: '展开完整赛题文档',
+      dataFormatHide: '收起赛题文档',
     },
   },
   en: {
     nav: {
       brand: 'Kernel Scheduling',
       home: 'Home',
-      problem: 'Problem Animation',
+      problem: 'Problem Explainer',
     },
     home: {
+      eyebrow: '2025A Kernel Scheduling Challenge',
       title: 'Kernel Scheduling for Neural Operator DAGs',
       subtitle: 'In-core scheduling, cache placement, and pipelined execution for general neural processors',
       authors: ['Chengzhi Gao', 'Jun Huang', 'Qin Ye'],
-      affiliations: ['Southeast University', 'Response by Vennai.org', '2025A Kernel Scheduling Challenge'],
-      links: [{ label: 'Paper' }, { label: 'Code' }, { label: 'Data' }, { label: 'Results' }],
+      affiliations: ['Southeast University', 'Venn Intelligence Foundation'],
+      links: [
+        { label: 'Paper', kind: 'paper' },
+        { label: 'Code', kind: 'code' },
+        { label: 'Data', kind: 'data' },
+        { label: 'Results', kind: 'results' },
+      ],
       abstractTitle: 'Abstract',
       abstract:
-        'This project studies how to produce high-quality schedules for neural-operator computation DAGs under dependency, cache capacity, physical offset, spill, and multi-pipe exclusivity constraints. The home page will later present our algorithm design, benchmark results, and paper findings; for now it keeps the standard academic GitHub Pages project structure.',
-      teaserTitle: 'Algorithm and Results',
-      teaserBody:
-        'This area is reserved for the main teaser: best schedules, maxV_stay, spill traffic, pipeline runtime, and benchmark comparisons across cases.',
-      animationTitle: 'Problem Animation',
+        'This project studies how to construct high-quality schedules for neural-operator computation DAGs under dependency, cache-capacity, physical-address, spill, and multi-pipe exclusivity constraints. The task decomposes into three progressive objectives: minimize peak residency maxV_stay, minimize spill-induced extra DDR traffic, and minimize the pipelined makespan T = max E(v). Algorithm design, benchmark results, and paper findings will be presented here.',
+      teaserCaption: 'Schedule → physical placement → pipelined execution: one instance, three subproblems.',
+      animationTitle: 'Problem Explainer',
       animationBody:
-        'The problem animation subpage explains DAG topological scheduling, buffer residency, cache placement, spill segments, and pipe timing before readers dive into the algorithm.',
-      openProblem: 'Open problem animation',
+        'An interactive five-stage figure walks one self-consistent miniature instance through the whole problem: DAG topology, the V_stay prefix scan, address fragmentation, spill relocation, and multi-pipe timing.',
+      openProblem: 'Open the interactive explainer',
       bibtexTitle: 'BibTeX',
       bibtex:
-        '@misc{kernel_scheduling_2025,\n  title={Kernel Scheduling for Neural Operator DAGs},\n  author={Venn Intelligence Kernel Scheduling Team},\n  year={2025}\n}',
+        '@misc{kernel_scheduling_2025,\n  title  = {Kernel Scheduling for Neural Operator DAGs},\n  author = {Venn Intelligence Kernel Scheduling Team},\n  year   = {2025}\n}',
+      copyBibtex: 'Copy',
+      copied: 'Copied',
     },
     problem: {
-      eyebrow: 'Precise Problem Visualization',
-      title: 'From DAG to cache and pipe scheduling',
+      eyebrow: 'Interactive Problem Explainer',
+      title: 'From DAG to cache and pipeline scheduling',
       lead:
-        'This subpage explains the contest problem itself: the input is a computation DAG with cache events, and the output is a valid schedule, memory offsets, optional spills, and a multi-pipe runtime evaluation.',
-      animationStage: 'Animation stage',
+        'The input is a computation DAG with cache events; the output is a valid topological schedule, physical address assignment, and any required spills, evaluated under serial-per-pipe timing. One self-consistent miniature instance drives all five stages below.',
+      figureKicker: 'Interactive figure',
+      stageWord: 'Stage',
       nextStage: 'Next stage',
-      scheduleCursor: 'Schedule cursor',
-      summaryTitle: 'Three objectives',
-      exportTitle: 'Static export',
-      exportBody: 'After Vite build, the dist/ directory can be published directly.',
+      controls: {
+        play: 'Play',
+        pause: 'Pause',
+        restart: 'Restart',
+        prevStep: 'Previous step',
+        nextStep: 'Next step',
+      },
+      legend: {
+        cache: 'cache event (ALLOC / FREE)',
+        op: 'operation node',
+        spill: 'spill node',
+      },
       stages: [
         {
-          title: 'DAG dependency',
+          tab: 'DAG',
+          title: 'DAG dependency structure',
           detail:
-            'Nodes can only form a valid topological order; edges encode both computation dependencies and buffer lifetime constraints.',
+            'The input DAG mixes cache events (ALLOC/FREE) with multi-pipe operations: two MATMUL tiles share one weight buffer W (b0, COPY_IN origin). The animation lights nodes up along one valid topological order; the badge is the schedule position — exactly the output of Problem 1.',
         },
         {
-          title: 'Problem 1: maxV_stay',
+          tab: 'V_stay',
+          title: 'Problem 1 · V_stay prefix scan',
           detail:
-            'Scan schedule prefixes: ALLOC adds Size, FREE subtracts Size, and operation nodes contribute 0 to residency.',
+            'Scan the schedule prefix: ALLOC adds Size, FREE subtracts it, operations contribute 0. This schedule reaches maxV_stay = 1024, exactly the UB capacity — logically a "perfect" schedule that should need no spill.',
         },
         {
-          title: 'Problem 2: cache offset',
+          tab: 'Memory',
+          title: 'Problem 2 · placement and fragmentation',
           detail:
-            'Within the same cache type, simultaneously resident buffers must occupy non-overlapping [Offset, Offset+Size-1] intervals.',
+            'Mapping logical residency onto physical address intervals exposes the catch: at step 10, X2 (640) must be placed. Total free space is 896, but W resident at [384, 512) splits it into 384 + 512 — no contiguous 640-unit hole exists. Fragmentation forces a spill even though maxV_stay ≤ capacity.',
         },
         {
-          title: 'Problem 2/3: spill segment',
+          tab: 'Spill',
+          title: 'Problem 2 · spill relocation',
           detail:
-            'SPILL_OUT and SPILL_IN move physical residency; the logical BufId remains the same buffer identity.',
+            'A SPILL_OUT / SPILL_IN pair is inserted: W parks in DDR, X2 takes [0, 640), and W reloads at NewOffset = 640. Since W originates from a COPY_IN, SPILL_OUT costs 0 cycles and the extra DDR traffic is only Size = 128 — precisely the Problem 2 cost metric.',
         },
         {
-          title: 'Problem 3: pipe timing',
+          tab: 'Pipeline',
+          title: 'Problem 3 · multi-pipe timing',
           detail:
-            'The same pipe executes serially in schedule order; different pipes may overlap but still wait for predecessors.',
+            'Each pipe runs serially in schedule order while different pipes overlap; address reuse and spills add new dependencies (dashed). SPILL_IN queues on MTE2, delaying MATMUL₂ until t = 1366, giving T = max E(v) = 1766. Problem 3 minimizes T without materially increasing traffic.',
         },
       ],
       problems: [
         {
           label: 'Problem 1',
           title: 'Topological schedule',
-          body: 'Output every original node id in a valid order and minimize maxV_stay over schedule prefixes.',
+          formula: 'min maxV_stay',
+          body: 'Output every original node in a valid topological order, minimizing peak logical residency over schedule prefixes.',
         },
         {
           label: 'Problem 2',
-          title: 'Cache address and spill',
-          body: 'Assign physical offsets for buffers while satisfying capacity and non-overlap; emit spills when needed.',
+          title: 'Cache address & spill',
+          formula: 'min Σ spill cost',
+          body: 'Assign physical offsets under capacity and non-overlap constraints; insert spills when placement fails — cost Size for COPY_IN-origin buffers, 2×Size otherwise.',
         },
         {
           label: 'Problem 3',
           title: 'Pipelined runtime',
-          body: 'After spills and address-reuse dependencies, minimize T=max E(v) under serial same-pipe execution.',
+          formula: 'min T = max E(v)',
+          body: 'With spill and address-reuse dependencies added, minimize the makespan under serial-per-pipe execution.',
         },
       ],
-      dataFormatTitle: 'Data Format and Benchmark',
-      dataFormatBody: 'For detailed problem background, operator DAG parsing, evaluation benchmark datasets, and JSON I/O format specifications, please refer to our complete problem documentation.',
-      dataFormatLink: 'Read Problem Documentation',
+      dataFormatTitle: 'Data format & benchmark',
+      dataFormatBody:
+        'For the full problem background, operator-DAG parsing, the six benchmark cases (Matmul / FlashAttention / Conv), and the JSON/CSV I/O specification, see the complete problem document.',
+      dataFormatLink: 'Expand the problem document',
+      dataFormatHide: 'Collapse the problem document',
     },
   },
 }

@@ -1,3 +1,4 @@
+import { BrandGlyph } from './icons'
 import type { Language, PageId } from '../lib/i18n'
 
 type TopNavCopy = {
@@ -21,34 +22,41 @@ export function TopNav({
 }) {
   return (
     <nav className="topbar" aria-label="Site navigation">
-      <button className="brand" type="button" onClick={() => onNavigate('home')}>
-        {copy.brand}
-      </button>
-      <div className="nav-actions">
-        <div className="nav-links">
-          <button className={page === 'home' ? 'active' : ''} type="button" onClick={() => onNavigate('home')}>
+      <div className="topbar-inner">
+        <button className="brand" type="button" onClick={() => onNavigate('home')}>
+          <BrandGlyph size={19} />
+          <span className="brand-name">{copy.brand}</span>
+        </button>
+
+        <div className="nav-links" role="tablist">
+          <button
+            type="button"
+            className={page === 'home' ? 'is-active' : ''}
+            aria-current={page === 'home' ? 'page' : undefined}
+            onClick={() => onNavigate('home')}
+          >
             {copy.home}
           </button>
           <button
-            className={page === 'problem' ? 'active' : ''}
             type="button"
+            className={page === 'problem' ? 'is-active' : ''}
+            aria-current={page === 'problem' ? 'page' : undefined}
             onClick={() => onNavigate('problem')}
           >
             {copy.problem}
           </button>
         </div>
-        <div className="nav-end">
-          <button
-            className={`language-switch ${language === 'en' ? 'en' : 'zh'}`}
-            type="button"
-            onClick={onToggleLanguage}
-            aria-label="Toggle language"
-          >
-            <div className="switch-thumb" />
-            <span>中</span>
-            <span>EN</span>
-          </button>
-        </div>
+
+        <button
+          className={`language-switch lang-${language}`}
+          type="button"
+          onClick={onToggleLanguage}
+          aria-label="Toggle language"
+        >
+          <span className="switch-thumb" aria-hidden="true" />
+          <span className={language === 'zh' ? 'is-on' : ''}>中</span>
+          <span className={language === 'en' ? 'is-on' : ''}>EN</span>
+        </button>
       </div>
     </nav>
   )

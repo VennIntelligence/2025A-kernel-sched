@@ -1,87 +1,134 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ProblemAnimation } from '../components/problem/ProblemAnimation'
 import { StageControls } from '../components/problem/StageControls'
-import { stageOrder, type StageId } from '../components/problem/problemData'
+import { stageMaxStep, stageOrder, type StageId } from '../components/problem/problemData'
+import { ArrowRightIcon, ChevronDownIcon } from '../components/icons'
 import type { Copy } from '../lib/i18n'
 import problemDocRaw from '../assets/problem.md?raw'
 
+const TICK_MS = 900
+
 export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+    [],
+  )
+
   const [stage, setStage] = useState<StageId>('dag')
-  const [step, setStep] = useState(4)
+  const [step, setStep] = useState(0)
+  const [playing, setPlaying] = useState(!prefersReducedMotion)
   const [showDoc, setShowDoc] = useState(false)
-  const currentStageIndex = stageOrder.indexOf(stage)
-  const activeStage = copy.stages[currentStageIndex]
+
+  const stageIndex = stageOrder.indexOf(stage)
+  const maxStep = stageMaxStep(stage)
+  const stageCopy = copy.stages[stageIndex]
+
+  useEffect(() => {
+    if (!playing) return
+    const timer = window.setInterval(() => {
+      setStep((current) => {
+        if (current >= maxStep) {
+          setPlaying(false)
+          return current
+        }
+        return current + 1
+      })
+    }, TICK_MS)
+    return () => window.clearInterval(timer)
+  }, [playing, maxStep])
+
+  const selectStage = (next: StageId) => {
+    setStage(next)
+    setStep(0)
+    setPlaying(!prefersReducedMotion)
+  }
+
+  const seek = (next: number) => {
+    setStep(Math.max(0, Math.min(maxStep, next)))
+    setPlaying(false)
+  }
+
+  const togglePlay = () => {
+    if (!playing && step >= maxStep) setStep(0)
+    setPlaying(!playing)
+  }
+
+  const restart = () => {
+    setStep(0)
+    setPlaying(true)
+  }
 
   const goToNextStage = () => {
-    const nextStage = stageOrder[(currentStageIndex + 1) % stageOrder.length]
-    setStage(nextStage)
-    setStep(nextStage === 'schedule' ? 5 : 4)
+    selectStage(stageOrder[(stageIndex + 1) % stageOrder.length])
   }
 
   return (
     <>
-      <header className="paper-hero problem-hero">
+      <header className="page-hero">
         <p className="eyebrow">{copy.eyebrow}</p>
         <h1>{copy.title}</h1>
-        <p className="paper-subtitle">{copy.lead}</p>
+        <p className="hero-lead">{copy.lead}</p>
       </header>
 
-      <section className="visualizer-container">
-        <section className="visualizer" aria-label="Kernel scheduling animation">
-          <div className="visualizer-header">
-            <div>
-              <p className="panel-kicker">{copy.animationStage}</p>
-              <h2>{activeStage.title}</h2>
-            </div>
-            <button className="icon-button" type="button" onClick={goToNextStage} aria-label={copy.nextStage}>
-              <span aria-hidden="true">→</span>
-            </button>
+      <section className="figure-card" aria-label="Kernel scheduling interactive figure">
+        <div className="figure-head">
+          <div className="figure-head-text">
+            <p className="figure-kicker">
+              {copy.figureKicker} · {copy.stageWord} {stageIndex + 1} / {stageOrder.length}
+            </p>
+            <h2>{stageCopy.title}</h2>
           </div>
-          <ProblemAnimation stage={stage} step={step} title={activeStage.title} />
-          <StageControls
-            stage={stage}
-            step={step}
-            cursorLabel={copy.scheduleCursor}
-            onStageChange={setStage}
-            onStepChange={setStep}
-          />
-          <p className="stage-detail">{activeStage.detail}</p>
-        </section>
+          <button type="button" className="btn-ghost next-stage" onClick={goToNextStage}>
+            <span>{copy.nextStage}</span>
+            <ArrowRightIcon size={15} />
+          </button>
+        </div>
+
+        <ProblemAnimation stage={stage} step={step} legend={copy.legend} onSeek={seek} />
+
+        <StageControls
+          stage={stage}
+          step={step}
+          maxStep={maxStep}
+          playing={playing}
+          tabs={copy.stages.map((s) => s.tab)}
+          copy={copy.controls}
+          onStageChange={selectStage}
+          onSeek={seek}
+          onTogglePlay={togglePlay}
+          onRestart={restart}
+        />
+
+        <p className="figure-caption">{stageCopy.detail}</p>
       </section>
 
-      <section className="summary-band" id="problems">
+      <section className="problem-grid" id="problems">
         {copy.problems.map((problem) => (
-          <article key={problem.label}>
-            <span>{problem.label}</span>
-            <h2>{problem.title}</h2>
-            <p>{problem.body}</p>
+          <article key={problem.label} className="problem-card">
+            <p className="card-label">{problem.label}</p>
+            <h3>{problem.title}</h3>
+            <code className="card-formula">{problem.formula}</code>
+            <p className="card-body">{problem.body}</p>
           </article>
         ))}
       </section>
 
-      <section className="paper-section problem-docs">
+      <section className="doc-section">
         <h2>{copy.dataFormatTitle}</h2>
         <p>{copy.dataFormatBody}</p>
-        <button className="minimal-action" type="button" onClick={() => setShowDoc(!showDoc)}>
-          <span>{copy.dataFormatLink}</span>
-          <svg
-            className="action-arrow"
-            style={{ transform: showDoc ? 'rotate(90deg)' : 'rotate(0)' }}
-            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          >
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-          </svg>
+        <button type="button" className="btn-ghost" onClick={() => setShowDoc(!showDoc)} aria-expanded={showDoc}>
+          <span>{showDoc ? copy.dataFormatHide : copy.dataFormatLink}</span>
+          <ChevronDownIcon size={15} style={{ transform: showDoc ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s ease' }} />
         </button>
-      </section>
 
-      {showDoc && (
-        <section className="paper-section markdown-content">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{problemDocRaw}</ReactMarkdown>
-        </section>
-      )}
+        {showDoc && (
+          <div className="markdown-content">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{problemDocRaw}</ReactMarkdown>
+          </div>
+        )}
+      </section>
     </>
   )
 }
