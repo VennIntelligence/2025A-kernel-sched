@@ -6,6 +6,39 @@ export type LinkKind = 'paper' | 'code' | 'data' | 'results'
 
 export type StageCopy = { tab: string; title: string; detail: string }
 
+export type FieldRow = { name: string; type: string; desc: string }
+
+export type DataSectionCopy = {
+  eyebrow: string
+  title: string
+  lead: string
+  inputTitle: string
+  inputLead: string
+  nodeToggle: { cache: string; op: string }
+  cacheFields: FieldRow[]
+  opFields: FieldRow[]
+  cacheExample: string
+  opExample: string
+  edgesTitle: string
+  edgesType: string
+  edgesDesc: string
+  outputTitle: string
+  outputLead: string
+  files: Array<{ name: string; format: string; desc: string }>
+  benchTitle: string
+  benchLead: string
+  benchCols: { task: string; nodes: string; edges: string; bufs: string; ops: string }
+  capTitle: string
+  capLead: string
+  enumTitle: string
+  enumLead: string
+  enumGroups: { op: string; pipe: string; type: string }
+  docTitle: string
+  docBody: string
+  docLink: string
+  docHide: string
+}
+
 export type Copy = {
   nav: {
     brand: string
@@ -47,10 +80,7 @@ export type Copy = {
     legend: { cache: string; op: string; spill: string }
     stages: StageCopy[]
     problems: Array<{ label: string; title: string; formula: string; body: string }>
-    dataFormatTitle: string
-    dataFormatBody: string
-    dataFormatLink: string
-    dataFormatHide: string
+    data: DataSectionCopy
   }
 }
 
@@ -159,11 +189,52 @@ export const copy: Record<Language, Copy> = {
           body: '计入 spill 与地址复用依赖后，在同 pipe 串行约束下最小化总执行时间。',
         },
       ],
-      dataFormatTitle: '数据格式与 Benchmark',
-      dataFormatBody:
-        '完整的赛题背景、算子计算图解析、六个评测算例（Matmul / FlashAttention / Conv）与输入输出 JSON/CSV 格式规范，见完整赛题文档。',
-      dataFormatLink: '展开完整赛题文档',
-      dataFormatHide: '收起赛题文档',
+      data: {
+        eyebrow: '数据格式与评测基准',
+        title: '输入输出数据类型与评测算例',
+        lead: '上面的动画用一个 17 节点的迷你实例讲清了流程。这里补充动画未展开的部分——真实的输入/输出数据结构、提交文件格式、硬件缓存容量，以及六个评测算例的规模。',
+        inputTitle: '输入 · 计算 DAG',
+        inputLead: '由两类节点与有向依赖边构成。切换标签查看两种节点各自的字段类型。',
+        nodeToggle: { cache: '缓存节点', op: '算子节点' },
+        cacheFields: [
+          { name: 'Id', type: 'int', desc: '唯一节点编号' },
+          { name: 'Op', type: 'ALLOC | FREE', desc: '缓存管理指令' },
+          { name: 'BufId', type: 'int', desc: '缓冲区编号' },
+          { name: 'Size', type: 'int', desc: '缓冲区大小（抽象单位）' },
+          { name: 'Type', type: 'str', desc: '缓存类型 L1 / UB / L0*' },
+        ],
+        opFields: [
+          { name: 'Id', type: 'int', desc: '唯一节点编号' },
+          { name: 'Op', type: 'str', desc: '算子名，如 MATMUL' },
+          { name: 'Pipe', type: 'str', desc: '执行流水线单元' },
+          { name: 'Cycles', type: 'int', desc: '执行周期 10–3771' },
+          { name: 'Bufs', type: 'list[int]', desc: '读写的缓冲区 id' },
+        ],
+        cacheExample: '{ "Id": 0, "Op": "ALLOC", "BufId": 0, "Size": 1, "Type": "UB" }',
+        opExample: '{ "Id": 1, "Op": "COPY_IN", "Pipe": "MTE2", "Cycles": 15, "Bufs": [0] }',
+        edgesTitle: '依赖边 Edges',
+        edgesType: 'list[[int, int]]',
+        edgesDesc: '有向依赖 [src, dst]，合法调度必须满足全部边。',
+        outputTitle: '输出 · 调度 / 地址 / Spill',
+        outputLead: '三个子问题分目录提交；Problem 2/3 还需地址与 spill 文件。',
+        files: [
+          { name: '<task>_schedule.txt', format: '每行一个节点 id', desc: 'P1 为全部原始节点；P2/P3 额外含插入的 SPILL_OUT / SPILL_IN' },
+          { name: '<task>_memory.txt', format: 'BufId : Offset', desc: '每个缓冲区的初始物理偏移' },
+          { name: '<task>_spill.txt', format: 'BufId : NewOffset', desc: '按顺序的 spill 重载偏移，无 spill 则为空' },
+        ],
+        benchTitle: '六个评测算例',
+        benchLead: 'Case0 为小规模、Case1 规模陡增（最大 36k 节点 / 85k 边）。算法须随规模稳定，不能针对单个算例特调。',
+        benchCols: { task: '算例', nodes: '节点', edges: '边', bufs: '缓冲区', ops: '算子节点' },
+        capTitle: '硬件缓存容量',
+        capLead: '五种片上缓存，容量相差达 16×：L1 最大、L0A / L0B 最小。',
+        enumTitle: '取值枚举',
+        enumLead: '求解器须按精确字符串解析（CUBE / VECTOR / MATMUL），不要盲目归一化。',
+        enumGroups: { op: 'Op · 算子', pipe: 'Pipe · 流水线', type: 'Type · 缓存' },
+        docTitle: '完整赛题文档',
+        docBody: '以上图解已覆盖核心要点。如需完整背景、约束清单、spill 周期公式与数据 schema，可展开原始赛题文档作为参考。',
+        docLink: '展开完整赛题文档',
+        docHide: '收起赛题文档',
+      },
     },
   },
   en: {
@@ -270,11 +341,52 @@ export const copy: Record<Language, Copy> = {
           body: 'With spill and address-reuse dependencies added, minimize the makespan under serial-per-pipe execution.',
         },
       ],
-      dataFormatTitle: 'Data format & benchmark',
-      dataFormatBody:
-        'For the full problem background, operator-DAG parsing, the six benchmark cases (Matmul / FlashAttention / Conv), and the JSON/CSV I/O specification, see the complete problem document.',
-      dataFormatLink: 'Expand the problem document',
-      dataFormatHide: 'Collapse the problem document',
+      data: {
+        eyebrow: 'Data format & benchmark',
+        title: 'I/O data types and benchmark cases',
+        lead: 'The animation above used one 17-node miniature instance to convey the flow. This part fills in what it left out — the real input/output data structures, the submission file formats, the hardware cache capacities, and the scale of the six benchmark cases.',
+        inputTitle: 'Input · computation DAG',
+        inputLead: 'Two node kinds plus directed dependency edges. Toggle to inspect the field types of each node kind.',
+        nodeToggle: { cache: 'Cache node', op: 'Operation node' },
+        cacheFields: [
+          { name: 'Id', type: 'int', desc: 'Unique node id' },
+          { name: 'Op', type: 'ALLOC | FREE', desc: 'Cache-management directive' },
+          { name: 'BufId', type: 'int', desc: 'Buffer id' },
+          { name: 'Size', type: 'int', desc: 'Buffer size (abstract units)' },
+          { name: 'Type', type: 'str', desc: 'Cache type L1 / UB / L0*' },
+        ],
+        opFields: [
+          { name: 'Id', type: 'int', desc: 'Unique node id' },
+          { name: 'Op', type: 'str', desc: 'Operator name, e.g. MATMUL' },
+          { name: 'Pipe', type: 'str', desc: 'Execution pipe unit' },
+          { name: 'Cycles', type: 'int', desc: 'Latency 10–3771' },
+          { name: 'Bufs', type: 'list[int]', desc: 'Buffer ids read/written' },
+        ],
+        cacheExample: '{ "Id": 0, "Op": "ALLOC", "BufId": 0, "Size": 1, "Type": "UB" }',
+        opExample: '{ "Id": 1, "Op": "COPY_IN", "Pipe": "MTE2", "Cycles": 15, "Bufs": [0] }',
+        edgesTitle: 'Dependency edges',
+        edgesType: 'list[[int, int]]',
+        edgesDesc: 'Directed dependency [src, dst]; a valid schedule must respect every edge.',
+        outputTitle: 'Output · schedule / address / spill',
+        outputLead: 'Submitted per subproblem; Problem 2/3 also need address and spill files.',
+        files: [
+          { name: '<task>_schedule.txt', format: 'one node id per line', desc: 'P1: all original nodes. P2/P3 also include inserted SPILL_OUT / SPILL_IN' },
+          { name: '<task>_memory.txt', format: 'BufId : Offset', desc: 'Initial physical offset of each buffer' },
+          { name: '<task>_spill.txt', format: 'BufId : NewOffset', desc: 'Reload offset per spill in order; empty if no spills' },
+        ],
+        benchTitle: 'Six benchmark cases',
+        benchLead: 'Case0 is small; Case1 jumps sharply (up to 36k nodes / 85k edges). A solver must stay stable across scale rather than over-fit one case.',
+        benchCols: { task: 'Case', nodes: 'Nodes', edges: 'Edges', bufs: 'Buffers', ops: 'Op nodes' },
+        capTitle: 'Hardware cache capacities',
+        capLead: 'Five on-chip caches spanning a 16× capacity range: L1 the largest, L0A / L0B the smallest.',
+        enumTitle: 'Value enums',
+        enumLead: 'Solvers must parse exact strings (CUBE / VECTOR / MATMUL) rather than normalize blindly.',
+        enumGroups: { op: 'Op · operator', pipe: 'Pipe · unit', type: 'Type · cache' },
+        docTitle: 'Full problem document',
+        docBody: 'The figures above cover the essentials. For the full background, the constraint list, spill-cycle formulas, and the data schema, expand the original problem document for reference.',
+        docLink: 'Expand the problem document',
+        docHide: 'Collapse the problem document',
+      },
     },
   },
 }

@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ProblemAnimation } from '../components/problem/ProblemAnimation'
 import { StageControls } from '../components/problem/StageControls'
+import { DataFormatSection } from '../components/problem/DataFormatSection'
 import { stageMaxStep, stageOrder, type StageId } from '../components/problem/problemData'
 import { ArrowRightIcon, ChevronDownIcon } from '../components/icons'
 import type { Copy } from '../lib/i18n'
@@ -65,7 +66,7 @@ export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
   }
 
   return (
-    <>
+    <div className="problem-view">
       <header className="page-hero">
         <p className="eyebrow">{copy.eyebrow}</p>
         <h1>{copy.title}</h1>
@@ -115,11 +116,15 @@ export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
         ))}
       </section>
 
+      <DataFormatSection copy={copy.data} />
+
       <section className="doc-section">
-        <h2>{copy.dataFormatTitle}</h2>
-        <p>{copy.dataFormatBody}</p>
+        <div className="doc-head">
+          <h2>{copy.data.docTitle}</h2>
+          <p>{copy.data.docBody}</p>
+        </div>
         <button type="button" className="btn-ghost" onClick={() => setShowDoc(!showDoc)} aria-expanded={showDoc}>
-          <span>{showDoc ? copy.dataFormatHide : copy.dataFormatLink}</span>
+          <span>{showDoc ? copy.data.docHide : copy.data.docLink}</span>
           <ChevronDownIcon size={15} style={{ transform: showDoc ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s ease' }} />
         </button>
 
@@ -129,6 +134,6 @@ export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
           </div>
         )}
       </section>
-    </>
+    </div>
   )
 }

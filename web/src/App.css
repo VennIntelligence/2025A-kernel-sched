@@ -1315,8 +1315,465 @@ p {
 .card-body {
   margin: 0;
   color: var(--body);
-  font-size: 14.5px;
-  line-height: 1.66;
+  font-size: 15px;
+  line-height: 1.68;
+}
+
+/* ================================================================
+   Data format & benchmark section
+   ================================================================ */
+
+.data-section {
+  width: min(1120px, 100% - 48px);
+  margin: 52px auto 8px;
+}
+
+.data-head {
+  max-width: 820px;
+  margin: 0 auto 22px;
+  text-align: center;
+}
+
+.data-eyebrow {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.data-head h2 {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.data-lead {
+  margin: 0;
+  color: var(--body);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.data-io,
+.data-metrics {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.data-io {
+  grid-template-columns: 1fr 1fr;
+}
+
+.data-metrics {
+  grid-template-columns: 1.35fr 1fr;
+}
+
+.data-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 24px 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 6px;
+}
+
+.panel-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.panel-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.panel-dot.in {
+  background: var(--accent);
+}
+
+.panel-dot.out {
+  background: var(--ok);
+}
+
+.panel-lead {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---- node-kind toggle ---- */
+
+.node-toggle {
+  display: inline-flex;
+  gap: 2px;
+  width: fit-content;
+  margin-bottom: 14px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.node-toggle button {
+  height: 30px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 550;
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.node-toggle button:hover {
+  color: var(--ink);
+}
+
+.node-toggle button.is-active {
+  background: #fff;
+  color: var(--accent);
+  font-weight: 650;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.14);
+}
+
+/* ---- field list ---- */
+
+.field-list {
+  margin: 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 84px auto 1fr;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.field-row:last-child {
+  border-bottom: 0;
+}
+
+.field-name {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.field-type {
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.field-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.json-example {
+  overflow-x: auto;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.edges-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.edges-label {
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.edges-type {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.edges-desc {
+  flex: 1 1 100%;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* ---- output panel ---- */
+
+.dir-tree {
+  overflow-x: auto;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--body);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.file-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.file-name {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.file-format {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+.file-desc {
+  flex: 1 1 100%;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* ---- benchmark table ---- */
+
+.bench-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.bench-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) repeat(4, minmax(0, 1fr));
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.bench-row:last-child {
+  border-bottom: 0;
+}
+
+.bench-header {
+  padding-bottom: 8px;
+  color: var(--faint);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bench-header span:not(:first-child),
+.bench-num {
+  text-align: right;
+}
+
+.bench-task {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bench-task-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bench-bar {
+  height: 4px;
+  min-width: 6px;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.bench-num {
+  color: var(--body);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- capacity bars ---- */
+
+.cap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cap-row {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.cap-name {
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cap-track {
+  height: 11px;
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.cap-fill {
+  display: block;
+  height: 100%;
+  min-width: 8px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--accent), #4a78c4);
+}
+
+.cap-value {
+  color: var(--body);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- enums ---- */
+
+.enum-panel {
+  margin-bottom: 0;
+}
+
+.enum-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.enum-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.enum-label {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--body);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.chip-pipe {
+  border-color: rgba(33, 80, 159, 0.25);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.chip-type {
+  border-color: rgba(0, 158, 115, 0.3);
+  background: rgba(0, 158, 115, 0.1);
+  color: #00785a;
 }
 
 /* ================================================================
@@ -1324,22 +1781,26 @@ p {
    ================================================================ */
 
 .doc-section {
-  width: min(880px, 100% - 48px);
-  margin: 28px auto 80px;
+  width: min(1120px, 100% - 48px);
+  margin: 30px auto 80px;
+}
+
+.doc-head {
+  max-width: 760px;
+  margin-bottom: 16px;
 }
 
 .doc-section h2 {
   margin-bottom: 10px;
   color: var(--ink);
-  font-family: var(--serif);
   font-size: 25px;
   font-weight: 700;
 }
 
-.doc-section > p {
-  margin-bottom: 16px;
+.doc-head > p {
+  margin: 0;
   color: var(--body);
-  font-size: 15.5px;
+  font-size: 16px;
   line-height: 1.7;
 }
 
@@ -1442,12 +1903,100 @@ p {
 }
 
 /* ================================================================
+   Problem view — unified sans-serif type scale
+   ================================================================ */
+
+/* Headings on the problem page use the sans family (not serif) so the
+   page reads as one consistent typeface instead of a serif/mono/sans mix. */
+.problem-view h1,
+.problem-view h2,
+.problem-view h3 {
+  font-family: var(--sans);
+}
+
+.problem-view .page-hero h1 {
+  font-family: var(--sans);
+  letter-spacing: -0.02em;
+}
+
+/* Decorative kickers/labels move from mono to sans; only genuine data and
+   code (formulas, JSON, axis numbers, chips) stay in the mono family. */
+.problem-view .eyebrow,
+.problem-view .figure-kicker,
+.problem-view .card-label {
+  font-family: var(--sans);
+  letter-spacing: 0.06em;
+}
+
+/* Bump the smallest labels up a notch for legibility. */
+.problem-view .eyebrow {
+  font-size: 12.5px;
+}
+
+.problem-view .figure-kicker {
+  font-size: 12px;
+}
+
+.problem-view .card-label {
+  font-size: 12px;
+}
+
+.problem-view .figure-head h2 {
+  font-size: 24px;
+}
+
+.problem-view .problem-card h3 {
+  font-size: 20px;
+}
+
+.problem-view .card-formula {
+  font-size: 13px;
+}
+
+.problem-view .figure-caption {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.problem-view .figure-status {
+  font-size: 12.5px;
+}
+
+.problem-view .figure-legend {
+  font-size: 12.5px;
+}
+
+.problem-view .step-readout,
+.problem-view .status-step {
+  font-size: 12.5px;
+}
+
+.problem-view .stage-tabs button {
+  font-size: 13.5px;
+}
+
+/* Schedule strip cells are space-constrained; nudge their micro-type up. */
+.problem-view .cell-idx {
+  font-size: 9px;
+}
+
+.problem-view .cell-op {
+  font-size: 9px;
+}
+
+.problem-view .cell-tag {
+  font-size: 9.5px;
+}
+
+/* ================================================================
    Responsive
    ================================================================ */
 
 @media (max-width: 1024px) {
   .figure-card,
-  .problem-grid {
+  .problem-grid,
+  .data-section,
+  .doc-section {
     width: calc(100% - 32px);
   }
 }
@@ -1456,6 +2005,11 @@ p {
   .problem-grid {
     grid-template-columns: 1fr;
     gap: 14px;
+  }
+
+  .data-io,
+  .data-metrics {
+    grid-template-columns: 1fr;
   }
 
   .figure-head {
@@ -1557,8 +2111,26 @@ p {
   }
 
   .problem-grid,
+  .data-section,
   .doc-section {
     width: calc(100% - 28px);
+  }
+
+  .data-panel {
+    padding: 18px 18px 20px;
+  }
+
+  .data-head h2 {
+    font-size: 24px;
+  }
+
+  .bench-row {
+    gap: 6px;
+  }
+
+  .bench-num,
+  .bench-task-name {
+    font-size: 12px;
   }
 
   .markdown-content {
