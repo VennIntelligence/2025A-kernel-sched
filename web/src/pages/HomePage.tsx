@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ArrowRightIcon,
   CheckIcon,
@@ -79,13 +80,7 @@ function TeaserFigure() {
   )
 }
 
-export function HomePage({
-  copy,
-  onOpenProblem,
-}: {
-  copy: Copy['home']
-  onOpenProblem: () => void
-}) {
+export function HomePage({ copy }: { copy: Copy['home'] }) {
   const [copied, setCopied] = useState(false)
 
   const copyBibtex = async () => {
@@ -135,13 +130,42 @@ export function HomePage({
         <p className="abstract-text">{copy.abstract}</p>
       </section>
 
+      <section className="paper-section">
+        <h2>{copy.scoresTitle}</h2>
+        <div className="score-bar">
+          {copy.scores.map((s) => (
+            <div key={s.label} className="score-chip">
+              <span className="score-value">{s.value}</span>
+              <span className="score-label">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="paper-section">
+        <h2>{copy.contribTitle}</h2>
+        <p>{copy.contribLead}</p>
+        <div className="contrib-grid">
+          {copy.contributions.map((c) => (
+            <Link key={c.tag} to="/method" className="contrib-card">
+              <span className="contrib-tag">{c.tag}</span>
+              <h3>{c.name}</h3>
+              <p>{c.body}</p>
+              <span className="contrib-go">
+                <ArrowRightIcon size={14} />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <section className="paper-section cta-section">
         <h2>{copy.animationTitle}</h2>
         <p>{copy.animationBody}</p>
-        <button className="btn-primary" type="button" onClick={onOpenProblem}>
+        <Link className="btn-primary" to="/problem">
           <span>{copy.openProblem}</span>
           <ArrowRightIcon size={16} />
-        </button>
+        </Link>
       </section>
 
       <section className="paper-section">

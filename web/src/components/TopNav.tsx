@@ -1,50 +1,47 @@
+import { Link, NavLink } from 'react-router-dom'
 import { BrandGlyph } from './icons'
-import type { Language, PageId } from '../lib/i18n'
+import type { Language } from '../lib/i18n'
 
 type TopNavCopy = {
   brand: string
   home: string
   problem: string
+  method: string
+  results: string
 }
+
+const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? 'is-active' : '')
 
 export function TopNav({
   copy,
   language,
-  page,
-  onNavigate,
   onToggleLanguage,
 }: {
   copy: TopNavCopy
   language: Language
-  page: PageId
-  onNavigate: (page: PageId) => void
   onToggleLanguage: () => void
 }) {
   return (
     <nav className="topbar" aria-label="Site navigation">
       <div className="topbar-inner">
-        <button className="brand" type="button" onClick={() => onNavigate('home')}>
+        <Link className="brand" to="/">
           <BrandGlyph size={19} />
           <span className="brand-name">{copy.brand}</span>
-        </button>
+        </Link>
 
-        <div className="nav-links" role="tablist">
-          <button
-            type="button"
-            className={page === 'home' ? 'is-active' : ''}
-            aria-current={page === 'home' ? 'page' : undefined}
-            onClick={() => onNavigate('home')}
-          >
+        <div className="nav-links">
+          <NavLink to="/" end className={navClass}>
             {copy.home}
-          </button>
-          <button
-            type="button"
-            className={page === 'problem' ? 'is-active' : ''}
-            aria-current={page === 'problem' ? 'page' : undefined}
-            onClick={() => onNavigate('problem')}
-          >
+          </NavLink>
+          <NavLink to="/problem" className={navClass}>
             {copy.problem}
-          </button>
+          </NavLink>
+          <NavLink to="/method" className={navClass}>
+            {copy.method}
+          </NavLink>
+          <NavLink to="/results" className={navClass}>
+            {copy.results}
+          </NavLink>
         </div>
 
         <button
