@@ -1903,24 +1903,27 @@ p {
 }
 
 /* ================================================================
-   Problem view — unified sans-serif type scale
+   Site pages — unified sans-serif type scale (home + problem)
    ================================================================ */
 
-/* Headings on the problem page use the sans family (not serif) so the
-   page reads as one consistent typeface instead of a serif/mono/sans mix. */
+/* Headings use sans (not serif) so both pages read as one consistent
+   typeface. Mono is reserved for genuine code / data (bibtex, formulas). */
+.paper-page h1,
+.paper-page h2,
+.paper-page h3,
 .problem-view h1,
 .problem-view h2,
 .problem-view h3 {
   font-family: var(--sans);
 }
 
+.paper-page .page-hero h1,
 .problem-view .page-hero h1 {
   font-family: var(--sans);
   letter-spacing: -0.02em;
 }
 
-/* Decorative kickers/labels move from mono to sans; only genuine data and
-   code (formulas, JSON, axis numbers, chips) stay in the mono family. */
+.paper-page .eyebrow,
 .problem-view .eyebrow,
 .problem-view .figure-kicker,
 .problem-view .card-label {
@@ -1928,10 +1931,54 @@ p {
   letter-spacing: 0.06em;
 }
 
-/* Bump the smallest labels up a notch for legibility. */
+.paper-page .eyebrow,
 .problem-view .eyebrow {
   font-size: 12.5px;
 }
+
+/* ---- home page ---- */
+
+.paper-page .paper-section h2 {
+  font-size: 24px;
+}
+
+.paper-page .hero-lead {
+  font-size: 17.5px;
+}
+
+.paper-page .authors {
+  font-size: 17px;
+}
+
+.paper-page .affiliations {
+  font-size: 15px;
+}
+
+.paper-page .paper-section p {
+  font-size: 16.5px;
+  line-height: 1.72;
+}
+
+.paper-page .teaser-panel figcaption {
+  font-family: var(--sans);
+  font-size: 13px;
+}
+
+.paper-page .btn-pill {
+  font-size: 14.5px;
+}
+
+.paper-page .btn-copy {
+  font-size: 13px;
+}
+
+/* SVG teaser labels — sans at a readable size */
+.paper-page .teaser-tag {
+  font-family: var(--sans);
+  font-size: 11px;
+}
+
+/* ---- problem page ---- */
 
 .problem-view .figure-kicker {
   font-size: 12px;
@@ -1975,7 +2022,6 @@ p {
   font-size: 13.5px;
 }
 
-/* Schedule strip cells are space-constrained; nudge their micro-type up. */
 .problem-view .cell-idx {
   font-size: 9px;
 }
@@ -2039,12 +2085,16 @@ p {
   }
 
   .hero-lead {
-    font-size: 15.5px;
+    font-size: 16px;
   }
 
   .authors {
     gap: 6px 18px;
-    font-size: 15px;
+    font-size: 16px;
+  }
+
+  .affiliations {
+    font-size: 14px;
   }
 
   .figure-card {
@@ -2098,11 +2148,15 @@ p {
   }
 
   .paper-section h2 {
-    font-size: 23px;
+    font-size: 22px;
   }
 
   .paper-section p {
-    font-size: 15.5px;
+    font-size: 16px;
+  }
+
+  .teaser-panel figcaption {
+    font-size: 12.5px;
   }
 
   .teaser-panel {
