@@ -25,8 +25,11 @@ results/autoresearch/
 !results/exp001_baseline01/schedules/*.txt
 
 # ──── Notebooks ────
-# .ipynb files are build artifacts (generated from fragments/)
+# Scratch/checkpoint .ipynb are ignored; the 3 published suite notebooks are tracked.
 notebooks/**/*.ipynb
+!notebooks/01_data_and_problem/01_data_and_problem.ipynb
+!notebooks/02_paper_figures/02_paper_figures.ipynb
+!notebooks/03_results_report/03_results_report.ipynb
 .ipynb_checkpoints/
 # Notebook cache artifacts (regeneratable PNG/CSV); paper figures live in paper/assets/
 output/
