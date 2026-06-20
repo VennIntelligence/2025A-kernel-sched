@@ -1,12 +1,13 @@
 experiment:
-  name: "exp001_baseline_gpt"
+  name: "exp001_baseline01"
   author: "team"
   date: "2026-06-05"
-  description: "Reproduce GPT first-round baseline results"
+  description: "Run the canonical baseline01 reference through ks_core.evaluate"
 
 algorithm:
-  name: "baseline_gpt"
-  params: {}
+  name: "baseline"
+  params:
+    result_dir: "results/exp001_baseline01"
 
 cases:
   - Conv_Case0
@@ -19,6 +20,5 @@ cases:
 problems: [1, 2, 3]
 
 output:
-  dir: "results/exp001_baseline_gpt"
+  dir: "results/exp001_baseline01"
   save_schedules: true
-  save_memory_trace: false

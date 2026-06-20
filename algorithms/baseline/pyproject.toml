@@ -1,7 +1,7 @@
 [project]
-name = "ks-baseline-gpt"
+name = "ks-baseline"
 version = "0.1.0"
-description = "GPT first-round baseline solution"
+description = "Canonical baseline solution adapter"
 requires-python = ">=3.12"
 dependencies = [
     "ks-core",
