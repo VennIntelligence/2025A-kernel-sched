@@ -6,15 +6,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from ks_core.evaluator import (
-    compute_extra,
-    compute_max_vstay,
-    compute_total_time,
-    validate_memory,
-    validate_spill,
-)
 from ks_core.graph import load_json
 from ks_core.io import get_project_root, read_memory_txt, read_schedule_txt, read_spill_txt
+from ks_core.metrics import evaluate
 
 
 def validate_schedule(
@@ -28,8 +22,6 @@ def validate_schedule(
 
     Returns (errors, metrics). errors is empty when valid.
     """
-    errors: list[str] = []
-
     root = get_project_root()
     json_path = root / "data" / "raw" / "json" / f"{case_name}.json"
     if not json_path.exists():
@@ -37,69 +29,11 @@ def validate_schedule(
 
     instance = load_json(json_path, problem_id=problem_id)
     order = read_schedule_txt(schedule_path)
-    nodes = {node.id: node for node in instance.nodes}
+    memory = read_memory_txt(memory_path) if memory_path else None
     spills = read_spill_txt(spill_path) if spill_path else []
 
-    errors.extend(_validate_original_schedule(order, instance, allow_extra=problem_id >= 2))
-
-    if problem_id >= 2 and spill_path:
-        errors.extend(
-            validate_spill(order, nodes, instance.edges, spills, len(instance.nodes))
-        )
-
-    memory = None
-    if memory_path:
-        memory = read_memory_txt(memory_path)
-        errors.extend(
-            validate_memory(
-                order, nodes, memory,
-                spill_entries=spills, num_original_nodes=len(instance.nodes),
-            )
-        )
-
-    # Metrics — always compute vstay and time
-    metrics = compute_max_vstay(order, nodes)
-    metrics["total_time"] = compute_total_time(order, nodes, instance.edges)
-
-    if memory_path and spill_path:
-        metrics["extra"] = compute_extra(spills, nodes)
-        metrics["total_time_p2"] = compute_total_time(
-            order, nodes, instance.edges,
-            memory=memory, spill_entries=spills, num_original_nodes=len(instance.nodes),
-        )
-
-    return errors, metrics
-
-
-def _validate_original_schedule(order: list[int], instance, allow_extra: bool) -> list[str]:
-    errors: list[str] = []
-    node_ids = {n.id for n in instance.nodes}
-    order_set = set(order)
-    missing = node_ids - order_set
-    extra = order_set - node_ids
-    if missing:
-        errors.append(f"Missing nodes: {sorted(missing)[:10]}... ({len(missing)} total)")
-    if extra and not allow_extra:
-        errors.append(f"Unknown nodes: {sorted(extra)[:10]}... ({len(extra)} total)")
-    if len(order) != len(order_set):
-        errors.append(f"Duplicate nodes: {len(order)} entries but {len(order_set)} unique")
-
-    position = {nid: i for i, nid in enumerate(order)}
-    dep_violations = 0
-    for edge in instance.edges:
-        src_pos = position.get(edge.src)
-        dst_pos = position.get(edge.dst)
-        if src_pos is not None and dst_pos is not None and src_pos >= dst_pos:
-            dep_violations += 1
-            if dep_violations <= 5:
-                errors.append(
-                    f"Dependency violation: node {edge.src} (pos {src_pos}) "
-                    f"must come before node {edge.dst} (pos {dst_pos})"
-                )
-    if dep_violations > 5:
-        errors.append(f"... and {dep_violations - 5} more dependency violations")
-
-    return errors
+    result = evaluate(instance, order, memory, spills)
+    return result.errors, result.metrics
 
 
 def _print_result(label: str, errors: list[str], metrics: dict[str, int]) -> bool:
@@ -125,28 +59,34 @@ def _parse_schedule_path(path: Path, default_problem: int) -> tuple[str, int]:
 
 
 def _sibling_artifact(schedule_path: Path, suffix: str) -> Path | None:
-    candidate = schedule_path.with_name(
-        schedule_path.name.replace("_schedule.txt", f"_{suffix}.txt")
-    )
+    artifact_name = schedule_path.name.replace("_schedule.txt", f"_{suffix}.txt")
+    candidate = schedule_path.with_name(artifact_name)
+    if candidate.exists():
+        return candidate
+
+    artifact_dir = {"memory": "memory", "spill": "spills"}.get(suffix, suffix)
+    candidate = schedule_path.parent.parent / artifact_dir / artifact_name
     return candidate if candidate.exists() else None
 
 
 def _print_summary(rows: list[tuple[str, int, bool, dict[str, int]]]) -> None:
     if not rows:
         return
-    # Collect all metric keys in stable order
     all_keys: list[str] = []
-    for *_, m in rows:
-        for k in m:
-            if k not in all_keys:
-                all_keys.append(k)
+    for *_, metrics in rows:
+        for key in metrics:
+            if key not in all_keys:
+                all_keys.append(key)
 
     headers = ["case", "P", "status"] + all_keys
     table: list[list[str]] = []
-    for case, pid, ok, m in rows:
-        table.append([case, str(pid), "OK" if ok else "FAIL"] + [str(m.get(k, "")) for k in all_keys])
+    for case, pid, ok, metrics in rows:
+        table.append(
+            [case, str(pid), "OK" if ok else "FAIL"]
+            + [str(metrics.get(key, "")) for key in all_keys]
+        )
 
-    widths = [max(len(h), *(len(r[i]) for r in table)) for i, h in enumerate(headers)]
+    widths = [max(len(header), *(len(row[i]) for row in table)) for i, header in enumerate(headers)]
     sep = "  "
     fmt = sep.join(f"{{:<{w}}}" for w in widths)
 
@@ -177,12 +117,12 @@ def main():
         ok = _print_result(str(args.file), errors, metrics)
         summary.append((args.case, args.problem, ok, metrics))
     elif args.dir:
-        for f in sorted(args.dir.rglob("*_schedule.txt")):
-            case, pid = _parse_schedule_path(f, args.problem)
-            mem = _sibling_artifact(f, "memory") if pid >= 2 else None
-            spl = _sibling_artifact(f, "spill") if pid >= 2 else None
-            errors, metrics = validate_schedule(case, pid, f, mem, spl)
-            ok = _print_result(str(f), errors, metrics)
+        for schedule_file in sorted(args.dir.rglob("*_schedule.txt")):
+            case, pid = _parse_schedule_path(schedule_file, args.problem)
+            mem = _sibling_artifact(schedule_file, "memory") if pid >= 2 else None
+            spl = _sibling_artifact(schedule_file, "spill") if pid >= 2 else None
+            errors, metrics = validate_schedule(case, pid, schedule_file, mem, spl)
+            ok = _print_result(str(schedule_file), errors, metrics)
             summary.append((case, pid, ok, metrics))
     else:
         parser.print_help()

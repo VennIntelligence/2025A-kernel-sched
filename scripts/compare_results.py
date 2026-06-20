@@ -7,27 +7,13 @@ import json
 from pathlib import Path
 
 from ks_core.io import get_project_root
+from ks_core.metrics import compare_experiments
 
 
 def build_leaderboard(results_dir: Path) -> list[dict]:
     """Scan all experiment directories and build a comparison table."""
-    rows = []
-    for exp_dir in sorted(results_dir.iterdir()):
-        if not exp_dir.is_dir():
-            continue
-        metrics_path = exp_dir / "metrics.json"
-        if not metrics_path.exists():
-            continue
-        with open(metrics_path) as f:
-            data = json.load(f)
-        if isinstance(data, list):
-            for entry in data:
-                entry["experiment"] = exp_dir.name
-                rows.append(entry)
-        elif isinstance(data, dict):
-            data["experiment"] = exp_dir.name
-            rows.append(data)
-    return rows
+    exp_dirs = [path for path in sorted(results_dir.iterdir()) if path.is_dir()]
+    return compare_experiments(exp_dirs)
 
 
 def main():
@@ -51,10 +37,12 @@ def main():
             json.dump(leaderboard, f, indent=2)
         print(f"📊 Leaderboard saved to {args.output} ({len(leaderboard)} entries)")
     else:
-        # Print to stdout
         try:
             import pandas as pd
+
             df = pd.DataFrame(leaderboard)
+            if "valid" in df.columns:
+                df = df[df["valid"].fillna(True)]
             print(df.to_string(index=False))
         except ImportError:
             print(json.dumps(leaderboard, indent=2))
