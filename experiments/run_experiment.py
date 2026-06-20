@@ -6,6 +6,7 @@ import importlib
 import importlib.util
 import json
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,8 @@ import yaml
 
 from ks_core.graph import load_json
 from ks_core.io import get_project_root, write_memory_txt, write_schedule_txt, write_spill_txt
+from ks_core.metrics import evaluate
+from ks_core.types import Schedule
 
 
 def load_config(config_path: Path) -> dict:
@@ -28,7 +31,6 @@ def resolve_algorithm(algo_name: str):
     try:
         mod = importlib.import_module(module_path)
     except ModuleNotFoundError:
-        # Fallback: try importing from the filesystem directly
         algo_dir = get_project_root() / "algorithms" / algo_name
         spec = importlib.util.spec_from_file_location(
             module_path, algo_dir / "solve.py"
@@ -53,7 +55,6 @@ def run_experiment(config_path: Path) -> None:
     output_dir = root / output_config.get("dir", f"results/{exp['name']}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save run metadata
     metadata = {
         "experiment": exp["name"],
         "algorithm": algo_config["name"],
@@ -64,11 +65,9 @@ def run_experiment(config_path: Path) -> None:
     with open(output_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
 
-    # Resolve algorithm
     solve_fn = resolve_algorithm(algo_config["name"])
-    evaluator = _load_evaluator()
+    invalid_runs = 0
 
-    # Run for each case × problem
     for case_name in cases:
         json_path = root / "data" / "raw" / "json" / f"{case_name}.json"
         if not json_path.exists():
@@ -98,18 +97,36 @@ def run_experiment(config_path: Path) -> None:
                     output_dir / "spills" / f"P{pid}_{case_name}_spill.txt",
                 )
 
-            metrics = _compute_metrics(evaluator, instance, schedule, memory, spill_entries)
-            _append_metrics(schedule, output_dir, metrics)
+            result = evaluate(
+                instance,
+                schedule.order,
+                memory,
+                spill_entries,
+            )
+            row = _build_metrics_row(schedule, result)
+            _append_metrics(output_dir, row)
 
-            max_l1 = metrics.get("max_L1", "?")
-            max_ub = metrics.get("max_UB", "?")
-            time_val = metrics.get("time", "?")
+            status = "✅" if result.valid else "❌"
+            if not result.valid:
+                invalid_runs += 1
+                for error in result.errors[:3]:
+                    print(f"      {error}")
+                if len(result.errors) > 3:
+                    print(f"      ... and {len(result.errors) - 3} more errors")
+
+            max_l1 = row.get("max_L1", "?")
+            max_ub = row.get("max_UB", "?")
+            time_val = row.get("time", "?")
             print(
-                f"  ✅ {case_name} P{pid}: {len(schedule.order)} steps, "
-                f"max_L1={max_l1}, max_UB={max_ub}, time={time_val}"
+                f"  {status} {case_name} P{pid}: {row['schedule_len']} steps, "
+                f"max_L1={max_l1}, max_UB={max_ub}, time={time_val}, "
+                f"valid={result.valid}"
             )
 
     print(f"\n📁 Results saved to: {output_dir}")
+    if invalid_runs:
+        print(f"⚠️  {invalid_runs} run(s) failed validation.")
+        sys.exit(1)
 
 
 def _get_git_hash() -> str:
@@ -126,30 +143,13 @@ def _get_git_hash() -> str:
         return "unknown"
 
 
-def _load_evaluator() -> Any | None:
-    """Load the optional evaluator module when it is available."""
-    try:
-        return importlib.import_module("ks_core.evaluator")
-    except ModuleNotFoundError as exc:
-        if exc.name == "ks_core.evaluator":
-            return None
-        raise
+def _unpack_solution(result: Any) -> tuple[Schedule, dict[int, int], list[tuple[int, int]]]:
+    """Read the standard Schedule return shape required from every algorithm."""
+    if not isinstance(result, Schedule):
+        raise TypeError("Algorithm solve() must return ks_core.types.Schedule")
 
-
-def _unpack_solution(result: Any) -> tuple[Any, dict[int, int], list[tuple[int, int]]]:
-    """Accept Schedule or (Schedule, memory, spill_entries) solver outputs."""
-    if isinstance(result, tuple):
-        schedule = result[0]
-        memory = dict(result[1] or {}) if len(result) > 1 else {}
-        spill_entries = _as_spill_entries(result[2] if len(result) > 2 else [])
-        return schedule, memory, spill_entries
-
-    memory = getattr(result, "memory", None) or getattr(result, "memory_layout", None) or {}
-    spill_entries = (
-        getattr(result, "spill_entries", None)
-        or getattr(result, "spills", None)
-        or []
-    )
+    memory = result.memory
+    spill_entries = result.spill_entries
     return result, dict(memory), _as_spill_entries(spill_entries)
 
 
@@ -164,55 +164,22 @@ def _as_spill_entries(entries: Any) -> list[tuple[int, int]]:
     return normalized
 
 
-def _compute_metrics(
-    evaluator: Any | None,
-    instance: Any,
-    schedule: Any,
-    memory: dict[int, int],
-    spill_entries: list[tuple[int, int]],
-) -> dict[str, Any]:
-    """Compute metrics from the optional evaluator functions."""
-    metrics = dict(getattr(schedule, "metrics", {}) or {})
-    metrics["schedule_len"] = len(schedule.order)
-    metrics["spills"] = len(spill_entries)
-
-    if evaluator is None:
-        return metrics
-
-    nodes_by_id = {node.id: node for node in instance.nodes}
-
-    compute_max_vstay = getattr(evaluator, "compute_max_vstay", None)
-    if callable(compute_max_vstay):
-        original_order = [node_id for node_id in schedule.order if node_id in nodes_by_id]
-        metrics.update(_prefix_max_metrics(compute_max_vstay(original_order, nodes_by_id)))
-
-    compute_extra = getattr(evaluator, "compute_extra", None)
-    if instance.problem_id >= 2 and callable(compute_extra):
-        metrics["extra"] = compute_extra(spill_entries, nodes_by_id)
-
-    compute_total_time = getattr(evaluator, "compute_total_time", None)
-    if callable(compute_total_time):
-        metrics["time"] = compute_total_time(
-            schedule.order,
-            nodes_by_id,
-            instance.edges,
-            memory=memory or None,
-            spill_entries=spill_entries or None,
-            num_original_nodes=len(instance.nodes),
-        )
-
-    return metrics
-
-
-def _prefix_max_metrics(metrics: dict[str, Any]) -> dict[str, Any]:
-    """Keep evaluator output compatible with existing max_* metric names."""
-    return {
-        key if key.startswith("max_") else f"max_{key}": value
-        for key, value in metrics.items()
+def _build_metrics_row(schedule: Any, result: Any) -> dict[str, Any]:
+    """Build one metrics.json row including validation status."""
+    row = {
+        "case": schedule.case_name,
+        "problem": schedule.problem_id,
+        "algorithm": schedule.algorithm,
+        **result.metrics,
+        "valid": result.valid,
+        "violations": result.violations,
     }
+    if result.errors:
+        row["errors"] = result.errors[:10]
+    return row
 
 
-def _append_metrics(schedule: Any, output_dir: Path, metrics: dict[str, Any]) -> None:
+def _append_metrics(output_dir: Path, row: dict[str, Any]) -> None:
     """Append one experiment row to metrics.json."""
     metrics_path = output_dir / "metrics.json"
     existing: list[dict[str, Any]] = []
@@ -221,14 +188,7 @@ def _append_metrics(schedule: Any, output_dir: Path, metrics: dict[str, Any]) ->
             data = json.load(f)
         existing = data if isinstance(data, list) else [data]
 
-    existing.append(
-        {
-            "case": schedule.case_name,
-            "problem": schedule.problem_id,
-            "algorithm": schedule.algorithm,
-            **metrics,
-        }
-    )
+    existing.append(row)
     with open(metrics_path, "w") as f:
         json.dump(existing, f, indent=2)
 
