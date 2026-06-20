@@ -15,11 +15,21 @@ data/processed/
 results/*/schedules/
 results/*/analysis/
 results/**/run_log.txt
+results/**/run.log
+results/autoresearch/
+!results/exp001_baseline01/schedules/
+!results/exp001_baseline01/schedules/*.txt
 
 # ──── Notebooks ────
 # .ipynb files are build artifacts (generated from fragments/)
 notebooks/**/*.ipynb
 .ipynb_checkpoints/
+# Notebook cache artifacts (regeneratable PNG/CSV); paper figures live in paper/assets/
+output/
+
+# ──── Scratch ────
+# One-off throwaway scripts/notes (see AGENTS.md)
+tmp/
 
 # ──── Paper build artifacts ────
 paper/*.aux
