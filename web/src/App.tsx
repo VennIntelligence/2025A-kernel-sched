@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { TopNav } from './components/TopNav'
-import { HomePage } from './pages/HomePage'
-import { ProblemPage } from './pages/ProblemPage'
-import { MethodPage } from './pages/MethodPage'
-import { ResultsPage } from './pages/ResultsPage'
+import { Hero } from './sections/Hero'
+import { Overview } from './sections/Overview'
+import { Problem } from './sections/Problem'
+import { Model } from './sections/Model'
+import { Method } from './sections/Method'
+import { Theory } from './sections/Theory'
+import { Results } from './sections/Results'
+import { Closing, SiteFooter } from './sections/Closing'
 import { copy, type Language } from './lib/i18n'
 import './App.css'
 
@@ -15,44 +18,39 @@ function readLang(): Language {
   return stored === 'en' || stored === 'zh' ? stored : 'zh'
 }
 
-/** Reset scroll on route change so deep links open at the top. */
-function ScrollReset() {
-  const { pathname } = useLocation()
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
-  return null
-}
-
 function App() {
   const [language, setLanguage] = useState<Language>(readLang)
   const t = copy[language]
 
   useEffect(() => {
     document.documentElement.lang = language
+    document.title = t.meta.title
     try {
       localStorage.setItem(LANG_KEY, language)
     } catch {
       /* storage unavailable — ignore */
     }
-  }, [language])
+  }, [language, t.meta.title])
 
   return (
-    <main className="app-shell">
-      <ScrollReset />
+    <div className="app-shell">
       <TopNav
         copy={t.nav}
         language={language}
         onToggleLanguage={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
       />
-      <Routes>
-        <Route path="/" element={<HomePage copy={t.home} />} />
-        <Route path="/problem" element={<ProblemPage copy={t.problem} />} />
-        <Route path="/method" element={<MethodPage copy={t.method} />} />
-        <Route path="/results" element={<ResultsPage copy={t.results} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </main>
+      <main className="paper">
+        <Hero copy={t} />
+        <Overview copy={t} />
+        <Problem copy={t.problem} />
+        <Model copy={t.model} />
+        <Method copy={t.method} />
+        <Theory copy={t.theory} />
+        <Results copy={t.results} />
+        <Closing copy={t} />
+      </main>
+      <SiteFooter copy={t} />
+    </div>
   )
 }
 

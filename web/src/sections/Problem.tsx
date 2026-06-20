@@ -11,7 +11,7 @@ import problemDocRaw from '../assets/problem.md?raw'
 
 const TICK_MS = 900
 
-export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
+export function Problem({ copy }: { copy: Copy['problem'] }) {
   const prefersReducedMotion = useMemo(
     () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
     [],
@@ -66,12 +66,12 @@ export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
   }
 
   return (
-    <div className="problem-view">
-      <header className="page-hero">
+    <section className="explainer-section" id="problem">
+      <div className="section-head">
         <p className="eyebrow">{copy.eyebrow}</p>
-        <h1>{copy.title}</h1>
-        <p className="hero-lead">{copy.lead}</p>
-      </header>
+        <h2 className="section-title">{copy.title}</h2>
+        <p className="section-lead">{copy.lead}</p>
+      </div>
 
       <section className="figure-card" aria-label="Kernel scheduling interactive figure">
         <div className="figure-head">
@@ -79,7 +79,7 @@ export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
             <p className="figure-kicker">
               {copy.figureKicker} · {copy.stageWord} {stageIndex + 1} / {stageOrder.length}
             </p>
-            <h2>{stageCopy.title}</h2>
+            <h3>{stageCopy.title}</h3>
           </div>
           <button type="button" className="btn-ghost next-stage" onClick={goToNextStage}>
             <span>{copy.nextStage}</span>
@@ -105,7 +105,7 @@ export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
         <p className="figure-caption">{stageCopy.detail}</p>
       </section>
 
-      <section className="problem-grid" id="problems">
+      <div className="problem-grid">
         {copy.problems.map((problem) => (
           <article key={problem.label} className="problem-card">
             <p className="card-label">{problem.label}</p>
@@ -114,18 +114,21 @@ export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
             <p className="card-body">{problem.body}</p>
           </article>
         ))}
-      </section>
+      </div>
 
       <DataFormatSection copy={copy.data} />
 
       <section className="doc-section">
         <div className="doc-head">
-          <h2>{copy.data.docTitle}</h2>
+          <h3>{copy.data.docTitle}</h3>
           <p>{copy.data.docBody}</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => setShowDoc(!showDoc)} aria-expanded={showDoc}>
           <span>{showDoc ? copy.data.docHide : copy.data.docLink}</span>
-          <ChevronDownIcon size={15} style={{ transform: showDoc ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s ease' }} />
+          <ChevronDownIcon
+            size={15}
+            style={{ transform: showDoc ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s ease' }}
+          />
         </button>
 
         {showDoc && (
@@ -134,6 +137,6 @@ export function ProblemPage({ copy }: { copy: Copy['problem'] }) {
           </div>
         )}
       </section>
-    </div>
+    </section>
   )
 }

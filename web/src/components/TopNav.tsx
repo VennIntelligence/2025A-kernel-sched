@@ -1,47 +1,75 @@
-import { Link, NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { BrandGlyph } from './icons'
-import type { Language } from '../lib/i18n'
+import type { Copy, Language } from '../lib/i18n'
 
-type TopNavCopy = {
-  brand: string
-  home: string
-  problem: string
-  method: string
-  results: string
+type NavCopy = Copy['nav']
+
+const SECTIONS: Array<{ id: string; key: keyof Omit<NavCopy, 'brand'> }> = [
+  { id: 'overview', key: 'overview' },
+  { id: 'problem', key: 'problem' },
+  { id: 'method', key: 'method' },
+  { id: 'results', key: 'results' },
+]
+
+/** Smoothly scroll to a section, accounting for the sticky bar height. */
+function scrollToId(id: string) {
+  const el = document.getElementById(id)
+  if (!el) return
+  const top = el.getBoundingClientRect().top + window.scrollY - 64
+  window.scrollTo({ top, behavior: 'smooth' })
 }
-
-const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? 'is-active' : '')
 
 export function TopNav({
   copy,
   language,
   onToggleLanguage,
 }: {
-  copy: TopNavCopy
+  copy: NavCopy
   language: Language
   onToggleLanguage: () => void
 }) {
+  const [active, setActive] = useState('overview')
+
+  useEffect(() => {
+    const targets = SECTIONS.map((s) => document.getElementById(s.id)).filter(
+      (el): el is HTMLElement => el != null,
+    )
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)
+        if (visible[0]) setActive(visible[0].target.id)
+      },
+      { rootMargin: '-45% 0px -45% 0px', threshold: [0, 0.25, 0.5, 1] },
+    )
+    targets.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <nav className="topbar" aria-label="Site navigation">
       <div className="topbar-inner">
-        <Link className="brand" to="/">
-          <BrandGlyph size={19} />
+        <button
+          className="brand"
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <BrandGlyph size={18} />
           <span className="brand-name">{copy.brand}</span>
-        </Link>
+        </button>
 
         <div className="nav-links">
-          <NavLink to="/" end className={navClass}>
-            {copy.home}
-          </NavLink>
-          <NavLink to="/problem" className={navClass}>
-            {copy.problem}
-          </NavLink>
-          <NavLink to="/method" className={navClass}>
-            {copy.method}
-          </NavLink>
-          <NavLink to="/results" className={navClass}>
-            {copy.results}
-          </NavLink>
+          {SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={active === s.id ? 'is-active' : ''}
+              onClick={() => scrollToId(s.id)}
+            >
+              {copy[s.key]}
+            </button>
+          ))}
         </div>
 
         <button

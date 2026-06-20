@@ -9,7 +9,7 @@ import {
   type ResidencyPoint,
 } from '../../data/residency'
 import { fmt } from '../../lib/format'
-import type { MethodCopy } from '../../lib/i18n'
+import type { ResidencyCopy } from '../../lib/i18n'
 
 const W = 920
 const H = 320
@@ -36,7 +36,7 @@ function phiArea(points: ResidencyPoint[]): number {
   return points.reduce((acc, p) => acc + Math.max(0, p.clean + p.dirty - RESIDENCY_CAPACITY), 0)
 }
 
-export function PhiResidency({ copy }: { copy: MethodCopy['residency'] }) {
+export function PhiResidency({ copy }: { copy: ResidencyCopy }) {
   const [series, setSeries] = useState<Series>('idRaw')
   const points = series === 'idRaw' ? RESIDENCY_ID_RAW : RESIDENCY_BASELINE
 
