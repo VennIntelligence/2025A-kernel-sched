@@ -1,3 +1,4 @@
+import { FigureBlock } from '../components/FigureBlock'
 import type { Copy } from '../lib/i18n'
 
 export function Theory({ copy }: { copy: Copy['theory'] }) {
@@ -21,6 +22,13 @@ export function Theory({ copy }: { copy: Copy['theory'] }) {
           </article>
         ))}
       </div>
+
+      <FigureBlock
+        src="figures/working_set.webp"
+        alt={copy.wsLabel}
+        label={copy.wsLabel}
+        caption={copy.wsCaption}
+      />
     </section>
   )
 }

@@ -3499,8 +3499,12 @@ p {
   font-size: 13.5px;
 }
 
+.byline-emails {
+  color: var(--body);
+}
+
 .byline-emails a {
-  color: var(--muted);
+  color: var(--body);
   text-decoration: none;
   font-family: var(--mono);
 }
@@ -3508,6 +3512,13 @@ p {
 .byline-emails a:hover {
   color: var(--accent);
   text-decoration: underline;
+}
+
+/* Figure 1 (concept) rendered at ~60% width, centered */
+.hero-figures .fig-60 {
+  width: 60%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ================================================================
@@ -4284,8 +4295,11 @@ p {
   }
 
   .hero-figures {
-    grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 28px;
+  }
+
+  .hero-figures .fig-60 {
+    width: 100%;
   }
 
   .model-grid {
@@ -4404,20 +4418,26 @@ p {
 }
 
 /* ================================================================
-   Centered prose — Related work & Conclusion
+   Article prose — Related work & Conclusion (natural left-aligned)
    ================================================================ */
 
-.prose-centered .section-title {
-  text-align: center;
-}
-
-.prose-centered .related-body,
-.prose-centered .conclusion-body {
-  text-align: center;
-}
-
-.prose-centered .future {
+.prose-article .section-title {
   text-align: left;
+  max-width: 760px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.prose-article .related-body,
+.prose-article .conclusion-body {
+  text-align: left;
+}
+
+/* extra breathing room around the closing sections */
+.prose-article {
+  padding-top: 80px !important;
+}
+
+.conclusion-section {
+  padding-bottom: 92px !important;
 }

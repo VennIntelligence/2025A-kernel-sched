@@ -134,6 +134,8 @@ export type Copy = {
     eyebrow: string
     title: string
     lead: string
+    wsLabel: string
+    wsCaption: string
     items: Array<{ tag: string; name: string; statement: string; note: string }>
   }
   results: {
@@ -467,6 +469,9 @@ export const copy: Record<Language, Copy> = {
       eyebrow: '理论',
       title: '方法在何处生效',
       lead: '三条结果界定了本方法的适用区间，并解释了“驱逐规则不敏感、调度序高度敏感”的实验现象。证明见补充材料。',
+      wsLabel: '图 5 · 工作集下界',
+      wsCaption:
+        '每个 (算例, 缓存) 在近最优 extra 子集上的工作集 / 容量比。比值 > 1 意味着即便最优重排也放不下、溢出不可避免。红色的 Matmul_Case1 / L1 高达 8.5，在近最优口径下远超容量——正是溢出必然性证书（定理 1）的实证。',
       items: [
         {
           tag: '定理 1',
@@ -850,6 +855,9 @@ export const copy: Record<Language, Copy> = {
       eyebrow: 'Theory',
       title: 'Where the method applies',
       lead: 'Three results delimit the regime and explain the empirical pattern of an insensitive victim rule alongside a highly sensitive schedule order. Proofs are in the supplementary material.',
+      wsLabel: 'Figure 5 · Working-set bound',
+      wsCaption:
+        'The near-optimal working-set / capacity ratio per (case, cache), computed over the near-optimal extra subset. A ratio > 1 means even an optimal reorder cannot fit — spills are unavoidable. Matmul_Case1 / L1 (red) reaches 8.5, far above capacity — an empirical instance of the spill-inevitability certificate (Theorem 1).',
       items: [
         {
           tag: 'Theorem 1',

@@ -27,7 +27,7 @@ export function Hero({ copy }: { copy: Copy }) {
       <p className="byline-emails">
         {m.authors.map((a, i) => (
           <span key={a.email}>
-            <a href={`mailto:${a.email}`}>{a.email}</a>
+            (<a href={`mailto:${a.email}`}>{a.email}</a>)
             {i < m.authors.length - 1 ? <span className="byline-sep">·</span> : null}
           </span>
         ))}
@@ -47,7 +47,13 @@ export function Hero({ copy }: { copy: Copy }) {
       </nav>
 
       <div className="hero-figures">
-        <FigureBlock src="figures/concept.png" alt={m.fig1Label} label={m.fig1Label} caption={m.fig1Caption} />
+        <FigureBlock
+          src="figures/concept.png"
+          alt={m.fig1Label}
+          label={m.fig1Label}
+          caption={m.fig1Caption}
+          className="fig-60"
+        />
         <FigureBlock src="figures/pipeline.png" alt={m.fig2Label} label={m.fig2Label} caption={m.fig2Caption} />
       </div>
     </header>

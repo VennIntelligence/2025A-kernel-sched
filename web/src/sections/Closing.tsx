@@ -3,7 +3,7 @@ import type { Copy, LinkKind } from '../lib/i18n'
 export function Closing({ copy }: { copy: Copy }) {
   return (
     <>
-      <section className="prose-section prose-centered" aria-labelledby="related-h">
+      <section className="prose-section prose-article" aria-labelledby="related-h">
         <h2 id="related-h" className="section-title">{copy.related.title}</h2>
         <div className="related-body">
           {copy.related.body.map((p, i) => (
@@ -12,13 +12,9 @@ export function Closing({ copy }: { copy: Copy }) {
         </div>
       </section>
 
-      <section className="prose-section prose-centered conclusion-section" aria-labelledby="conclusion-h">
+      <section className="prose-section prose-article conclusion-section" aria-labelledby="conclusion-h">
         <h2 id="conclusion-h" className="section-title">{copy.conclusion.title}</h2>
         <p className="conclusion-body">{copy.conclusion.body}</p>
-        <div className="future">
-          <h3>{copy.conclusion.futureTitle}</h3>
-          <p>{copy.conclusion.future}</p>
-        </div>
       </section>
     </>
   )
