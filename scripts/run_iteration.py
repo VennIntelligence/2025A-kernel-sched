@@ -1,4 +1,10 @@
-"""Run one immutable AutoResearch iteration."""
+"""Run one immutable AutoResearch iteration.
+
+Process state (iterations, ledger, best_iter) lives under ``autoresearch/``;
+the active solver slot is ``algorithms/ours/solve.py``. The search is complete
+(iter038 promoted into ``ks_core.solver``); this runner is retained for
+reproducibility.
+"""
 
 from __future__ import annotations
 
@@ -117,13 +123,14 @@ def main() -> int:
     slug = _slugify(args.desc)
     iter_name = f"iter{iter_id}_{slug}"
 
-    algo_dir = root / "algorithms" / "autoresearch"
-    iteration_dir = algo_dir / "iterations" / iter_name
+    process_dir = root / "autoresearch"
+    method_dir = root / "algorithms" / "ours"
+    iteration_dir = process_dir / "iterations" / iter_name
     candidate_solve = iteration_dir / "solve.py"
-    active_solve = algo_dir / "solve.py"
+    active_solve = method_dir / "solve.py"
     result_dir = root / "results" / "autoresearch" / iter_name
-    best_path = algo_dir / "best_iter.txt"
-    ledger_path = algo_dir / "ledger.csv"
+    best_path = process_dir / "best_iter.txt"
+    ledger_path = process_dir / "ledger.csv"
 
     if not candidate_solve.exists():
         raise FileNotFoundError(f"Missing candidate solver: {candidate_solve}")
@@ -171,7 +178,7 @@ def main() -> int:
         shutil.copy2(candidate_solve, active_solve)
         best_path.write_text(f"{iter_name}\n")
     elif previous_best:
-        best_solve = algo_dir / "iterations" / previous_best / "solve.py"
+        best_solve = process_dir / "iterations" / previous_best / "solve.py"
         if best_solve.exists():
             shutil.copy2(best_solve, active_solve)
 
@@ -243,7 +250,7 @@ def _write_config(
             "description": f"AutoResearch iteration {iter_name}",
         },
         "algorithm": {
-            "name": "autoresearch",
+            "name": "ours",
             "params": {},
         },
         "cases": suite["cases"],

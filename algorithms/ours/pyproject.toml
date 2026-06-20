@@ -1,7 +1,7 @@
 [project]
-name = "ks-autoresearch"
+name = "ks-ours"
 version = "0.1.0"
-description = "Iterative AutoResearch solver for kernel scheduling"
+description = "Promoted kernel-scheduling solver (re-exports ks_core.solver)"
 requires-python = ">=3.12"
 dependencies = [
     "ks-core",

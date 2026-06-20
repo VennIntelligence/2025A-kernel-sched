@@ -13,9 +13,9 @@ resolution-markers = [
 [manifest]
 members = [
     "kernel-scheduling",
-    "ks-autoresearch",
     "ks-baseline",
     "ks-core",
+    "ks-ours",
 ]
 
 [[package]]
@@ -1120,17 +1120,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ks-autoresearch"
-version = "0.1.0"
-source = { editable = "algorithms/autoresearch" }
-dependencies = [
-    { name = "ks-core" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "ks-core", editable = "src" }]
-
-[[package]]
 name = "ks-baseline"
 version = "0.1.0"
 source = { editable = "algorithms/baseline" }
@@ -1157,6 +1146,17 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "pandas", specifier = ">=2.1" },
 ]
+
+[[package]]
+name = "ks-ours"
+version = "0.1.0"
+source = { editable = "algorithms/ours" }
+dependencies = [
+    { name = "ks-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "ks-core", editable = "src" }]
 
 [[package]]
 name = "lark"
