@@ -28,8 +28,8 @@ contains failed hypotheses and intermediate claims that were later revised.
 
 ## Final Solver
 
-The promoted solver is `iter038_id_raw_candidate`, exposed as
-`algorithms/autoresearch/solve.py`.
+The promoted solver is `iter038_id_raw_candidate`, implemented in
+`src/ks_core/solver.py` and exposed as the method `algorithms/ours/solve.py`.
 
 - P1 uses the promoted memory-aware list scheduler.
 - P2/P3 evaluate a small portfolio of candidate orders: `capfit_id`, `p1`, and
@@ -77,9 +77,9 @@ the final method. They should not, however, dominate the final paper narrative.
 
 ## Source Files
 
-- Final solver: `algorithms/autoresearch/solve.py`
-- Best iteration marker: `algorithms/autoresearch/best_iter.txt`
-- Iteration trajectory: `algorithms/autoresearch/ledger.csv`
+- Final solver: `src/ks_core/solver.py` (method entry point `algorithms/ours/solve.py`)
+- Best iteration marker: `autoresearch/best_iter.txt`
+- Iteration trajectory: `autoresearch/ledger.csv`
 - Headline metrics: `results/paper/e1_headline.csv`
 - Portfolio trajectory: `results/paper/e10_portfolio.csv`
 - Paper thesis and experiment matrix:
