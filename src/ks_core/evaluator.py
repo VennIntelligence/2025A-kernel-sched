@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 
+from ks_core.constants import CACHE_CAPACITIES
 from ks_core.types import Edge, Node
 
-CACHE_CAPACITIES = {"L1": 4096, "UB": 1024, "L0A": 256, "L0B": 256, "L0C": 512}
 CACHE_TYPES = ("L1", "UB", "L0A", "L0B", "L0C")
 L0_TYPES = ("L0A", "L0B", "L0C")
 
