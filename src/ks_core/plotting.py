@@ -294,3 +294,152 @@ def make_figure(
         h = h * nrows * 0.7  # slight compression per row
     fig, axes = plt.subplots(nrows, ncols, figsize=(w, h), **subplot_kw)
     return fig, axes
+
+
+# ---------------------------------------------------------------------------
+# Project figure vocabulary — shared by every notebook that plots benchmark
+# results (lifted out of individual notebooks so labels/colours stay in sync).
+# ---------------------------------------------------------------------------
+
+# Canonical left-to-right ordering of the six benchmark instances.
+CASE_ORDER = [
+    "Conv_Case0",
+    "Conv_Case1",
+    "FlashAttention_Case0",
+    "FlashAttention_Case1",
+    "Matmul_Case0",
+    "Matmul_Case1",
+]
+
+# Compact axis labels for the benchmark instances.
+CASE_LABELS = {
+    "Conv_Case0": "Conv 0",
+    "Conv_Case1": "Conv 1",
+    "FlashAttention_Case0": "FA 0",
+    "FlashAttention_Case1": "FA 1",
+    "Matmul_Case0": "Matmul 0",
+    "Matmul_Case1": "Matmul 1",
+}
+
+# Human-readable labels for schedule-order / method keys.
+ORDER_LABELS = {
+    "capfit_id": "CapFit",
+    "p1": "P1",
+    "id_raw": "ID",
+    "min_id": "Min-ID",
+    "baseline": "Base",
+    "cp_list": "Critical-path",
+    "cp_free_first": "Delayed-free",
+    "pressure_uniform": "Uniform pressure",
+    "goodman_hsu": "Goodman--Hsu",
+    "ours": "Ours",
+    "phi_best": r"$\Phi$-best",
+    "ratio_all": "All orders",
+    "ratio_nearopt": "Near-optimal",
+}
+
+# Stable colour assignment per order/method, drawn from METHOD_PALETTE so the
+# "ours" family always reads as the primary colour and baselines as accents.
+ORDER_COLORS = {
+    "capfit_id": METHOD_PALETTE["primary"],
+    "ours": METHOD_PALETTE["primary"],
+    "phi_best": METHOD_PALETTE["primary"],
+    "p1": METHOD_PALETTE["secondary"],
+    "cp_free_first": METHOD_PALETTE["secondary"],
+    "id_raw": METHOD_PALETTE["accent_3"],
+    "pressure_uniform": METHOD_PALETTE["accent_2"],
+    "min_id": METHOD_PALETTE["neutral"],
+    "goodman_hsu": METHOD_PALETTE["neutral"],
+    "baseline": METHOD_PALETTE["accent_1"],
+    "cp_list": METHOD_PALETTE["accent_1"],
+    "ratio_all": "#c9c9c9",
+    "ratio_nearopt": METHOD_PALETTE["primary"],
+}
+
+
+def case_label(case) -> str:
+    """Compact display label for a benchmark case key."""
+    return CASE_LABELS.get(str(case), str(case).replace("_Case", " "))
+
+
+def order_label(name) -> str:
+    """Human-readable label for a schedule-order / method key."""
+    return ORDER_LABELS.get(str(name), str(name))
+
+
+def order_color(name, default: str = METHOD_PALETTE["neutral"]) -> str:
+    """Stable colour for a schedule-order / method key."""
+    return ORDER_COLORS.get(str(name), default)
+
+
+def compact_count(value) -> str:
+    """Format a count compactly (e.g. ``1.2M``, ``34k``, ``128``)."""
+    value = float(value)
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    if value >= 100_000:
+        return f"{value / 1_000:.0f}k"
+    if value >= 10_000:
+        return f"{value / 1_000:.1f}k"
+    if abs(value - round(value)) < 1e-9:
+        return f"{value:.0f}"
+    return f"{value:.2g}"
+
+
+def compact_ratio(value) -> str:
+    """Format a ratio compactly with an ``x`` suffix (e.g. ``2.3x``)."""
+    value = float(value)
+    if value >= 10:
+        return f"{value:.0f}x"
+    if value >= 1:
+        return f"{value:.1f}x"
+    return f"{value:.2f}x"
+
+
+def annotate_bars(ax, bars, values=None, formatter=compact_count, *,
+                  rotation=90, fontsize=7.8, offset=2, min_value=0.0) -> None:
+    """Annotate each bar in *bars* with its (formatted) value."""
+    values = values if values is not None else [bar.get_height() for bar in bars]
+    for bar, value in zip(bars, values):
+        value = float(value)
+        if value <= min_value:
+            continue
+        ax.annotate(
+            formatter(value),
+            xy=(bar.get_x() + bar.get_width() / 2, value),
+            xytext=(0, offset),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            rotation=rotation,
+            fontsize=fontsize,
+            clip_on=False,
+        )
+
+
+def style_bar_axes(ax, *, xlabel="Benchmark case", ylabel=None, grid_alpha=0.22) -> None:
+    """Apply the project's standard bar-chart axis styling."""
+    if ylabel:
+        ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+    ax.tick_params(axis="x", labelsize=9)
+    ax.tick_params(axis="y", labelsize=9)
+    ax.grid(axis="y", alpha=grid_alpha, linewidth=0.5)
+    ax.grid(False, which="minor", axis="y")
+    ax.tick_params(axis="y", which="minor", length=0)
+
+
+def place_bar_legend(ax, *, ncol=3, y=1.03):
+    """Place a frameless legend above the axes, left-aligned."""
+    return ax.legend(
+        ncol=ncol,
+        loc="lower left",
+        bbox_to_anchor=(0.0, y),
+        borderaxespad=0.0,
+        frameon=False,
+    )
+
+
+def grouped_offsets(n, width):
+    """Symmetric x-offsets for *n* grouped bars of the given *width*."""
+    return [(i - (n - 1) / 2) * width for i in range(n)]

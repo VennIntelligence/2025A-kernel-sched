@@ -6,6 +6,10 @@ __pycache__/
 dist/
 build/
 
+# Built paper PDFs are published artifacts
+!paper/dist/
+!paper/dist/*.pdf
+
 # ──── Data (large / generated) ────
 data/processed/
 *.parquet

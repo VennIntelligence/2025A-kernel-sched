@@ -1,8 +1,7 @@
 {
   "experiment": "exp001_baseline01",
-  "algorithm": "baseline01",
-  "source": "gpt_generated_baseline",
-  "timestamp": "2026-06-07T16:34:12.841559+00:00",
+  "algorithm": "baseline",
+  "timestamp": "2026-06-20T13:53:00.025202+00:00",
   "config_file": "experiments/configs/exp001_baseline01.yaml",
-  "git_hash": "fdfd2d5"
+  "git_hash": "fb0926d"
 }

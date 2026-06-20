@@ -1,0 +1,7 @@
+case,max_L1,max_UB,L1_ratio,UB_ratio
+Conv_Case0,7488,0,1.828125,0.0
+Conv_Case1,14040,0,3.427734375,0.0
+FlashAttention_Case0,3328,1428,0.8125,1.39453125
+FlashAttention_Case1,5376,2468,1.3125,2.41015625
+Matmul_Case0,9216,0,2.25,0.0
+Matmul_Case1,34816,0,8.5,0.0

@@ -1,0 +1,170 @@
+# Paper number manifest.
+# Values are recomputed by scripts/paper/sync_paper_artifacts.py from CSV files.
+
+numbers:
+  - id: e1_win_count
+    tex_macro: EOneWinCount
+    source_csv: results/paper/e1_headline.csv
+    filter: result == 'WIN'
+    operation: count
+    format: int
+    expected: "13"
+
+  - id: e1_loss_count
+    tex_macro: EOneLossCount
+    source_csv: results/paper/e1_headline.csv
+    filter: result == 'LOSS'
+    operation: count
+    format: int
+    expected: "5"
+
+  - id: e1_total_rows
+    tex_macro: EOneTotalRows
+    source_csv: results/paper/e1_headline.csv
+    operation: count
+    format: int
+    expected: "18"
+
+  - id: e1_p1_win_count
+    tex_macro: EOnePoneWinCount
+    source_csv: results/paper/e1_headline.csv
+    filter: problem == 1 and result == 'WIN'
+    operation: count
+    format: int
+    expected: "6"
+
+  - id: e2_cv_below_one_pct
+    tex_macro: ETwoVictimCvBelowOnePct
+    source_csv: results/paper/e2_victim_cv.csv
+    filter: cv < 0.01
+    operation: count
+    format: int
+    expected: "22"
+
+  - id: e2_cv_rows
+    tex_macro: ETwoVictimCvRows
+    source_csv: results/paper/e2_victim_cv.csv
+    operation: count
+    format: int
+    expected: "30"
+
+  - id: e2_cv_max_percent
+    tex_macro: ETwoVictimCvMaxPercent
+    source_csv: results/paper/e2_victim_cv.csv
+    column: cv
+    operation: max
+    format: percent2
+    expected: "9.58\\%"
+
+  - id: e6_phi_extra_global
+    tex_macro: ESixPhiExtraGlobal
+    source_csv: results/paper/e6_corr.csv
+    filter: case == 'ALL'
+    column: spearman_phi_extra
+    operation: value
+    format: float4
+    expected: "0.9575"
+
+  - id: e6_peak_extra_global
+    tex_macro: ESixPeakExtraGlobal
+    source_csv: results/paper/e6_corr.csv
+    filter: case == 'ALL'
+    column: spearman_peak_extra
+    operation: value
+    format: float4
+    expected: "0.9549"
+
+  - id: e9_matmul1_l1_ratio_nearopt
+    tex_macro: ENineMatmulOneLoneRatioNearopt
+    source_csv: results/paper/e9_working_set.csv
+    filter: case == 'Matmul_Case1' and cache == 'L1'
+    column: ratio_nearopt
+    operation: value
+    format: float1
+    expected: "8.5"
+
+  - id: e9_matmul1_l1_ratio_all
+    tex_macro: ENineMatmulOneLoneRatioAll
+    source_csv: results/paper/e9_working_set.csv
+    filter: case == 'Matmul_Case1' and cache == 'L1'
+    column: ratio_all
+    operation: value
+    format: float5
+    expected: "0.03125"
+
+  - id: e10_win_trajectory
+    tex_macro: ETenWinTrajectory
+    source_csv: results/paper/e10_portfolio.csv
+    column: wins
+    operation: sequence
+    separator: "--"
+    format: raw
+    expected: "8--10--11--12--13"
+
+  - id: e11_clean_extra
+    tex_macro: EElevenCleanExtra
+    source_csv: results/paper/e11_synth_ablation.csv
+    filter: reserve == 'clean' and order == 'capfit_id'
+    column: extra
+    operation: value
+    format: int
+    expected: "1536"
+
+  - id: e11_dirty_extra
+    tex_macro: EElevenDirtyExtra
+    source_csv: results/paper/e11_synth_ablation.csv
+    filter: reserve == 'dirty' and order == 'capfit_id'
+    column: extra
+    operation: value
+    format: int
+    expected: "3072"
+
+  - id: e11_clean_dirty_spills
+    tex_macro: EElevenMatchedSpills
+    source_csv: results/paper/e11_synth_ablation.csv
+    filter: reserve == 'clean' and order == 'capfit_id'
+    column: spills
+    operation: value
+    format: int
+    expected: "3"
+
+  - id: e11_clean_dirty_peak
+    tex_macro: EElevenMatchedPeak
+    source_csv: results/paper/e11_synth_ablation.csv
+    filter: reserve == 'clean' and order == 'capfit_id'
+    column: peak_total
+    operation: value
+    format: int
+    expected: "4864"
+
+# Only notebook-generated figures are synced. The hand-authored vector assets
+# (e0_concept, e1_dag_example, pipeline) live directly in paper/assets/figures/.
+figures:
+  - source: output/02_paper_figures/e2_victim_sensitivity.png
+    target: paper/assets/figures/e2_victim_sensitivity.png
+  - source: output/02_paper_figures/e3_order_sensitivity.png
+    target: paper/assets/figures/e3_order_sensitivity.png
+  - source: output/02_paper_figures/e4_clean_dirty_composition.png
+    target: paper/assets/figures/e4_clean_dirty_composition.png
+  - source: output/02_paper_figures/e5_peak_residency.png
+    target: paper/assets/figures/e5_peak_residency.png
+  - source: output/02_paper_figures/e6_surrogate.png
+    target: paper/assets/figures/e6_surrogate.png
+  - source: output/02_paper_figures/e7_misalignment_worst_ratio.png
+    target: paper/assets/figures/e7_misalignment_worst_ratio.png
+  - source: output/02_paper_figures/e8_decoupling.png
+    target: paper/assets/figures/e8_decoupling.png
+  - source: output/02_paper_figures/e9_working_set.png
+    target: paper/assets/figures/e9_working_set.png
+  - source: output/02_paper_figures/e10_portfolio.png
+    target: paper/assets/figures/e10_portfolio.png
+  - source: output/02_paper_figures/e11_synth_generality.png
+    target: paper/assets/figures/e11_synth_generality.png
+  - source: output/02_paper_figures/e12_baselines.png
+    target: paper/assets/figures/e12_baselines.png
+  - source: output/02_paper_figures/e13_synth_suite.png
+    target: paper/assets/figures/e13_synth_suite.png
+  - source: output/02_paper_figures/e14_oracle.png
+    target: paper/assets/figures/e14_oracle.png
+  - source: output/02_paper_figures/e15_applicability.png
+    target: paper/assets/figures/e15_applicability.png

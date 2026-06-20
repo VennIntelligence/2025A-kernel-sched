@@ -1,0 +1,9 @@
+reserve,order,extra,clean_bytes,dirty_bytes,spills,peak_total,peak_clean,peak_dirty
+clean,capfit_id,1536,1536,0,3,4864,3840,1024
+clean,p1,3328,3328,0,9,6912,5888,1024
+clean,id_raw,1536,1536,0,3,4864,3840,1024
+clean,min_id,2560,2560,0,5,4864,3840,1024
+dirty,capfit_id,3072,0,3072,3,4864,256,4608
+dirty,p1,4864,1792,3072,10,6912,2304,4608
+dirty,id_raw,3072,0,3072,3,4864,256,4608
+dirty,min_id,5120,0,5120,5,4864,256,4608

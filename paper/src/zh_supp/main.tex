@@ -1,0 +1,63 @@
+\documentclass[UTF8,fontset=none,zihao=5]{ctexart}
+\input{../../common/preamble}
+\input{../../common/macros}
+\input{../../common/metadata}
+
+\usepackage{indentfirst}
+\geometry{a4paper,left=2.05cm,right=2.05cm,top=2.0cm,bottom=2.15cm}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small 补充材料}
+\fancyhead[R]{\small 技术细节与附加证据}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.25pt}
+\renewcommand{\refname}{参考文献}
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parindent}{2em}
+\titleformat{\section}{\zihao{4}\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\zihao{-4}\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{0.85em}{0.35em}
+\titlespacing*{\subsection}{0pt}{0.6em}{0.25em}
+\makeatletter
+\setlength{\@fptop}{0pt}
+\makeatother
+\newcommand{\ksOp}[1]{\textsf{\MakeUppercase{#1}}}
+\newcommand{\ksField}[1]{\textsf{#1}}
+\newcommand{\ksName}[1]{\textit{#1}}
+\newcommand{\ksFile}[1]{\textsf{#1}}
+
+% xr-hyper：读取 zh_conf 的 .aux，自动同步跨文档引用编号
+\externaldocument{../../build/zh_conf/zh_conf}
+
+% 所有超链接（含定理/命题等跨文档引用）一律黑色。
+\hypersetup{linkcolor=black,filecolor=black}
+
+\begin{document}
+
+\begin{center}
+{\large\bfseries \paperTitleZh\\补充材料\par}
+\vspace{0.35em}
+{\small \paperAuthorNamesZhConf\par}
+\vspace{0.2em}
+{\small \paperAuthorEmailsZhConf\par}
+\vspace{0.6em}
+\end{center}
+
+% 目录：精确到二级子目录（section 与 subsection），字号与正文一致
+\setcounter{tocdepth}{2}
+\tableofcontents
+\vspace{0.5em}
+
+% --- 补充材料图表编号加 S 前缀 ---
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+\setcounter{figure}{0}
+\setcounter{table}{0}
+
+\input{sections/overview}
+\input{sections/problem_statement}
+\input{sections/formal_reasoning}
+\input{sections/solution_walkthrough}
+\input{sections/cgo_evidence}
+
+\end{document}

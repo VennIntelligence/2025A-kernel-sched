@@ -1,0 +1,7 @@
+\section{相关工作}\label{sec:related}
+
+面向 DNN 加速器的联合调度与内存优化中，COSMA~\citep{li2023combined} 明确指出额外片外访问取决于 operator schedule、memory allocation 和 tensor replacement 三者的交互，并用 ILP 同时优化以减少 non-compulsory off-chip accesses。该工作在图级算子粒度上统一求解放置与替换，而核内微操作 DAG 的片上 scratchpad 调度面临更细粒度的约束：缓冲的 clean/dirty 属性带来 $2\times$ 的溢出代价非对称，调度序不仅影响驻留量峰值，还决定溢出窗口内可驱逐对象的代价构成。
+
+经典编译器后端早已认识到调度与存活区间的耦合。Goodman--Hsu 风格的 integrated prepass~\citep{goodman1988integrated} 及后续寄存器压力感知调度~\citep{shobaki2013preallocation,shobaki2022register} 在指令级并行性与 register pressure 之间折中；局部分配中的 Clean-First 启发式利用了 clean value 换出无需 store 的事实~\citep{liberatore1999evaluation,guo2004belady}。缓存替换理论中，Belady 最远未来原则~\citep{belady1966study} 及 block-aware caching~\citep{coester2022blockaware} 将问题推广到非均匀代价对象。这些工作说明"调度序影响 liveness"和"clean victim 更便宜"并非新概念，但它们或在固定指令流上选择 victim，或面对给定请求序列；核内 DAG 调度的额外自由度在于可通过改变拓扑序主动塑形存活重叠与驻留构成。
+
+重物化与激活检查点从另一侧处理内存压力~\citep{chen2016training,jain2019checkmate}；近期 spill-free compilation~\citep{chatarasi2026spillfree} 通过缩短活跃范围追求完全消除溢出。这些方法与本文正交：在真实大模型核内调度中容量约束常使溢出不可避免，此时已有的可重载输入缓冲构成天然的 clean 储备，关键在于通过调度序降低不可避免溢出的写回成本。

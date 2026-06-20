@@ -1,0 +1,137 @@
+\section{形式化论证与适用边界}\label{sec:supp-formal}
+
+正文方法节以三个形式化结论为溢出代价感知的活跃度塑形建立理论基础：定理~\ref{thm:spill-inev}（溢出不可避免性证书）、命题~\ref{prop:belady-margin}（Belady-margin 稳定性）和 定理~\ref{thm:area-extra}（溢出面积近似）。本节给出它们的完整证明，并严格标注每个结论的适用条件，以避免过度声称。
+
+三个结论从不同角度划定方法的作用域。溢出不可避免性证书以近最优调度集合上的工作集下界判定容量受限：当证书成立时，优化目标从消除溢出转为降低溢出代价。Belady-margin 稳定性解释了主要优化自由度为何是调度序而非驱逐策略：在距离主导条件下，不同 Belady 风格驱逐规则选出相同的 victim 集合，差异因此只来自序。溢出面积近似定理则为代理目标 $\Phi$ 在容量受限区域跟踪溢出流量的有效性提供条件性保证。以下各节依次给出这些结论的完整证明，并将“严格成立的定理”“需要条件的命题”和“经验观察”分开表述。
+
+\subsection{Clean/dirty 代价非对称}\label{sec:supp-clean-proof}
+
+正文 \S\ref{sec:formulation} 将缓冲区分为 clean 与 dirty 两类，指出二者占用相同片上空间但溢出代价相差 $2\times$。以下观察为这一非对称结构提供定量基础，是后续所有代价感知决策的出发点。
+
+\paragraph{观察（clean/dirty 代价非对称）。}
+设 $x$ 与 $y$ 是大小均为 $s$ 的两个缓冲，$x$ 为 clean，$y$ 为 dirty。若一次 spill 将 $y$ 替换为 $x$，则该次 P2 extra 从 $2s$ 降为 $s$，恰好减半。
+
+\paragraph{代价比的推导。}
+这一非对称直接来自评测指标的定义：由式~\eqref{eq:supp-extra}，clean 缓冲的 extra 为 $s$，dirty 缓冲的 extra 为 $2s$。因此二者之比为 $1/2$。该结论是评测指标本身的直接推论，不依赖特定调度器或数据集。合成消融实验中，在相同 DAG、相同 spill 数和相同峰值下，clean 储备与 dirty 储备的 extra 分别为 $1536$ 与 $3072$，用于验证实现是否忠实反映该定义。
+
+\subsection{近最优集合中的工作集证书}\label{sec:supp-working-set-proof}
+
+给定拓扑序 $S$，记节点 $v$ 在序中的位置为 $\pos_S(v)$。缓冲 $b$ 的逻辑生命期为
+\begin{equation}
+  I_S(b)=[\pos_S(a_b),\pos_S(f_b)).
+\end{equation}
+cache $c$ 在位置 $t$ 的逻辑 live 工作集为
+\begin{equation}
+  W_c^S(t)=\sum_{b:\tau(b)=c,\ t\in I_S(b)}s_b,\qquad
+  W_c^S=\max_t W_c^S(t).
+\end{equation}
+对候选序集合 $\mathcal S$，令 $E^\star(S)$ 表示固定原始节点序 $S$ 后，所有合法地址、spill 选择和 spill 放置中的最小 P2 extra。给定 $\epsilon\ge0$，定义近最优集合
+\begin{equation}
+  \mathcal O_\epsilon=\{S\in\mathcal S:\ E^\star(S)\le (1+\epsilon)\min_{S'\in\mathcal S}E^\star(S')\},
+\end{equation}
+以及该集合内的工作集下界
+\begin{equation}
+  \underline W_c^\epsilon=\min_{S\in\mathcal O_\epsilon} W_c^S.
+\end{equation}
+
+正文定理~\ref{thm:spill-inev} 声称：若近最优 extra 子集上的工作集下界超过 cache 容量，则溢出不可避免。以下给出完整证明，并讨论该证书作为单侧条件的含义：它能确认溢出不可避免，但反向不成立。
+
+\paragraph{定理 1。}
+若 $\underline W_c^\epsilon>\Capc_c$，则每个 $S\in\mathcal O_\epsilon$ 都必须在 cache $c$ 上发生容量溢出。换言之，在保持近最优 P2 extra 的候选范围内，仅靠地址摆放无法让 cache $c$ 完全 spill-free。
+
+更定量地，对任意 $S\in\mathcal O_\epsilon$ 及任意尊重 $S$ 的合法 P2 实现 $P$，
+\begin{equation}
+  \extra(P)\ge \max_t (W_c^S(t)-\Capc_c)_+ .
+\end{equation}
+
+\paragraph{证明。}
+在任一位置 $t$，将逻辑 live 体积分解为已驻留体积 $R_c^P(t)$ 与已 spill、暂不驻留体积 $A_c^P(t)$：
+\begin{equation}
+  W_c^S(t)=R_c^P(t)+A_c^P(t).
+\end{equation}
+容量约束给出 $R_c^P(t)\le \Capc_c$，故
+\begin{equation}
+  A_c^P(t)\ge (W_c^S(t)-\Capc_c)_+ .
+\end{equation}
+任一暂不驻留但仍 live 的缓冲，在该位置之前至少被 spill 过一次；一次 spill 的 extra 至少为该缓冲大小。因此，总 extra 不小于任一时刻的缺席 live 体积。对 $t$ 取最大即得上式。若 $\underline W_c^\epsilon>\Capc_c$，则 $\mathcal O_\epsilon$ 中每个序都存在某个位置使 $W_c^S(t)>\Capc_c$，所以不可能在该 cache 上完全避免 spill。
+
+\paragraph{证书的单侧性与适用范围。}
+该定理给出的是一个单侧证书（one-sided certificate）：它只能确认溢出不可避免，反向不成立。当 $\underline W_c^\epsilon\le \Capc_c$ 时，并不能推出 spill-free；碎片、地址复用依赖、被 pin 住的驻留段和重载位置仍可能导致 spill。近最优集合限制也不可省略：若在所有合法序上无约束地最小化峰值，某些 P2 extra 很差的低峰值序会使实例看起来“不受容量限制”。例如 Matmul\_Case1/L1 的全序最小工作集比值为 $0.03125$，但在 $10\%$ 近最优 extra 集合内的比值为 $8.5$，后者才反映 P2 相关区域的容量压力。正文 \S\ref{sec:exp-mechanism} 的 CP-SAT oracle 验证表明，该下界在全部小图上成立。
+
+\subsection{Belady 风格驱逐的稳定条件}\label{sec:supp-belady-proof}
+
+正文命题~\ref{prop:belady-margin} 断言，在距离主导条件下不同 Belady 风格驱逐规则会选出相同的 victim 集合。以下给出形式化条件和证明。
+
+固定某个调度序，在一次 cache 溢出决策 $k$ 中，令 $R_k$ 为可驱逐驻留缓冲集合，$\Delta_k$ 为必须释放的体积，$d_k(b)$ 为缓冲 $b$ 到下一次使用的距离。考虑一族距离主导的 Belady 风格规则：
+\begin{equation}
+  \mathrm{score}_r(b)=d_k(b)g_r(b),
+\end{equation}
+其中 $g_r(b)>0$ 是规则相关的有界扰动，例如 clean/dirty 代价权重。假设所有规则和候选满足 $g_r(b)\in[g_{\min},g_{\max}]$，并记 $\rho=g_{\max}/g_{\min}$。
+
+\paragraph{命题 1。}
+若存在集合 $F_k\subseteq R_k$，满足：（i）$\sum_{b\in F_k}s_b\ge\Delta_k$；（ii）$F_k$ 的任意真子集都不足以释放 $\Delta_k$；（iii）任意 $x\in F_k$ 与 $y\in R_k\setminus F_k$ 都满足
+\begin{equation}
+  d_k(x)>\rho\,d_k(y),
+\end{equation}
+则上述规则都会优先选择同一个 victim 集合 $F_k$，只可能在 $F_k$ 内部有 tie 顺序差异。若该条件在每次溢出决策均成立，则这些规则得到相同的驻留演化和相同的 P2 extra。
+
+\paragraph{证明。}
+对任意规则 $r$、$x\in F_k$、$y\notin F_k$，
+\begin{equation}
+  \frac{\mathrm{score}_r(x)}{\mathrm{score}_r(y)}
+  =
+  \frac{d_k(x)g_r(x)}{d_k(y)g_r(y)}
+  \ge
+  \frac{d_k(x)g_{\min}}{d_k(y)g_{\max}}>1.
+\end{equation}
+因此每个 $F_k$ 中的元素都排在集合外元素之前。贪心选择最高分元素直到释放足够体积时，由充分性和极小性可知它恰好选中 $F_k$。
+
+\paragraph{命题的直觉与适用条件。}
+本文采用的代价加权距离分数为 $d_k(b)s_b/e_b$。由于 $e_b=s_b$ 或 $2s_b$，clean/dirty 权重最多造成 $2\times$ 扰动。因此，当远期候选的下一次使用距离超过近端候选两倍以上时，代价权重不会改变 victim 集合。若候选在大小和 clean/dirty 类别上近似同质，不同 Belady 风格规则也会退化为相同排序。这个命题解释了固定序上 victim rule 往往不敏感，但它不是无条件定理；若短期 clean 缓冲和长期 dirty 缓冲反复交替，规则差异可以累积。正文 \S\ref{sec:exp-mechanism} 的受控实验证实了这一预测：固定序时四种 victim rule 的 extra 差异 $\mathrm{CV}<4\%$，而不同序之间的 extra 摆动可达 $10\times$ 以上。
+
+\subsection{溢出面积代理的条件性}\label{sec:supp-area-proof}
+
+令未归一化溢出面积为
+\begin{equation}
+  A(S)=\sum_t\sum_c (W_c^S(t)-\Capc_c)_+,
+\end{equation}
+归一化代理为
+\begin{equation}
+  \Phi(S)=\sum_t\sum_c \frac{(W_c^S(t)-\Capc_c)_+}{\Capc_c}.
+\end{equation}
+二者都度量“超容量的 memory-time 面积”。P2 extra 则是事件代价：同一次 spill 可让缓冲缺席多个调度位置。因此，$A(S)$ 或 $\Phi(S)$ 与最优 extra 之间不存在无条件常数近似。长寿命小溢出会使面积随时间增长而 extra 只支付一次；反过来，一个只超出 1 单位容量的大缓冲也可能迫使换出整个大块。
+
+正文定理~\ref{thm:area-extra} 在有界缺席时长假设下建立溢出面积 $A(S)$ 与最优 extra 的双边常数关系。以下给出完整证明与反例构造。
+
+\paragraph{定理 2。}
+固定序 $S$。若存在合法 spill 方案 $P$，其每个 spill episode 的缺席长度 $\ell_j$ 满足 $\ell\le \ell_j\le L$，其移除 memory-time 面积
+\begin{equation}
+  R(P)=\sum_j s_j\ell_j
+\end{equation}
+满足 $R(P)\le \lambda A(S)$，并且每单位 spill 代价 $\kappa_j$ 满足 $\kappa_{\min}\le\kappa_j\le\kappa_{\max}$，则固定序最优 extra 满足
+\begin{equation}
+  \frac{\kappa_{\min}}{L}A(S)
+  \le
+  E^\star(S)
+  \le
+  \frac{\kappa_{\max}\lambda}{\ell}A(S).
+\end{equation}
+在本文评测模型中，$\kappa_{\min}=1$、$\kappa_{\max}=2$。
+
+\paragraph{证明要点。}
+任一合法实现必须在每个位置至少移除 $(W_c^S(t)-\Capc_c)_+$ 的体积，故 $A(S)\le R(P)$。又因 $\ell_j\le L$，有 $R(P)\le L\sum_j s_j$；每单位 extra 至少为 $\kappa_{\min}$，得到下界。上界使用假设中的可行方案：由 $\ell_j\ge\ell$ 得 $\sum_j s_j\le R(P)/\ell\le \lambda A(S)/\ell$，再乘以每单位最高代价 $\kappa_{\max}$。
+
+\paragraph{从 $A$ 到 $\Phi$。}
+由于各 cache 容量固定且最小容量为 $256$、最大容量为 $4096$，
+\begin{equation}
+  256\,\Phi(S)\le A(S)\le 4096\,\Phi(S).
+\end{equation}
+因此以 $\Phi$ 给出直接理论保证会额外支付 $16\times$ 的容量跨度因子。本文使用 $\Phi$ 的主要理由不是它经验上显著强于逐 cache 峰值，而是它以 $O(N)$ 代价给出 lifetime-aware、跨 cache 可比较的候选选择信号。正文 \S\ref{sec:exp-mechanism} 报告的经验数据印证了这一定位：在评估集合中，$\Phi$ 与 P2 extra 的全局 Spearman 相关性为 $0.958$，逐 cache 峰值压力为 $0.955$，二者基本持平；定理~\ref{thm:area-extra} 的经验比 $E^\star/A\in[0.56,1.13]$ 落在常数因子带内。这一事实也要求正文采用克制表述：$\Phi$ 的价值在于计算效率与跨阶段一致性，而非显著优于逐 cache 峰值的预测精度。
+
+\subsection{Portfolio 选择的单调性}\label{sec:supp-portfolio-proof}
+
+正文方法节（\S\ref{sec:liveness-shaping}）指出，加入候选序不会使结果退化。以下给出形式化论证。候选 portfolio 的安全性来自一个简单事实。令 $\mathcal P$ 为候选序、victim rule 或预取窗口的有限集合，$J(x)$ 为真实评测键（可以是词典序键）。若输出由 $\arg\min_{x\in\mathcal P}J(x)$ 选择，则加入新候选 $z$ 后
+\begin{equation}
+  \min_{x\in\mathcal P\cup\{z\}}J(x)\le \min_{x\in\mathcal P}J(x).
+\end{equation}
+因此，只要最终选择使用真实 P2/P3 评测键而不是代理分数，扩大候选集合不会使已选结果退化；代理 $\Phi$ 只用于生成和筛选候选，不替代最终目标。

@@ -1,0 +1,8 @@
+\section{结论}\label{sec:conclusion}
+
+本文揭示了 NPU 核内调度中的一个结构性杠杆：clean/dirty 溢出代价的 $2\times$ 非对称，使调度序不仅影响活跃字节峰值，还能主动塑形容量峰值窗口中的驻留构成。当溢出不可避免时，保留更多可廉价换出的 clean 储备，可以显著降低真实溢出流量。围绕这一发现，本文给出了溢出不可避免性证书（Theorem~\ref{thm:spill-inev}）、有条件溢出面积近似定理（Theorem~\ref{thm:area-extra}），并用 Belady-margin 稳定性（Proposition~\ref{prop:belady-margin}）解释了“驱逐策略相对不敏感、调度序高度敏感”的经验现象。
+
+实验从公开 NPU 风格基准 case、合成分布、小图 oracle 和受控消融四个层面支持这一结论。在公开基准 case 上，clean/dirty 无感的标准内存压力调度器比本文方法多付 $2.4\text{--}26\times$ 的 P2 溢出流量（\S\ref{sec:exp-baselines}）。合成分布表明，收益集中在证书所界定的 capacity-bound 区域；在 order-reachable 区域，简单序已经可以避免溢出，本文方法没有系统优势（\S\ref{sec:exp-suite}）。小图 CP-SAT oracle 进一步验证了给定序下的引擎最优性，以及两个理论界的经验常数范围（\S\ref{sec:exp-oracle}）。受控消融则隔离出 clean 与 dirty 储备的 $2\times$ 代价差异，说明收益并非来自样例偶然性（\S\ref{sec:exp-generality}）。
+
+未来工作包括：将溢出代价感知的活跃度塑形推广到多核调度与跨核缓存一致性场景；支持含动态控制流（条件分支、循环）的计算图；以及对更复杂存储层级中跨层溢出级联效应的建模。
+

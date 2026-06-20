@@ -1,0 +1,13 @@
+\section{问题模型}\label{sec:formulation}
+
+本文考虑的 DAG 结构与 cache 层级参数来源于公开 NPU 核内调度基准，该基准模拟编译器生成的核函数级调度问题。输入为一个神经算子的微操作计算图 $\daggraph$，节点分为两类（图~\ref{fig:dag-example}）：执行计算或数据搬运的\textbf{操作节点}，具有执行单元、延迟以及所读写的缓冲集合；以及标记缓冲生命周期起止的\textbf{缓存管理节点}。每个逻辑缓冲 $b$ 有唯一的分配节点 $a_b$ 与释放节点 $f_b$，携带缓冲大小 $s_b$ 与所属 cache 类型 $\tau(b)\in\mathcal{C}$。每种 cache $c\in\mathcal{C}$ 具有抽象容量 $\Capc_c$（具体参数见 \S\ref{sec:experiments}）。一个\textbf{调度} $S=(v_1,\dots,v_m)$ 是所有必需节点的一个拓扑序。
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\linewidth]{\ksFigure{e1_dag_example.pdf}}
+\caption{微操作 DAG 示例。粉色为缓存管理节点（分配/释放），蓝色为操作节点。缓冲 $b_0$ 经外存读入（片外已有备份），属于 clean 缓冲（$\kappa=1$）；缓冲 $b_1$ 由计算产生，属于 dirty 缓冲（$\kappa=2$）。}\label{fig:dag-example}
+\end{figure}
+
+称缓冲 $b$ 为 clean（干净），当且仅当它由某个从外存读入数据的操作节点写入——此时片外存储中存在其备份，溢出换出时无需写回，额外流量仅为重载代价 $e_b=s_b$；否则称 $b$ 为 dirty（脏），换出必须先写后读，额外流量 $e_b=2s_b$。这一非对称结构是本文方法的核心出发点：clean 与 dirty 缓冲在容量模型中占用相同的片上空间，但溢出代价相差 $2\times$。
+
+同一代价模型从三个递进视角度量调度质量：P1（峰值驻留）只评判节点序，最小化逐 cache 峰值；P2（溢出流量）进一步输出物理地址与溢出列表，最小化总额外流量 $E(S)=\sum_{b\in\mathrm{Spills}}e_b$；P3（执行时间）在固定序下按依赖与管线约束求最早完成时间。三者共享上述非对称代价，因此一个能在溢出窗口保留更多 clean 储备的调度序会在三个层面同时获益。

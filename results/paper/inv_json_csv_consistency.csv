@@ -1,0 +1,7 @@
+case,nodes_match,edges_match
+Conv_Case0,True,True
+Conv_Case1,True,True
+FlashAttention_Case0,True,True
+FlashAttention_Case1,True,True
+Matmul_Case0,True,True
+Matmul_Case1,True,True

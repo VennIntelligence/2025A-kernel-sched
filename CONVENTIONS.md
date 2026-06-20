@@ -74,9 +74,72 @@ def solve(instance: ProblemInstance, config: dict) -> Schedule:
     ...
 ```
 
+**Problem 2/3** 还需返回内存分配与 spill 决策，支持两种形式：
+
+```python
+# 形式 A：三元组（推荐）
+def solve(instance: ProblemInstance, config: dict) -> tuple[Schedule, dict[int, int], list[tuple[int, int]]]:
+    schedule = Schedule(...)
+    memory = {buf_id: offset, ...}      # BufId → physical offset
+    spill_entries = [(buf_id, new_offset), ...]  # 有序，可重复 BufId
+    return schedule, memory, spill_entries
+
+# 形式 B：Schedule 上挂属性（memory / memory_layout, spill_entries / spills）
+```
+
 - 算法目录必须包含 `pyproject.toml`（UV workspace member）
 - 算法目录必须包含 `README.md`（说明算法思路）
 - 可选：`tests/` 子目录放算法自测
+
+---
+
+## 📏 Metrics 评测约定
+
+所有算法输出的评分 **必须** 通过 `ks_core.metrics.evaluate()` 统一计算，禁止各算法自行实现指标逻辑。
+
+### 统一入口
+
+```python
+from ks_core.metrics import evaluate
+
+result = evaluate(instance, order, memory=None, spill_entries=None)
+# result.valid      — 是否通过全部合法性校验
+# result.errors     — 违规详情（空列表 = 合法）
+# result.metrics    — 标准指标字典
+# result.violations — len(result.errors)
+```
+
+### Canonical 指标字段（`metrics.json` / `metrics.csv`）
+
+| 字段 | 含义 | P1 | P2 | P3 |
+|------|------|----|----|-----|
+| `max_L1` | L1 峰值驻留 (bytes) | ✓ | ✓ | ✓ |
+| `max_UB` | UB 峰值驻留 | ✓ | ✓ | ✓ |
+| `max_L0A_count` | L0A 峰值并发 buffer 数 | ✓ | ✓ | ✓ |
+| `max_L0B_count` | L0B 峰值并发 buffer 数 | ✓ | ✓ | ✓ |
+| `max_L0C_count` | L0C 峰值并发 buffer 数 | ✓ | ✓ | ✓ |
+| `time` | 流水线总执行 cycles | ✓ | ✓ | ✓ |
+| `spills` | spill 次数 | — | ✓ | ✓ |
+| `extra` | 额外 DDR 流量 (bytes) | — | ✓ | ✓ |
+| `schedule_len` | schedule 节点总数 | ✓ | ✓ | ✓ |
+| `valid` | 合法性（实验输出专用） | ✓ | ✓ | ✓ |
+| `violations` | 违规条数（实验输出专用） | ✓ | ✓ | ✓ |
+
+`Metrics` dataclass（`total_time`, `num_spills`, …）是摘要视图，字段名映射见 `metrics_dict_to_dataclass()`。
+
+### 工具链
+
+```bash
+# 对任意 schedule 文件验算
+uv run python scripts/validate_schedule.py --case Conv_Case0 --problem 2 \
+    --file path/to/schedule.txt --memory path/to/memory.txt --spill path/to/spill.txt
+
+# 金标准回归（18 点 baseline 对照）
+uv run python scripts/eval_baseline.py
+
+# 实验跑完后自动 evaluate；若有 invalid 解则 exit 1
+make run CONFIG=experiments/configs/exp00X.yaml
+```
 
 ---
 
@@ -87,7 +150,7 @@ exp{NNN}_{algorithm}_{variant}
 ```
 
 示例：
-- `exp001_baseline_gpt`
+- `exp001_baseline01`
 - `exp002_greedy_v1`
 - `exp003_ilp_small_cases`
 

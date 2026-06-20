@@ -1,0 +1,58 @@
+\documentclass[UTF8,fontset=none,zihao=5]{ctexart}
+\input{../../common/preamble}
+\input{../../common/macros}
+\input{../../common/metadata}
+
+\usepackage{indentfirst}
+\usepackage{amsthm}
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命题}
+\newtheorem{observation}{观察}
+\theoremstyle{definition}
+\newtheorem{definition}{定义}
+\theoremstyle{remark}
+\newtheorem{remark}{注}
+
+\geometry{a4paper,left=2.05cm,right=2.05cm,top=2.0cm,bottom=2.15cm}
+\pagestyle{plain}
+\renewcommand{\abstractname}{摘要}
+\renewcommand{\refname}{参考文献}
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parindent}{2em}
+\titleformat{\section}{\zihao{4}\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\zihao{-4}\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{0.85em}{0.35em}
+\titlespacing*{\subsection}{0pt}{0.6em}{0.25em}
+\makeatletter
+\setlength{\@fptop}{0pt}
+\makeatother
+
+\begin{document}
+
+\begin{center}
+{\large\bfseries 调度序驱动的驻留构成优化：面向NPU的溢出代价感知方法\par}
+\vspace{0.35em}
+{\small \paperAuthorNamesZhConf\par}
+\vspace{0.2em}
+{\small \paperAuthorEmailsZhConf\par}
+\vspace{0.6em}
+\end{center}
+
+\begin{abstract}
+深度学习编译器在将算子编译为核函数时，会产生由微操作、短生命周期张量和异构流水线组成的有向无环图。由于片上缓存容量有限，不同的合法调度顺序会导致差异巨大的内存峰值和数据溢出流量。本文揭示了现有调度算法常忽略的一个结构性非对称特征：从主存读入且已有备份的“干净”数据在被驱逐时无需写回，而计算产生的“脏”数据则必须写回，两者的溢出代价截然不同。基于此，本文提出一种溢出代价感知的活跃度（Liveness）塑形方法，通过主动调整容量受限时的干净与脏数据驻留比例，优先驱逐低代价数据，从而保留片上缓存储备。理论上，本文给出单侧的溢出必然性证书，用于判定溢出在近最优调度中是否不可避免，并建立了溢出面积与额外访存流量间的有条件常数近似关系。基于公开 NPU 风格调度实例、合成分布、小图 oracle 与受控消融的实验表明，clean/dirty 无感的内存压力调度器在容量受限区域会多付 $2.4\text{--}26\times$ 的 P2 溢出流量。
+\end{abstract}
+
+\noindent\textbf{关键词：} 核内调度；神经网络处理器；DAG 调度；片上驻留优化；溢出代价；编译器优化
+\vspace{0.8em}
+
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/model}
+\input{sections/algorithm}
+\input{sections/experiments}
+\input{sections/conclusion}
+
+\bibliographystyle{plainnat}
+\bibliography{../../common/references}
+
+\end{document}

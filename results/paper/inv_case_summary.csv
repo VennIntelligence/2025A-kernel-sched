@@ -1,0 +1,7 @@
+case,kernel,scale,total_nodes,total_edges,op_nodes,alloc_nodes,unique_buffers,total_buf_size,num_pipes_used,num_mem_types
+Conv_Case0,Conv,small,2580,3869,918,831,831,150807,4,2
+Conv_Case1,Conv,large,36086,85653,12060,12013,12013,570168,4,2
+FlashAttention_Case0,FlashAttention,small,1716,2712,572,572,572,64264,6,5
+FlashAttention_Case1,FlashAttention,large,6952,11184,2296,2328,2328,248976,6,5
+Matmul_Case0,Matmul,small,4160,7104,1728,1216,1216,163840,4,4
+Matmul_Case1,Matmul,large,30976,55040,13056,8960,8960,1179648,4,4

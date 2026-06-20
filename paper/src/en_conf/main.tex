@@ -1,0 +1,53 @@
+\documentclass[sigplan,screen,review,anonymous]{acmart}
+\input{../../common/preamble_acm}
+\input{../../common/macros}
+\input{../../common/metadata}
+
+\settopmatter{printacmref=false,printccs=false,printfolios=true}
+\acmConference[CGO '27]{2027 IEEE/ACM International Symposium on Code Generation and Optimization}{2027}{}
+\acmYear{2027}
+\copyrightyear{2027}
+
+\begin{document}
+
+\title{\paperTitleEn}
+\author{\paperAuthorLineEn}
+
+\begin{abstract}
+Deep-learning compilers lower neural operators into kernel-level DAGs whose
+nodes mix micro-operations, short-lived tensors, and heterogeneous execution
+pipes. Under tight on-chip cache capacity, two legal topological orders can have
+similar peak pressure yet induce very different off-chip spill traffic. This
+paper identifies a structural asymmetry that standard schedulers often miss:
+clean buffers loaded from off-chip memory already have a backing copy and need not be
+written back when evicted, whereas dirty buffers produced by computation must be
+written before they are later reloaded. The two classes consume identical
+on-chip capacity but differ by a factor of two in spill cost. We introduce
+spill-cost-aware liveness shaping, which changes the legal schedule order to
+control the clean/dirty composition exposed inside capacity-pressure windows.
+The method keeps low-cost clean bytes available as eviction reserve and thereby
+reduces the cost of unavoidable spills. We prove a one-sided certificate for
+spill inevitability, give a linear-time overflow-area surrogate with a
+conditional constant-factor connection to optimal spill traffic, and explain why
+schedule order dominates victim-rule tuning under a Belady-margin condition.
+Experiments on public NPU-style scheduling instances, synthetic DAG
+distributions, small-graph oracles, and controlled clean/dirty ablations show
+that clean/dirty-blind pressure schedulers can pay
+$2.4\text{--}26\times$ more spill traffic in capacity-bound regimes.
+\end{abstract}
+
+\keywords{\paperKeywordsEn}
+
+\maketitle
+
+\input{sections/introduction}
+\input{sections/model}
+\input{sections/algorithm}
+\input{sections/experiments}
+\input{sections/related_work}
+\input{sections/conclusion}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{../../common/references}
+
+\end{document}

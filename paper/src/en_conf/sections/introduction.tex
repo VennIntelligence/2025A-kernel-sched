@@ -1,0 +1,71 @@
+\section{Introduction}\label{sec:intro}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{\ksFigure{e0_concept.pdf}}
+\caption{Spill-cost-aware liveness shaping. Two legal schedules can have
+similar capacity pressure while exposing different clean/dirty compositions to
+the eviction process. Keeping clean buffers resident in high-pressure windows
+provides low-cost eviction reserve and reduces off-chip traffic.}
+\Description{Conceptual comparison of two schedules whose overflow windows have
+different clean and dirty residency composition.}
+\label{fig:concept}
+\end{figure}
+
+NPU intra-kernel scheduling maps hundreds to tens of thousands of
+micro-operations from an operator-level computation graph onto a finite on-chip
+cache hierarchy. It sits at the lowest level of the compiler stacks that lower
+neural operators through successive graph- and IR-level optimizations~\citep{chen2018tvm,lattner2021mlir}.
+A schedule must respect data dependencies while managing the
+residency and eviction of intermediate values in scratchpad-like memories. When
+the live working set exceeds capacity, the compiler must temporarily spill some
+buffers to off-chip memory and reload them later. Such spills add data movement
+and can also block execution pipes.
+
+Existing intra-kernel schedulers typically prioritize critical paths, resource
+pressure, or peak live bytes, treating spills as a local consequence of capacity
+shortage. This view misses a structural lever: once capacity
+overflow is unavoidable, different legal topological orders can expose markedly
+different buffer compositions inside the overflow window, and therefore incur
+substantially different eviction costs.
+
+The key distinction is between clean and dirty kernel buffers. A clean buffer is
+read from off-chip memory and already has a backing copy; evicting it requires
+only a later reload. A dirty buffer is produced by computation; if it will be
+used again, eviction requires both a write-back and a reload. Clean and dirty
+buffers consume the same on-chip capacity, yet dirty eviction costs exactly
+$2\times$ as much under the traffic model. A scheduler that only lowers
+the peak, or only changes victims on a fixed order, cannot fully exploit this
+asymmetry. We call the scheduling freedom that controls the clean/dirty
+composition of overflow windows \emph{spill-cost-aware liveness shaping}. Two
+facts behind it are each known on their own: schedule order affects liveness, as
+in instruction scheduling, and clean victims are cheaper to evict, as in register
+allocation and cache replacement. What is new here is treating their interaction
+as a degree of freedom the scheduler can actively shape in a kernel-level DAG. We
+defer a detailed contrast with those lines of work to Section~\ref{sec:related}.
+
+This paper makes three contributions:
+
+\begin{enumerate}[leftmargin=2em]
+  \item We formulate spill-cost-aware liveness shaping for NPU intra-kernel
+  DAGs. The method changes schedule order to control the clean/dirty residency
+  composition in overflow windows, preserving low-cost eviction reserve when
+  capacity is tight.
+
+  \item We give a theoretical characterization of the regime in which this
+  matters. The spill-inevitability certificate in
+  Theorem~\ref{thm:spill-inev} provides a one-sided, linear-time diagnostic for
+  identifying cases where spills cannot be avoided by any near-optimal schedule.
+  The Belady-margin stability result in Proposition~\ref{prop:belady-margin}
+  explains why schedule order, rather than victim-rule tuning, is the main
+  optimization degree of freedom. The overflow-area theorem in
+  Theorem~\ref{thm:area-extra} connects a cheap liveness surrogate to optimal
+  spill traffic within constant factors under bounded absence durations,
+  explaining when the surrogate is expected to track real traffic.
+
+  \item We evaluate the method across public NPU-style benchmark instances,
+  synthetic DAG distributions, small-graph oracles, and controlled ablations.
+  The results show that benefits concentrate exactly in capacity-bound regions
+  and that clean/dirty-blind pressure schedulers can pay
+  $2.4\text{--}26\times$ more spill traffic.
+\end{enumerate}

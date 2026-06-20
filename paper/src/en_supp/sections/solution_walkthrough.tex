@@ -1,0 +1,335 @@
+\section{Method Details and End-to-End Comparison}\label{sec:supp-solution}
+
+Section~\ref{sec:method} of the main text gives the overall structure of
+candidate-order generation and address assignment as algorithmic pseudocode.
+This section expands on three aspects of the design: the rationale for the
+complementary candidate orders (\S\ref{sec:supp-framework}), the end-to-end
+results compared against the external reference solution
+(\S\ref{sec:supp-p1}--\S\ref{sec:supp-headline}), and a diagnostic analysis of
+where the gaps come from (\S\ref{sec:supp-failure}).
+
+\subsection{Candidate-Order Design and the Spill-Separation Principle}\label{sec:supp-framework}
+
+The main text treats schedule order as the primary degree of freedom for
+optimizing spill cost. This strategy requires the candidate-order set to cover
+the different clean/dirty compositions that can arise within peak windows,
+rather than merely chasing the local optimum of a single metric. We first
+explain why the three candidate orders are complementary, and then discuss the
+separation of the prefetch window from spill selection.
+
+\paragraph{Candidate orders.}
+All three candidate orders are structure-agnostic topological orders. They share
+the same memory-aware list scheduling skeleton (frees-first, allocations-delayed)
+and differ only in how they rank the ready set.
+
+\begin{enumerate}
+  \item The pressure-aware order (\ksName{p1}) is the memory-aware list
+  scheduling order used by Algorithm~\ref{alg:assign-spill} of the main text,
+  applying a memory-aware priority within each ready set. \ksOp{alloc} nodes are
+  ranked by successor indegree / successor readiness: a lower indegree means the
+  consumer becomes ready sooner, so the allocation is deferred until close to its
+  use, pushing the allocation timing to the point least sensitive to the peak.
+  This order is the direct output of P1 and is also one candidate for P2/P3.
+  \item The capacity-throttled order (\ksName{capfit-id}) retains the
+  memory-aware free/operation priority within each ready set, but ranks
+  \ksOp{alloc} nodes by minimum node identifier instead, and overlays capacity
+  gating on top of this base order: if an \ksOp{alloc} would push its cache over
+  capacity, the allocation is held back; when all ready allocations are blocked
+  and no further deferral is possible, the one that unblocks subsequent work the
+  fastest is forced through (with weights normalized by $1/\Capc_c$). The role of
+  this order is to directly bound the peak height, at the cost of sacrificing
+  some of the continuous residency of buffers.
+  \item The ID-reserve order (\ksName{id-raw}) always takes the minimum identifier
+  within the free, operation, and allocation ready sets, with neither a
+  memory-aware priority nor capacity gating. Its purpose is to preserve the
+  original residency order of clean \ksOp{copy-in} buffers, making these clean
+  buffers more likely to stay resident through the compute window and thereby
+  leaving a clean reserve in high-pressure windows that can be evicted at half
+  price. This effect cannot be reliably produced by the first two orders, since
+  both of their ranking strategies disturb the original order of the input
+  buffers.
+\end{enumerate}
+
+The complementarity of the three orders manifests as distinct paths for shaping
+the clean/dirty composition: the capacity-throttled order (\ksName{capfit-id})
+lowers the total peak through capacity gating, the pressure-aware order
+(\ksName{p1}) shortens active intervals through delayed allocation, and the
+ID-reserve order (\ksName{id-raw}) maintains a clean reserve through order
+preservation. As noted in Section~\ref{sec:liveness-shaping} of the main text,
+candidate-set expansion is monotone: adding a new candidate can only improve or
+preserve the selected objective.
+
+\paragraph{Address assignment and cost-aware eviction.}
+Given a topological order, best-fit address assignment is performed along the
+order. When capacity is insufficient, the victim is chosen by a cost-weighted
+Belady score:
+\begin{equation}\label{eq:supp-victim}
+\mathrm{victim}=\arg\max_b d(b)\frac{s_b}{e_b}
+=\arg\max_b
+\begin{cases}
+d(b), & b\ \text{clean},\\
+d(b)/2, & b\ \text{dirty},
+\end{cases}
+\end{equation}
+where $d(b)$ is the next-use distance of buffer $b$. The effective distance of a
+dirty buffer is halved, so the engine prefers to evict the cheaper clean
+buffers: a dirty buffer is evicted ahead of a clean buffer of the same size only
+when its future use is far enough away. Proposition~\ref{prop:belady-margin} of
+the main text shows that under distance-dominant conditions this scoring rule
+selects the same eviction set as other cost-weighted variants, so the marginal
+benefit of the eviction policy is far smaller than that of schedule order.
+
+\paragraph{Separating the prefetch window from spill selection.}
+The selection of the spill set and the placement of reloads are two separable
+degrees of freedom. The former determines the total $\extra$; the latter affects
+whether reloads can overlap with computation, and hence the P3 time. Coupling
+the two would let time optimization contaminate the traffic objective without
+constraint. The method's design choice is to keep them apart. The prefetch
+window $H$ controls only the advancement of \ksOp{spill-in}: if an evicted buffer
+will be used within $\le H$ steps and the cache has free space, it is reloaded
+early, but no extra eviction is triggered to enable the prefetch. P2 uses the
+tight grid $H\in\{0,5,40\}$ to minimize traffic; P3 uses the wider grid
+$H\in\{0,5,40,80,120\}$ to minimize time.
+
+\paragraph{Selection mechanism.}
+A full simulation is run over each point of the Cartesian product of the 3
+candidate orders and the prefetch windows: P2 selects by the lexicographic key
+$(\extra,\#\mathrm{spills},T)$, and P3 by $(T,\extra,\#\mathrm{spills})$. The
+final output is the minimal item over the candidate set.
+
+\begin{algorithm}[htbp]
+\caption{Unified solver framework for P1/P2/P3}\label{alg:supp-portfolio}
+\begin{algorithmic}[1]
+\Require DAG $G=(V,E)$, problem type $p\in\{1,2,3\}$
+\Ensure schedule; for P2/P3 also output address assignment $\mathit{mem}$ and spill list $\mathit{spill}$
+\If{$p=1$}
+  \State \Return $\mathrm{MemoryAwareOrder}(G)$
+\EndIf
+\State $\mathcal{H}\gets\{0,5,40\}$ \textbf{if} $p=2$ \textbf{else} $\{0,5,40,80,120\}$
+\State $\mathit{best}\gets\bot$
+\For{$\sigma\in\{\ksName{capfit-id},\ksName{p1},\ksName{id-raw}\}$}
+  \For{$H\in\mathcal{H}$}
+    \State $(\pi,\mathit{mem},\mathit{spill})\gets \mathrm{AssignAndSpill}(G,\sigma,H)$
+    \State $E\gets\sum_{(b,\cdot)\in\mathit{spill}} e_b$;\quad $T\gets \mathrm{SimTime}(\pi,\mathit{mem},\mathit{spill})$
+    \State $k\gets(E,|\mathit{spill}|,T)$ \textbf{if} $p=2$ \textbf{else} $(T,E,|\mathit{spill}|)$
+    \State $\mathit{best}\gets\min\bigl(\mathit{best},(k,\pi,\mathit{mem},\mathit{spill})\bigr)$
+  \EndFor
+\EndFor
+\State \Return $\mathit{best}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{P1: Peak Residency and Objective Misalignment}\label{sec:supp-p1}
+
+P1 is judged on per-cache peak residency; its result directly answers ``whether
+a given DAG can lower its peak under some legal order.'' However, a P1-optimal
+order does not automatically translate into a P2/P3 optimum, which is precisely
+the objective misalignment phenomenon emphasized in the main text.
+
+The end-to-end results show that our order lowers the L1 peak below the external
+reference solution on all six instances: Conv\_Case0 drops from $7488$ to
+$6912$, and Conv\_Case1 from $14040$ to $13786$; the reductions are even larger
+on the FlashAttention and Matmul instances, where the P1 peaks fall to
+$256/256/128/128$. But a low P1 peak is not equivalent to a low spill cost. Take
+FlashAttention\_Case1 as an example: the P1 order drives the UB peak to $33010$,
+far exceeding $\Capc_{\mathrm{UB}}=1024$. The order that lowers the L1 peak
+instead causes a more severe capacity overrun on UB. This case directly explains
+why the method must move from the single-peak P1 metric to the spill-traffic
+metric of P2: in a multi-cache system, it is the cross-cache distribution of
+peaks that determines the true spill cost.
+
+\subsection{P2: Schedule Order Shapes the Clean/Dirty Composition}\label{sec:supp-p2}
+
+The core objective of P2 is to minimize the total spill traffic $\extra$. Unlike
+swapping only the eviction policy on a fixed order, our approach uses schedule
+order to change the composition of clean and dirty buffers in high-pressure
+windows, so that when capacity is exceeded the evictor can free space at a cost
+of $s_b$ (clean) rather than $2s_b$ (dirty).
+
+Relative to the external reference solution, P2 wins three and loses three of the
+six instances. The wins reveal the effectiveness of the shaping mechanism: in
+Conv\_Case1 ($73240\to72520$), our order keeps more clean buffers in the
+high-pressure window; Matmul\_Case0 ($34944\to34688$) behaves likewise; and on
+Matmul\_Case1 both the $\extra$ and the spill count are level with the reference
+solution ($460800$, $3600$), but the third key, time, is better. The three
+losing instances point to the flip side of the same mechanism: in the critical
+high-pressure window, the reference order happens to retain more suitable clean
+buffers. For instance, in Conv\_Case0 the reference solution's $\extra$ is
+$73500$, below our $88044$; the gap does not come from a difference in the
+eviction rule (Proposition~\ref{prop:belady-margin} shows that different
+eviction variants on a fixed order differ very little in extra traffic), but
+rather from the reference order keeping more clean buffers resident when spilling
+occurs---exactly the shaping effect of schedule order on the residency
+composition.
+
+The wins and losses together corroborate the central thesis of the main text:
+the primary determinant of spill cost is how the order shapes the clean/dirty
+composition, not the eviction rule itself.
+
+\subsection{P3: Prefetch Window and Compute Overlap}\label{sec:supp-p3}
+
+P3 takes pipelined execution time as its primary objective. A nonzero prefetch
+window advances some \ksOp{spill-in} operations ahead of their immediate use
+points, allowing reloads to overlap with computation or other pipeline transfers
+and reducing the wait-blocking of consumer nodes. Because prefetching occurs only
+when idle intervals exist and triggers no extra eviction, it mainly adjusts the
+timing of reload placement rather than redefining the spill set.
+
+The end-to-end results are four wins and two losses. Our method achieves shorter
+times on the two FlashAttention and two Matmul instances: FlashAttention\_Case1
+drops from $193059$ to $180364$, and Matmul\_Case0 from $194331$ to $186820$.
+Our times lag on the two Conv instances, and Conv\_Case1 is especially
+diagnostic: our $\extra$ is lower ($73578<86690$), yet the reference solution's
+time is shorter ($1073322<1111778$). This counterexample shows that lower traffic
+does not automatically translate into shorter time: the degree of overlap between
+reloads and computation is an independent dimension. When the reference order's
+reloads happen to be scheduled into idle gaps in the compute pipeline, the
+blocking time can be shorter even when the total traffic is higher. This
+observation further supports the method's design decision to separate spill
+selection from reload placement.
+
+\subsection{End-to-End Reference Comparison}\label{sec:supp-headline}
+
+Table~\ref{tab:supp-headline} summarizes the end-to-end results of the six public
+instances on P1/P2/P3, for a combined 13/18 wins. The comparison protocol here
+differs from that of the main text's primary experiments: Section~\ref{sec:exp-baselines}
+of the main text uses the ``same-engine reorder'' protocol, in which all methods
+share the same address assignment / spill engine and only the schedule order is
+swapped, so as to isolate the shaping effect of order on the clean/dirty
+composition. The end-to-end comparison, by contrast, uses each system's own
+complete schedule, address assignment, and spill list, reflecting the final
+output quality of two complete systems. The two protocols answer different
+questions, and the end-to-end data serve as an overall reference for system
+performance.
+
+\begin{table}[H]
+\centering
+\caption{End-to-end comparison of our method against the external reference solution baseline01 (each cell is ours/reference).}
+\label{tab:supp-headline}
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llrrrrc@{}}
+\toprule
+Case & P & \(\max_{\mathrm{L1}}\) & spills & \(\extra\) & \(T\) & Result \\
+\midrule
+Conv\_Case0   & P1 & 6912/7488   & 0/0       & 0/0           & 394430/359570   & Win \\
+              & P2 & 6912/7488   & 339/141   & 88044/73500   & 615694/535312   & Loss \\
+              & P3 & 6912/7488   & 342/141   & 92652/73500   & 553280/535312   & Loss \\
+\addlinespace
+Conv\_Case1   & P1 & 13786/14040 & 0/0       & 0/0           & 650044/573395   & Win \\
+              & P2 & 14040/14040 & 1963/1828 & 72520/73240   & 1159169/1150333 & Win \\
+              & P3 & 14040/14040 & 1951/1290 & 73578/86690   & 1111778/1073322 & Loss \\
+\addlinespace
+FA\_Case0     & P1 & 256/3328    & 0/0       & 0/0           & 31063/31429     & Win \\
+              & P2 & 3328/3328   & 31/41     & 3904/3692     & 51700/53374     & Loss \\
+              & P3 & 4096/3328   & 58/24     & 5832/4128     & 46167/46761     & Win \\
+\addlinespace
+FA\_Case1     & P1 & 256/5376    & 0/0       & 0/0           & 112458/113445   & Win \\
+              & P2 & 5376/5376   & 229/146   & 32920/32840   & 214361/193059   & Loss \\
+              & P3 & 5376/5376   & 229/146   & 34432/32840   & 180364/193059   & Win \\
+\addlinespace
+Matmul\_Case0 & P1 & 128/9216    & 0/0       & 0/0           & 82308/82773     & Win \\
+              & P2 & 9216/9216   & 271/273   & 34688/34944   & 192380/194331   & Win \\
+              & P3 & 9216/9216   & 273/273   & 34944/34944   & 186820/194331   & Win \\
+\addlinespace
+Matmul\_Case1 & P1 & 128/34816   & 0/0       & 0/0           & 629076/583525   & Win \\
+              & P2 & 34816/34816 & 3600/3600 & 460800/460800 & 1783145/1800218 & Win \\
+              & P3 & 34816/34816 & 3601/3600 & 460928/460800 & 1771132/1800218 & Win \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{Analysis of Where the Gaps Come From}\label{sec:supp-failure}
+
+The core finding across the five losing entries is consistent: the reference
+solution's advantage on these instances does not weaken the main text's thesis
+but instead corroborates the same mechanism from the opposite direction, namely
+that the gap comes mainly from how schedule order shapes the clean/dirty
+residency composition, not from a difference in the eviction policy on a fixed
+order.
+
+Two kinds of diagnostics cross-validate this judgment. First, when the reference
+solution's order is fed into our address assignment / spill engine, the traffic
+of several losing entries can be closely reproduced, showing that the gap comes
+from the composition of evictable buffers in the high-pressure window rather than
+from a difference in the engine implementation. Second, swapping among four
+Belady-style victim policies on a fixed order produces only small differences in
+P2 $\extra$ (Section~\ref{sec:exp-mechanism} of the main text reports
+CV $\le 4\%$); by contrast, $\extra$ can differ by an order of magnitude across
+different legal orders.
+
+We keep these losing entries rather than fitting them with operator-family
+specialization rules, because such fitting would break the method's
+structure-agnostic property: the algorithm uses only the DAG dependencies, buffer
+sizes, cache types, clean/dirty attributes, and capacity information, and
+contains no ranking rules tailored to operator categories. Once specialization is
+introduced, the conclusion would degrade from ``schedule order shapes the
+clean/dirty composition to lower spill cost'' to ``a dedicated ordering for a
+specific operator structure,'' weakening the generality of the method.
+
+\subsection{Runtime Efficiency}\label{sec:supp-runtime}
+
+Table~\ref{tab:supp-runtime} gives the complete statistics over 3 repetitions
+(median, min, max), supplementing the median data of Table~\ref{tab:runtime} in
+the main text.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Wall-clock runtime (seconds, 3 repetitions).}\label{tab:supp-runtime}
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llrrrr@{}}
+\toprule
+Instance & P & Median & Min & Max & Nodes \\
+\midrule
+Conv\_Case0 & P1 & 0.009 & 0.009 & 0.010 & 2\,580 \\
+            & P2 & 0.391 & 0.390 & 0.392 & \\
+            & P3 & 0.683 & 0.677 & 0.706 & \\
+\addlinespace
+Conv\_Case1 & P1 & 0.189 & 0.186 & 0.190 & 36\,086 \\
+            & P2 & 57.97 & 57.46 & 58.62 & \\
+            & P3 & 73.14 & 73.10 & 73.28 & \\
+\addlinespace
+FA\_Case0   & P1 & 0.006 & 0.006 & 0.007 & 1\,716 \\
+            & P2 & 0.220 & 0.218 & 0.222 & \\
+            & P3 & 0.328 & 0.326 & 0.328 & \\
+\addlinespace
+FA\_Case1   & P1 & 0.027 & 0.026 & 0.030 & 6\,952 \\
+            & P2 & 2.723 & 2.723 & 2.757 & \\
+            & P3 & 3.356 & 3.316 & 3.367 & \\
+\addlinespace
+Matmul\_Case0 & P1 & 0.014 & 0.014 & 0.016 & 4\,160 \\
+              & P2 & 0.701 & 0.695 & 0.703 & \\
+              & P3 & 1.137 & 1.136 & 1.170 & \\
+\addlinespace
+Matmul\_Case1 & P1 & 0.126 & 0.111 & 0.126 & 30\,976 \\
+              & P2 & 19.40 & 19.33 & 19.46 & \\
+              & P3 & 32.33 & 32.19 & 32.34 & \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\paragraph{Dominant factors in runtime.}
+P1 generates only a single schedule order, and all instances complete in under
+$0.2$ seconds. The runtime of P2/P3 is dominated by two factors: (1) the grid
+size of candidate orders $\times$ prefetch windows (P2 evaluates $3\times3=9$
+combinations, P3 evaluates $3\times5=15$ combinations); and (2) the quadratic
+worst-case cost of Belady eviction selection in address assignment. Conv\_Case1
+and Matmul\_Case1 have 12\,013 and 8\,960 buffers respectively, and the eviction
+scan constitutes the bulk of their runtime. The min/max values over the three
+repetitions tightly bracket the median (coefficient of variation $<2\%$),
+indicating that the timing results are stable.
+
+\paragraph{Time complexity.}
+Let $N=|V|$ be the number of nodes, $E=|E|$ the number of edges, $B$ the number
+of buffers, $K=3$ the number of candidate orders, and $W$ the size of the
+prefetch-window grid. The complexity of each stage is as follows:
+\begin{itemize}
+  \item \textbf{Candidate-order generation}: $O(K(N\log N+E))$, a heap-maintained
+  ready-set topological sort.
+  \item \textbf{Address assignment and spill insertion}: $O(N+E+B^2)$ per
+  $(\text{order},\text{window})$ combination. The sweep along the order is linear,
+  and the worst-case cost of Belady eviction is $B$ allocations each scanning
+  $O(B)$ resident buffers.
+  \item \textbf{Pipeline simulation}: $O(N+E)$ per combination.
+  \item \textbf{Portfolio selection}: enumeration of $O(KW)$ combinations.
+\end{itemize}
+The total is $O(KW(N\log N+E+B^2))$. Since $K$ and $W$ are small constants, the
+dominant asymptotic term is $O(N\log N+E+B^2)$. The space complexity is
+$O(N+E+B)$.

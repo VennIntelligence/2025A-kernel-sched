@@ -1,0 +1,70 @@
+\documentclass[11pt]{article}
+\input{../../common/preamble}
+\input{../../common/macros}
+\input{../../common/metadata}
+
+\usepackage{float}
+\geometry{letterpaper,left=0.95in,right=0.95in,top=0.9in,bottom=0.95in}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\paperShortTitleEn}
+\fancyhead[R]{\small Supplementary Material}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.25pt}
+\captionsetup{font=small,labelfont=bf}
+
+% --- Float placement: let large figures share pages with text and pack any
+% float-only page flush to the top, avoiding sparse one/two-figure pages. ---
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.70}
+\makeatletter
+\setlength{\@fptop}{0pt}            % float-only pages: figures flush to top
+\setlength{\@fpsep}{12pt plus 1fil} % all slack collects between/after floats
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+
+% Inline-notation macros, mirroring zh_supp.
+\newcommand{\ksOp}[1]{\textsf{\MakeUppercase{#1}}}
+\newcommand{\ksField}[1]{\textsf{#1}}
+\newcommand{\ksName}[1]{\textit{#1}}
+\newcommand{\ksFile}[1]{\textsf{#1}}
+
+% xr-hyper: read the en_conf .aux so theorem/equation/section numbers stay in
+% sync with the conference paper across documents.
+\externaldocument{../../build/en_conf/en_conf}
+
+% All hyperlinks (incl. cross-document theorem refs) in black. Mirrors zh_supp.
+\hypersetup{linkcolor=black,filecolor=black}
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries Supplementary Material for\\\paperTitleEn\par}
+\vspace{0.55em}
+{\normalsize \paperAuthorLineEnAnon\par}
+\end{center}
+\vspace{0.4em}
+
+% Table of contents to subsection level, body-size font. Mirrors zh_supp.
+\setcounter{tocdepth}{2}
+\tableofcontents
+\vspace{0.6em}
+
+% --- S-prefix for supplementary figure/table numbering ---
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+\setcounter{figure}{0}
+\setcounter{table}{0}
+
+\input{sections/overview}
+\input{sections/problem_statement}
+\input{sections/formal_reasoning}
+\input{sections/solution_walkthrough}
+\input{sections/cgo_evidence}
+
+\end{document}

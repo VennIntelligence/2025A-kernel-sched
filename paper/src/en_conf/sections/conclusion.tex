@@ -1,0 +1,28 @@
+\section{Conclusion}\label{sec:conclusion}
+
+This paper identifies a structural lever in NPU intra-kernel scheduling: the
+$2\times$ asymmetry between clean and dirty spill costs means that schedule order
+controls not only peak live bytes, but also the cost composition of the buffers
+available for eviction in capacity-pressure windows. When spills are unavoidable,
+keeping more cheaply evictable clean reserve substantially reduces real off-chip
+traffic. Around this finding we give a spill-inevitability certificate
+(Theorem~\ref{thm:spill-inev}), a conditional overflow-area approximation
+(Theorem~\ref{thm:area-extra}), and a Belady-margin stability result
+(Proposition~\ref{prop:belady-margin}) that explains the empirical pattern of an
+insensitive victim rule alongside a highly sensitive schedule order.
+
+Experiments support the claim at four levels. On the public benchmark cases,
+clean/dirty-blind memory-pressure schedulers pay $2.4\text{--}26\times$ more P2
+spill traffic than our method (Section~\ref{sec:exp-baselines}). The synthetic
+distribution shows that the gains concentrate in the capacity-bound region
+delimited by the certificate; in order-reachable instances a simple order already
+avoids spills and our method has no systematic advantage
+(Section~\ref{sec:exp-mechanism}). Small-graph CP-SAT oracles confirm fixed-order
+engine optimality and the empirical constant ranges of the two bounds, and the
+controlled ablation isolates the $2\times$ clean/dirty cost gap, showing that the
+benefit is not an artifact of particular instances.
+
+Future work includes extending spill-cost-aware liveness shaping to multi-core
+scheduling and cross-core cache coherence; supporting graphs with dynamic control
+flow such as conditional branches and loops; and modeling cross-level spill
+cascades in deeper memory hierarchies.

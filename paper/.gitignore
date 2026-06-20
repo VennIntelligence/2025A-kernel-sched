@@ -1,0 +1,35 @@
+# LaTeX build artifacts
+build/
+dist/
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lot
+*.lof
+*.nav
+*.snm
+*.vrb
+*.run.xml
+*.bcf
+*-blx.bib
+*.pdf
+
+# Keep manually curated PDF figures if added later.
+!assets/figures/*.pdf
+
+# Built paper PDFs are published artifacts
+!dist/
+!dist/*.pdf
+
+# macOS
+.DS_Store
+
+# 编辑器
+*.swp
+*~

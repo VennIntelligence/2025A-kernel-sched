@@ -1,0 +1,9 @@
+inst_id,n_nodes,bound_cache,capacity,W_star_bound,ratio_Wstar,ours_real_extra,ours_order_extra_caponly,lb_T1,A_ours,ratio_E_over_A,Estar_joint,joint_status,gap_real_vs_joint,gap_real_vs_fixed
+oracle_000,17,L0C,512,704,1.375,352,352,192,624,0.56410256,,SKIPPED,,1
+oracle_001,17,UB,1024,1408,1.375,1408,1408,384,1248,1.1282051,,SKIPPED,,1
+oracle_002,17,L0C,512,704,1.375,704,704,192,624,1.1282051,,SKIPPED,,1
+oracle_003,17,UB,1024,1408,1.375,704,704,384,1248,0.56410256,,SKIPPED,,1
+oracle_004,17,L0C,512,704,1.375,352,352,192,624,0.56410256,,SKIPPED,,1
+oracle_005,17,UB,1024,1408,1.375,1408,1408,384,1248,1.1282051,,SKIPPED,,1
+oracle_006,17,L0C,512,704,1.375,704,704,192,624,1.1282051,,SKIPPED,,1
+oracle_007,17,UB,1024,1408,1.375,704,704,384,1248,0.56410256,,SKIPPED,,1

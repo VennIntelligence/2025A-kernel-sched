@@ -1,0 +1,4 @@
+problem,optimization_target,output_files,metric_formula,direction
+Problem 1,Minimize peak resident cache demand for a valid topological schedule,<task>_schedule.txt,max prefix V_stay over ALLOC/FREE size deltas,minimize maxV_stay
+Problem 2,Assign cache offsets and spills under capacity constraints,"<task>_schedule.txt, <task>_memory.txt, <task>_spill.txt",sum spill cost: Size or 2*Size depending on COPY_IN usage,minimize extra DDR traffic
+Problem 3,Reduce pipelined execution time with spill and reuse dependencies,"<task>_schedule.txt, <task>_memory.txt, <task>_spill.txt","T = max E(v) under DAG, same-pipe, spill, and reuse constraints",minimize total time

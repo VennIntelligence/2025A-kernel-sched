@@ -1,0 +1,20 @@
+\usepackage{iftex}
+\ifXeTeX
+\else
+  \PackageError{kernel-scheduling}{Use XeLaTeX to build this paper suite}{Run bash paper/build.sh <target>.}
+\fi
+
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{tabularx}
+
+\graphicspath{{../../assets/figures/}}
+\setlength{\parindent}{1em}
+\setlength{\parskip}{0pt}
+\emergencystretch=2em
+\frenchspacing
+\urlstyle{same}
+
+\definecolor{ksBlue}{HTML}{1F4E79}
+\definecolor{ksGray}{HTML}{555555}

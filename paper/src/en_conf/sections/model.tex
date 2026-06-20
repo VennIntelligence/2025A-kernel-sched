@@ -1,0 +1,47 @@
+\section{Problem Model}\label{sec:formulation}
+
+We study DAGs and cache parameters from a public NPU intra-kernel scheduling
+benchmark that models compiler-generated kernel schedules. The input is a
+micro-operation graph $\daggraph$ for a neural operator. Its nodes have two
+types, illustrated in
+Figure~\ref{fig:dag-example}: \emph{operation nodes}, which execute computation
+or data movement and carry execution units, latencies, and read/write buffer
+sets; and \emph{cache-management nodes}, which mark the beginning and end of
+buffer lifetimes. Each logical buffer $b$ has a unique allocation node $a_b$ and
+free node $f_b$, a size $s_b$, and a cache type
+$\tau(b)\in\mathcal{C}$. Each cache $c\in\mathcal{C}$ has an abstract capacity
+$\Capc_c$; the concrete values are given in Section~\ref{sec:experiments}. A
+\emph{schedule} $S=(v_1,\ldots,v_N)$ is a topological order of all required
+nodes.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{\ksFigure{e1_dag_example.pdf}}
+\caption{A micro-operation DAG. Pink nodes are cache-management events
+(allocation/free); blue nodes are operations. Buffer $b_0$ is loaded from
+off-chip memory and already has a backing copy, so it is \emph{clean}
+($\kappa=1$). Buffer $b_1$ is produced by computation, so it is \emph{dirty}
+($\kappa=2$).}
+\Description{Example kernel DAG with operation nodes, allocation/free nodes,
+and two buffers labeled clean and dirty.}
+\label{fig:dag-example}
+\end{figure}
+
+A buffer $b$ is \emph{clean} if it is written by an operation that reads data
+from off-chip memory; in this case, off-chip storage already contains a backing
+copy, so eviction needs no write-back and contributes only a reload cost
+$e_b=s_b$. Otherwise $b$ is \emph{dirty}: evicting it requires a write-back and a
+later reload, for extra traffic $e_b=2s_b$. The two classes occupy identical
+on-chip space yet differ by $2\times$ in spill cost---the core asymmetry our
+method exploits.
+
+We evaluate schedule quality through three nested views. \textbf{P1} considers
+only node order and minimizes per-cache peak live residency. \textbf{P2} adds
+physical address assignment and spill insertion, minimizing total extra traffic
+\[
+  E(S)=\sum_{b\in\mathrm{Spills}} e_b.
+\]
+\textbf{P3} simulates the earliest completion time under dependencies and pipe
+constraints for a fixed order. All three views share the same asymmetric
+clean/dirty traffic model. Therefore, an order that keeps more clean reserve in
+overflow windows can improve residency, traffic, and timing behavior at once.

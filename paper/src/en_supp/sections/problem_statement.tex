@@ -1,0 +1,120 @@
+\section{Problem Definition Supplement}\label{sec:supp-problem}
+
+The main text (\S\ref{sec:formulation}) establishes the P1/P2/P3 evaluation framework through a condensed set of definitions. This section supplies the full formal conventions needed to reproduce our experiments, including the DAG fields, the detailed formulas for the evaluation metrics, and the precise parameters of the spill mechanism.
+
+\subsection{DAG and Buffer Lifetimes}\label{sec:supp-input}
+
+The main text gives only an outline of the two node categories; here we spell out the complete field definitions. The input is a directed acyclic graph $\daggraph$. Its nodes fall into two classes:
+
+\begin{enumerate}
+  \item Operation nodes carry $(\ksField{Id},\ksField{Op},\ksField{Pipe},\ksField{Cycles},\ksField{Bufs})$ and represent a compute or data-movement instruction on some hardware pipeline; \ksField{Bufs} lists the logical buffers that the instruction reads and writes.
+  \item Cache-management nodes carry $(\ksField{Id},\ksField{Op},\ksField{BufId},\ksField{Size},\ksField{Type})$, where $\mathrm{Op}\in\{\ksOp{alloc},\ksOp{free}\}$. Every logical buffer $b$ has a unique allocation node $a_b$, a unique free node $f_b$, a size $s_b$, and a cache type $\tau(b)$.
+\end{enumerate}
+
+Edges encode execution dependencies that must be satisfied. Ignoring the cache-management nodes, a typical sample graph enters through \ksOp{copy-in}, proceeds through on-chip computation or data movement, and finally writes back off-chip via \ksOp{copy-out}; our algorithm, however, does not rely on any specific operator family or motif name. A schedule $S=(v_1,\ldots,v_N)$ is a topological order covering all required nodes.
+
+\subsection{Three Evaluation Views}\label{sec:supp-objective}
+
+The main text condenses P1/P2/P3 into a single paragraph; here we expand their mathematical definitions. The three subproblems add constraints incrementally on the same graph. Let the residency increment that node $v$ contributes be
+\begin{equation}\label{eq:supp-mv}
+  M_{v}=
+  \begin{cases}
+    +\,s_b, & v=a_b\ (\ksOp{alloc}),\\
+    -\,s_b, & v=f_b\ (\ksOp{free}),\\
+    0, & \text{otherwise}.
+  \end{cases}
+\end{equation}
+
+\paragraph{\mdseries P1: peak residency.}
+P1 judges only the node order and requires neither physical addresses nor a spill list. Define the prefix sums
+\begin{equation}\label{eq:supp-vstay}
+  V_{\mathrm{stay}}(0)=0,\qquad
+  V_{\mathrm{stay}}(i)=V_{\mathrm{stay}}(i-1)+M_{v_i},\qquad
+  V_{\mathrm{stay}}^{\max}=\max_{0\le i\le N}V_{\mathrm{stay}}(i).
+\end{equation}
+The primary objective is to minimize $\max V_{\mathrm{stay}}$. We also report the per-cache peaks, which help explain the mismatch between the P1 order and P2/P3.
+
+\paragraph{\mdseries P2: extra DDR traffic.}
+Under the capacity constraint, P2 produces physical addresses and a spill list, with the objective of minimizing the extra data movement induced by spilling:
+\begin{equation}\label{eq:supp-extra}
+  \extra(S)=\sum_{b\in \mathrm{Spilled}(S)} e_b,\qquad
+  e_b=\kappa_b s_b,\qquad
+  \kappa_b=
+  \begin{cases}
+  1, & b\ \text{is clean},\\
+  2, & b\ \text{is dirty}.
+  \end{cases}
+\end{equation}
+
+\paragraph{\mdseries P3: pipeline execution time.}
+After inserting the spill nodes and the address-reuse dependencies, P3 computes the makespan under a multi-pipeline earliest-issue model. Writing $\sigma(v)$ for the start time, $\epsilon(v)$ for the finish time, and $E'$ for the augmented dependency set:
+\begin{equation}\label{eq:supp-time}
+  \sigma(v)\ge 0,\quad
+  \sigma(v)\ge \epsilon(u)\ \ \forall (u,v)\in E',\quad
+  \epsilon(v)=\sigma(v)+\mathrm{Cycles}(v),\quad
+  T=\max_v \epsilon(v).
+\end{equation}
+Cache-management nodes have cycle count $0$; nodes on the same \ksField{Pipe} execute serially in schedule order, and no reordering within a pipeline is permitted.
+
+\paragraph{Lexicographic keys.}
+We compare schedules using the same lexicographic keys as the main text: P1 uses $\bigl(\max\livec_{\mathrm{L1}},\max\livec_{\mathrm{UB}},\mathrm{L0\ count},T\bigr)$; P2 uses $\bigl(\extra,\#\mathrm{spills},T\bigr)$; and P3 uses $\bigl(T,\extra,\#\mathrm{spills}\bigr)$. The benchmark definition provides no single scalar that merges runtime with extra traffic, so for P3 we adopt this lexicographic ordering explicitly as the tie-breaking criterion.
+
+\subsection{Capacity, Address, and Spill Rules}\label{sec:supp-constraints}
+
+The main text briefly states the asymmetric cost of clean/dirty buffers; here we give the full rules for address assignment and the spill mechanism. In P2/P3, a buffer $b$ occupies a contiguous interval $[o_b,o_b+s_b)$ at offset $o_b$ within a single cache. At any instant, the intervals of co-resident buffers belonging to the same cache must not overlap, and they must satisfy $0\le o_b$ and $o_b+s_b\le \Capc_{\tau(b)}$. The capacity parameters are given in Table~\ref{tab:supp-cap}.
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware cache types and capacities (abstract units).}\label{tab:supp-cap}
+\begin{tabular}{lccccc}
+\toprule
+Cache type & L1 & UB & L0A & L0B & L0C \\
+\midrule
+Capacity $\Capc$ & 4096 & 1024 & 256 & 256 & 512 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+We call a buffer $b$ clean if and only if it appears in the \ksField{Bufs} of some \ksOp{copy-in} node; in that case an off-chip backing copy already exists, so eviction needs no write-back. All other buffers are dirty. The corresponding spill-cycle model is
+\begin{equation}\label{eq:supp-spillcycle}
+  \mathrm{Cycles}(\mathrm{SPILL\_IN}_b)=2s_b+150,\qquad
+  \mathrm{Cycles}(\mathrm{SPILL\_OUT}_b)=
+  \begin{cases}
+    0, & b\ \text{is clean},\\
+    2s_b+150, & b\ \text{is dirty}.
+  \end{cases}
+\end{equation}
+
+If the original graph has $N$ nodes, the $k$-th spill generates a pair of implicit nodes:
+\begin{equation}\label{eq:supp-spillid}
+  \mathrm{Id}(\mathrm{SPILL\_OUT}_k)=N+2(k-1),\qquad
+  \mathrm{Id}(\mathrm{SPILL\_IN}_k)=N+2(k-1)+1.
+\end{equation}
+The \ksOp{spill-out} uses MTE3 and the \ksOp{spill-in} uses MTE2. The basic dependency chain for the target buffer $b$ is
+\begin{equation}
+  a_b\to \mathrm{SPILL\_OUT}\to \mathrm{SPILL\_IN}\to f_b.
+\end{equation}
+Every operation node that has already used $b$ must precede the \ksOp{spill-out}, and every operation node that has not yet used $b$ must follow the \ksOp{spill-in}. The physical address may change at the \ksOp{spill-in}, so feasibility is checked over residency segments rather than over the logical lifetime $a_b\to f_b$ alone.
+
+Address reuse introduces an additional dependency: if buffer $b$ reuses the physical interval of an earlier buffer $a$, the edge $f_a\to a_b$ is added before timing. This dependency leaves the spill traffic unchanged but may alter the P3 makespan.
+
+\subsection{Benchmark Data Description}\label{sec:supp-data}
+
+The sizes of the six public NPU intra-kernel scheduling instances used in this work are listed in Table~\ref{tab:supp-cases}. All experiments start from the DAG structure and use no rules specialized to Conv, FlashAttention, or Matmul.
+
+\begin{table}[htbp]
+\centering
+\caption{Sizes of the public NPU intra-kernel scheduling instances.}\label{tab:supp-cases}
+\begin{tabular}{lrrrr}
+\toprule
+Task & Nodes & Edges & Buffers & Op.\ nodes \\
+\midrule
+Matmul\_Case0         &  4160 &  7104 &  1216 &  1728 \\
+Matmul\_Case1         & 30976 & 55040 &  8960 & 13056 \\
+FlashAttention\_Case0 &  1716 &  2712 &   572 &   572 \\
+FlashAttention\_Case1 &  6952 & 11184 &  2328 &  2296 \\
+Conv\_Case0           &  2580 &  3869 &   831 &   918 \\
+Conv\_Case1           & 36086 & 85653 & 12013 & 12060 \\
+\bottomrule
+\end{tabular}
+\end{table}

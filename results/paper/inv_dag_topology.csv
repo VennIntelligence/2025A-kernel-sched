@@ -1,0 +1,7 @@
+case,is_dag,weak_components,root_nodes,roots_all_alloc,leaf_nodes,leaves_all_free,topological_generations
+Conv_Case0,True,1,831,True,831,True,60
+Conv_Case1,True,1,12013,True,12013,True,148
+FlashAttention_Case0,True,1,572,True,572,True,22
+FlashAttention_Case1,True,1,2328,True,2328,True,30
+Matmul_Case0,True,1,1216,True,1216,True,13
+Matmul_Case1,True,1,8960,True,8960,True,21

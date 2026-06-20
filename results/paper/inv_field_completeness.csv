@@ -1,0 +1,7 @@
+case,op_nodes,op_nodes_with_pipe,op_nodes_with_cycles,op_nodes_with_bufs,cache_nodes,cache_nodes_with_bufid,cache_nodes_with_size,cache_nodes_with_type
+Conv_Case0,918,918,918,918,1662,1662,1662,1662
+Conv_Case1,12060,12060,12060,12060,24026,24026,24026,24026
+FlashAttention_Case0,572,572,572,572,1144,1144,1144,1144
+FlashAttention_Case1,2296,2296,2296,2296,4656,4656,4656,4656
+Matmul_Case0,1728,1728,1728,1728,2432,2432,2432,2432
+Matmul_Case1,13056,13056,13056,13056,17920,17920,17920,17920

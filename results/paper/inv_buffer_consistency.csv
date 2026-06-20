@@ -1,0 +1,7 @@
+case,buffers,bad_alloc_counts,bad_free_counts,op_refs_without_alloc,passed
+Conv_Case0,831,0,0,0,True
+Conv_Case1,12013,0,0,0,True
+FlashAttention_Case0,572,0,0,0,True
+FlashAttention_Case1,2328,0,0,0,True
+Matmul_Case0,1216,0,0,0,True
+Matmul_Case1,8960,0,0,0,True

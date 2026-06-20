@@ -1,225 +1,140 @@
-# 🧠 Kernel Scheduling — AutoResearch
+# Spill-Cost-Aware Liveness Shaping for NPU Intra-Kernel Scheduling
 
-> 2025A 通用神经网络处理器下的核内调度问题  
-> Multi-algorithm, multi-round optimization research framework
+> Change the *schedule order* — not the victim rule — to control the clean/dirty
+> composition of overflow windows, keeping cheap eviction reserve available when
+> on-chip cache capacity is tight.
+
+**Authors:** Chengzhi Gao · Jun Huang · Qin Ye
+**Affiliation:** Southeast University · Venn Intelligence
+**Venue:** CGO '27 submission (compiler optimization)
+
+> Note: the conference paper PDFs (`paper/dist/*_conf.pdf`) are intentionally
+> de-identified for double-blind review. The author info above comes from the
+> repo's non-blind web sources and is used here for the (non-blind) README.
 
 ---
 
-## Quick Start
+![Concept: spill-cost-aware liveness shaping](web/public/figures/concept.png)
+
+*Two legal schedules can have similar capacity pressure yet expose very
+different clean/dirty compositions to eviction. Keeping clean buffers resident in
+high-pressure windows provides low-cost eviction reserve and cuts off-chip traffic.*
+
+## Overview
+
+Deep-learning compilers lower neural operators into kernel-level DAGs whose nodes
+mix micro-operations, short-lived tensors, and heterogeneous execution pipes.
+Under tight on-chip cache capacity, two legal topological orders can have similar
+peak pressure yet induce very different off-chip **spill traffic**. This work
+identifies a structural asymmetry standard schedulers often miss: **clean**
+buffers (loaded from off-chip, already backed) need no write-back when evicted,
+whereas **dirty** buffers (produced by computation) must be written back before
+reload. The two consume identical on-chip capacity but differ by **2×** in spill
+cost. We exploit this with *spill-cost-aware liveness shaping*: pick a legal
+schedule order that keeps cheap clean bytes resident as eviction reserve inside
+capacity-pressure windows.
+
+## Method
+
+![Method overview pipeline](web/public/figures/pipeline.png)
+
+A three-stage pipeline:
+
+1. **Spill diagnosis** — decide whether spills are unavoidable for the given DAG
+   and capacity. If so, the goal shifts from *eliminating* spills to *lowering
+   their cost*, and overflow area Φ becomes a cheap cross-stage surrogate.
+2. **Candidate orders & assignment** — generate three complementary topological
+   orders (pressure-aware, capacity-throttled, ID-reserve) and run best-fit
+   placement with cost-aware spill insertion along each.
+3. **Selection** — pick the best candidate by the true lexicographic key:
+   `(E, n, T)` for P2 spill traffic, `(T, E, n)` for P3 runtime. Adding a
+   candidate can only improve or tie the chosen objective.
+
+The core claim is that **schedule order, not the victim rule, is the dominant
+degree of freedom**: on a fixed order, four Belady-style victim variants differ
+by ≤4% in extra traffic, while legal orders can swing it by more than 10×. Three
+theory results (spill-inevitability certificate, conditional overflow-area
+approximation, Belady-margin stability) delimit exactly the regime where the
+method pays off.
+
+## Key results
+
+- **2.4–26×** more P2 spill traffic paid by clean/dirty-blind pressure schedulers
+  in capacity-bound regimes (median ~11×); pure critical-path orders are 8–54×
+  away.
+- Across **all 6 cases × 3 views × 4 comparators (72 combinations)**, our order
+  is lower or equal in **every** one (same shared best-fit + spill engine).
+- **Exactly 2×** clean-vs-dirty gap in a controlled GEMM ablation: clean reserve
+  1,536 vs dirty reserve 3,072 units of extra traffic, with structure, peak, and
+  spill count held fixed.
+- Φ is a cheap, reliable surrogate: **Spearman(Φ, extra) = 0.958**, nearly
+  identical to Spearman(peak, extra) = 0.955.
+- Applicability tracks the theory: in certificate-flagged capacity-bound regions,
+  100% win vs critical-path/random and 77.8% vs the strong free-first companion;
+  in order-reachable instances the systematic advantage disappears.
+- Runtime: P1 under 0.2 s on every instance; P2/P3 grow with size, reaching
+  ~73 s for P3 on the largest (≈36k-node) case.
+
+Evidence spans **four levels**: public NPU benchmarks, synthetic DAG
+distributions, small-graph CP-SAT oracles, and controlled ablations.
+
+| ![Standard scheduler comparison](paper/assets/figures/e12_baselines.png) | ![Applicability across synthetic regimes](paper/assets/figures/e15_applicability.png) |
+| :---: | :---: |
+| P2 spill traffic vs standard schedulers (log scale, shared engine) | Win rate & median traffic ratio across synthetic regimes |
+
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| [`src/ks_core/`](src/ks_core/) | Core library: `solver`, `plotting`, `data_utils`, `graph`, `io`, `metrics`, `evaluator`, `constants` |
+| [`algorithms/ours/`](algorithms/ours/) | Promoted method — re-exports `ks_core.solver.solve` (final candidate) |
+| [`algorithms/baseline/`](algorithms/baseline/) | Reference baseline solver |
+| [`autoresearch/`](autoresearch/) | AutoResearch *process* state: iterations, `ledger.csv`, `best_iter.txt` (process, not method) |
+| [`experiments/`](experiments/) | YAML-config-driven runner (`run_experiment.py`) + `configs/` |
+| [`scripts/paper/`](scripts/paper/) | Paper experiment scripts → regenerate `results/paper/*.csv` (SSOT); `sync_paper_artifacts.py` |
+| [`notebooks/`](notebooks/) | Three read-only notebooks (data/problem, paper figures, results report) |
+| [`results/paper/`](results/paper/) | Single source of truth: result CSVs + `PAPER_NUMBERS.yml` (regeneratable) |
+| [`paper/`](paper/) | LaTeX sources (`src/<target>/`), build (`build.sh`) → `dist/*.pdf`, assets |
+| [`web/`](web/) | Single-scroll academic research page (Vite/React) |
+| [`data/`](data/) | Benchmark input instances |
+| [`docs/`](docs/) | [`RUNNING.md`](docs/RUNNING.md), `problem.md`, `research_summary.md`, standards |
+| [`tests/`](tests/) | Unit tests |
+
+## Getting started
+
+See **[docs/RUNNING.md](docs/RUNNING.md)** for the full, copy-pasteable pipeline.
+The repo is a `uv` workspace; run everything from the repo root. The essentials:
 
 ```bash
-# 1. Install uv (if not installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+make setup            # uv sync --all-extras  (Python 3.12, ks-core editable)
+make test             # uv run pytest -v
 
-# 2. Clone & setup
-cd kernel_scheduling
-make setup          # or: uv sync --all-extras
+# Run the canonical baseline experiment
+uv run python experiments/run_experiment.py experiments/configs/exp001_baseline01.yaml
 
-# 3. Run an experiment
-make run CONFIG=experiments/configs/exp001_baseline_gpt.yaml
-
-# 4. Validate results
-make validate
-
-# 5. Compare experiments
-make compare
-
-# 6. Launch notebooks
-make notebook
+# Regenerate paper data (SSOT CSVs), then sync LaTeX/figure artifacts.
+# (the full loop over scripts/paper/*.py is in docs/RUNNING.md, stage 2)
+uv run python scripts/paper/sync_paper_artifacts.py
 ```
 
----
+## Paper
 
-## 📁 Project Structure
+Built PDFs live in [`paper/dist/`](paper/dist/) — four targets, English/Chinese ×
+conference/supplement (Chinese is authoritative; the conference instances are
+double-blind):
 
+- [`en_conf.pdf`](paper/dist/en_conf.pdf) · [`en_supp.pdf`](paper/dist/en_supp.pdf)
+- [`zh_conf.pdf`](paper/dist/zh_conf.pdf) · [`zh_supp.pdf`](paper/dist/zh_supp.pdf)
+
+Build with `bash paper/build.sh all` (requires `latexmk` + `xelatex`).
+
+## Citation
+
+```bibtex
+@inproceedings{gao2027liveness,
+  title     = {Spill-Cost-Aware Liveness Shaping for NPU Intra-Kernel Scheduling},
+  author    = {Gao, Chengzhi and Huang, Jun and Ye, Qin},
+  booktitle = {Proc. 2027 IEEE/ACM Int. Symp. on Code Generation and Optimization (CGO)},
+  year      = {2027}
+}
 ```
-kernel_scheduling/
-├── data/                   Raw & processed data
-│   ├── raw/json/           Original JSON (DAG nodes + edges)
-│   └── raw/csv/            Original CSV format
-├── docs/                   Problem statement & references
-├── src/ks_core/            Shared core library
-├── algorithms/             Algorithm implementations
-│   └── baseline_gpt/      GPT first-round baseline
-├── experiments/            Experiment configs & runner
-├── results/                Experiment outputs
-├── notebooks/              Visualization & analysis
-├── paper/                  Paper source files
-├── scripts/                Utility scripts
-├── conventions/            Team conventions & style guides
-└── output/                 Final submission artifacts
-```
-
-→ Full structure details: see [CONVENTIONS.md](CONVENTIONS.md)
-
----
-
-## 📖 Key Documents
-
-| Document | Description |
-|----------|-------------|
-| [CONVENTIONS.md](CONVENTIONS.md) | 团队协作约定（目录、接口、命名、Git、绘图） |
-| [docs/problem.md](docs/problem.md) | 赛题描述（Markdown 权威版本） |
-| [algorithms/baseline_gpt/README.md](algorithms/baseline_gpt/README.md) | Baseline 算法说明 & benchmark 数据 |
-
----
-
-## 🧪 How to Add a New Algorithm
-
-```bash
-# 1. Create algorithm directory
-mkdir -p algorithms/my_algo
-
-# 2. Create required files
-cat > algorithms/my_algo/pyproject.toml << 'EOF'
-[project]
-name = "ks-my-algo"
-version = "0.1.0"
-requires-python = ">=3.12"
-dependencies = ["ks-core"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-EOF
-
-# 3. Implement solve.py with the standard interface
-cat > algorithms/my_algo/solve.py << 'EOF'
-from ks_core.types import ProblemInstance, Schedule
-
-def solve(instance: ProblemInstance, config: dict) -> Schedule:
-    # Your algorithm here
-    order = [n.id for n in instance.nodes]  # placeholder
-    return Schedule(
-        case_name=instance.case_name,
-        problem_id=instance.problem_id,
-        algorithm="my_algo",
-        order=order,
-    )
-EOF
-
-# 4. Sync dependencies
-uv sync
-
-# 5. Create experiment config
-cp experiments/configs/exp001_baseline_gpt.yaml \
-   experiments/configs/exp002_my_algo.yaml
-# Edit the config to use your algorithm name
-
-# 6. Run
-make run CONFIG=experiments/configs/exp002_my_algo.yaml
-```
-
----
-
-## 🔬 How to Run Experiments
-
-### Single experiment
-
-```bash
-uv run python experiments/run_experiment.py experiments/configs/exp001_baseline_gpt.yaml
-```
-
-### Experiment config format
-
-```yaml
-experiment:
-  name: "exp002_greedy_v1"
-  author: "alice"
-  description: "Greedy with topological sort"
-
-algorithm:
-  name: "greedy_v1"
-  params:
-    eviction_policy: "belady_cost"
-
-cases: [Conv_Case0, Conv_Case1, ...]
-problems: [1, 2, 3]
-
-output:
-  dir: "results/exp002_greedy_v1"
-  save_schedules: true
-```
-
-### Compare all results
-
-```bash
-make compare
-# or
-uv run python scripts/compare_results.py
-```
-
----
-
-## 📊 Notebooks
-
-| Notebook | Purpose |
-|----------|---------|
-| `01_data_exploration.ipynb` | 数据结构探索、DAG 统计 |
-| `02_dag_visualization.ipynb` | DAG 拓扑可视化 |
-| `03_schedule_gantt.ipynb` | 调度甘特图（pipeline 时间线） |
-| `04_benchmark_comparison.ipynb` | 跨算法 benchmark 对比 |
-
-```bash
-make notebook   # Launch Jupyter Lab
-```
-
----
-
-## 📝 Paper
-
-Paper source files are in [`paper/`](paper/). Build with:
-
-```bash
-cd paper && ./build.sh
-```
-
-Figures are auto-exported from notebooks to `paper/figures/`.
-
----
-
-## 🔧 Available Commands
-
-```bash
-make help       # Show all commands
-make setup      # First-time setup
-make sync       # Sync dependencies
-make lint       # Run linter
-make test       # Run tests
-make run        # Run experiment (CONFIG=...)
-make validate   # Validate schedules
-make compare    # Compare results
-make notebook   # Launch Jupyter
-make clean      # Clean generated files
-```
-
----
-
-## 📐 Conventions
-
-See [CONVENTIONS.md](CONVENTIONS.md) for full team conventions, including:
-- Algorithm interface contract
-- Experiment naming scheme
-- Git commit format
-- Plotting standards
-
-Additional style guides in [`conventions/`](conventions/):
-- CVPR figure standards *(to be added)*
-- LaTeX style guide *(to be added)*
-
----
-
-## 🗂️ Data Overview
-
-6 cases across 3 kernel types:
-
-| Kernel | Case 0 (Nodes) | Case 1 (Nodes) |
-|--------|----------------|----------------|
-| Conv | 2,580 | 36,086 |
-| FlashAttention | 1,716 | 6,952 |
-| Matmul | 4,160 | 30,976 |
-
-3 problem variants:
-- **P1**: Instruction scheduling (minimize total time, no spill)
-- **P2**: Scheduling + memory management (allow spill/reload)
-- **P3**: Optimized scheduling + memory (minimize combined cost)

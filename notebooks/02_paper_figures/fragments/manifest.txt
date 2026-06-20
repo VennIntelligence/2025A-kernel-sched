@@ -1,0 +1,16 @@
+01_setup.py
+02_e1_headline.py
+03_e2_victim_sensitivity.py
+04_e3_order_sensitivity.py
+05_e4_clean_dirty_composition.py
+06_e5_peak_residency.py
+07_e6_surrogate.py
+08_e7_misalignment.py
+09_e8_decoupling.py
+10_e9_working_set.py
+11_e10_portfolio.py
+12_e11_synth_generality.py
+13_e12_baselines.py
+14_e13_synth_suite.py
+15_e14_oracle.py
+16_e15_applicability.py

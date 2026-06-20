@@ -1,0 +1,13 @@
+case,order_kind,max_L1,max_UB,max_L0A_count,max_L0B_count,max_L0C_count,worst_over_ratio
+Conv_Case0,p1,6912,0,0,300,0,1.6875
+Conv_Case0,phi_best,9360,0,0,6,0,2.28515625
+Conv_Case1,p1,13786,0,0,5264,0,20.5625
+Conv_Case1,phi_best,14040,0,0,1,0,3.427734375
+FlashAttention_Case0,p1,256,8258,24,32,4,8.064453125
+FlashAttention_Case0,phi_best,3328,1428,1,1,2,1.39453125
+FlashAttention_Case1,p1,256,33010,112,128,8,32.236328125
+FlashAttention_Case1,phi_best,5376,2468,2,2,2,2.41015625
+Matmul_Case0,p1,128,0,57,448,8,1.75
+Matmul_Case0,phi_best,9216,0,2,2,2,2.25
+Matmul_Case1,p1,128,0,241,3840,16,15.0
+Matmul_Case1,phi_best,34816,0,2,2,2,8.5

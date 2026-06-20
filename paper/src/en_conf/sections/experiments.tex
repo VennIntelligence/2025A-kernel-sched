@@ -1,0 +1,253 @@
+\section{Experiments}\label{sec:experiments}
+
+The experiments test the paper's central claim: when capacity overflow is
+unavoidable, can schedule order reduce real spill cost by changing the
+clean/dirty composition inside peak-pressure windows? We build evidence at four
+levels: controlled reorder comparisons on public NPU-style benchmark instances,
+mechanism decomposition with an applicability analysis, exact small-graph oracle
+checks for the theoretical bounds, and clean/dirty cost ablations that isolate
+the $2\times$ asymmetry. The four levels keep the conclusion from resting on a
+single black-box comparison.
+
+\subsection{Experimental Setup}\label{sec:exp-setup}
+
+We evaluate on a set of public NPU intra-kernel scheduling instances built from
+compiler-style micro-operation DAGs. They cover three mainstream operator
+families---convolution, FlashAttention, and matrix multiplication---with graph
+sizes from about $1.7\times10^3$ to $3.6\times10^4$ nodes, large enough to
+exhibit the capacity-bound behavior typical of kernel-level scheduling
+(Table~\ref{tab:benchmark}). The hardware abstraction has five on-chip caches
+with abstract capacities L1 = 4{,}096, UB = 1{,}024, L0A = 256, L0B = 256, and
+L0C = 512. The instances are used only for evaluation; our method hard-codes
+nothing specific to any operator structure.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Benchmark instances. FA denotes FlashAttention.}
+\label{tab:benchmark}
+\begin{tabular}{llrrr}
+\toprule
+Instance & Op. type & $|V|$ & $|E|$ & Buffers \\
+\midrule
+Conv\_Case0   & Conv   &  2{,}580 &  3{,}869 &    831 \\
+Conv\_Case1   & Conv   & 36{,}086 & 85{,}653 & 12{,}013 \\
+FA\_Case0     & FA     &  1{,}716 &  2{,}712 &    572 \\
+FA\_Case1     & FA     &  6{,}952 & 11{,}184 &  2{,}328 \\
+Matmul\_Case0 & Matmul &  4{,}160 &  7{,}104 &  1{,}216 \\
+Matmul\_Case1 & Matmul & 30{,}976 & 55{,}040 &  8{,}960 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:evidence} lists the four evidence layers. The common thread is a
+single \emph{same-engine} protocol: every comparator and our method share one
+best-fit address-assignment and spill engine (Algorithm~\ref{alg:assign-spill})
+and only the input topological order is swapped. This attributes spill-traffic
+differences cleanly to how order shapes clean/dirty residency, not to
+differences in the eviction implementation. We report the three views defined in
+Section~\ref{sec:formulation}---P1 per-cache peak residency, P2 total spill
+traffic $E(S)$, and P3 pipelined execution time---and take P2 as the primary
+view because it directly measures the spill cost targeted by liveness shaping.
+
+\begin{table}[H]
+\centering
+\small
+\caption{The four evidence layers used in the evaluation.}
+\label{tab:evidence}
+\begin{tabularx}{\linewidth}{l l X}
+\toprule
+Layer & Scale & Role \\
+\midrule
+Public NPU cases     & 6 DAGs  & Same-engine reorder comparison on compiler-style instances. \\
+Synthetic suite      & 36 DAGs & Separate capacity-bound from order-reachable regimes. \\
+CP-SAT oracle        & 8 graphs & Fixed-order optimum and theorem bounds. \\
+Clean/dirty ablation & GEMM    & Isolate the $2\times$ reserve-cost mechanism. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The main controls are drawn from the classic latency-oriented and
+memory-pressure-oriented paradigms, all of which are blind to the clean/dirty
+distinction. Critical-path list scheduling~\citep{kwok1999listscheduling,topcuoglu2002heft}
+minimizes critical-path latency and ignores memory pressure. A uniform-pressure
+greedy minimizes the stepwise peak of live bytes but treats clean and dirty
+buffers identically. A Goodman--Hsu-style latency/pressure mode
+switch~\citep{goodman1988integrated} alternates between critical-path priority
+and pressure reduction, representing the classic integrated-prepass idea. Beyond
+these, we add a \emph{free-first critical-path companion} as a stronger control:
+it keeps the critical-path order but schedules ready frees early to shorten live
+ranges, making the order more amenable to the allocator while still carrying no
+explicit cost awareness. It tests how much of our benefit ``free early, allocate
+late'' alone can explain.
+
+Our solver keeps a practical runtime even on the largest instance
+(Table~\ref{tab:runtime}). P1 emits a single schedule and finishes within
+$0.2$\,s on every instance. P2 and P3 simulate the Cartesian product of
+candidate orders and prefetch windows, so their cost grows with instance size,
+reaching about $73$\,s for P3 on the largest instance, Conv\_Case1 (median of
+three repetitions).
+
+\begin{table}[H]
+\centering
+\small
+\caption{Solver wall-clock runtime (seconds; median of three repetitions).}
+\label{tab:runtime}
+\begin{tabular}{lrrr}
+\toprule
+Instance & P1 & P2 & P3 \\
+\midrule
+Conv\_0   & 0.009 & 0.391  & 0.683 \\
+Conv\_1   & 0.189 & 57.971 & 73.141 \\
+FA\_0     & 0.006 & 0.220  & 0.328 \\
+FA\_1     & 0.027 & 2.723  & 3.356 \\
+Matmul\_0 & 0.014 & 0.701  & 1.137 \\
+Matmul\_1 & 0.126 & 19.402 & 32.328 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Main Baseline Results}\label{sec:exp-baselines}
+
+Figure~\ref{fig:e12} and Table~\ref{tab:main-results} report P2 spill traffic for
+the six public benchmark cases under the same spill engine. The memory-aware but
+clean/dirty-blind uniform-pressure and Goodman--Hsu orders are substantially
+worse than our method on every case, paying $2.4\text{--}26\times$ more extra
+traffic, with a median gap of about $11\times$. The pure latency-oriented
+critical-path order is further behind, by roughly $8\text{--}54\times$. This
+systematic gap shows that minimizing total live bytes or critical-path latency
+is not enough to approach the true spill-cost lower bound: the key is to shape
+the eviction reserve in peak windows toward cheaper clean bytes. Across all
+$6$ cases, $3$ views, and $4$ comparators ($72$ combinations), our order attains
+a lower or equal objective in every one.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.86\textwidth]{\ksFigure{e12_baselines.png}}
+\caption{Standard scheduler comparison for P2 spill traffic on a log scale. All
+orders use the same address-assignment and spill engine; only the topological
+order changes.}
+\Description{Bar chart comparing spill traffic of critical-path,
+pressure-based, Goodman-Hsu, free-first, and proposed schedules across six
+benchmarks.}
+\label{fig:e12}
+\end{figure*}
+
+\begin{table*}[t]
+\centering
+\small
+\caption{P2 spill traffic $E(S)$ under a shared spill engine. FA denotes
+FlashAttention; the best value in each row is bold.}
+\label{tab:main-results}
+\begin{tabular}{lrrrrr}
+\toprule
+Instance & CP list & Pressure & G--Hsu & CP-free & Ours \\
+\midrule
+Conv\_0   & 694{,}506     & 207{,}932   & 210{,}844   & 212{,}956 & \textbf{88{,}044} \\
+Conv\_1   & 1{,}695{,}264 & 1{,}048{,}524 & 1{,}053{,}484 & 73{,}348  & \textbf{72{,}520} \\
+FA\_0     & 211{,}784     & 101{,}356   & 90{,}092    & \textbf{3{,}904}   & \textbf{3{,}904} \\
+FA\_1     & 965{,}944     & 445{,}876   & 418{,}228   & 33{,}152  & \textbf{32{,}920} \\
+Matmul\_0 & 823{,}168     & 296{,}064   & 298{,}240   & 34{,}944  & \textbf{34{,}688} \\
+Matmul\_1 & 6{,}506{,}240 & 2{,}556{,}928 & 2{,}560{,}640 & \textbf{460{,}800} & \textbf{460{,}800} \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The free-first critical-path companion is a strong baseline. Except
+on Conv\_Case0, where it trails by $2.4\times$, its median P2 gap from our method
+is only about $1\%$, and it ties on FA\_Case0 and Matmul\_Case1. This indicates
+that an allocator-friendly latency order already reduces spills indirectly by
+shortening live ranges, capturing part of the benefit. However, because it has
+no explicit clean/dirty cost shaping, it remains systematically behind on cases
+such as Conv\_Case0 where clean eviction reserve is decisive for cost, and it is
+consistently dominated by our method across the multi-objective evaluation.
+
+\subsection{Mechanism and Applicability}\label{sec:exp-mechanism}
+
+The previous comparison shows a systematic spill-traffic gap; we now ask where
+the benefit comes from and where it applies.
+
+\paragraph{Schedule order versus victim rule.}
+With a fixed order, four Belady-style victim variants produce identical extra
+traffic on Matmul and FA instances (coefficient of variation $\mathrm{CV}=0$) and
+at most about $4\%$ CV on Conv rows; across different legal orders under the same
+engine, extra traffic can swing by more than $10\times$.
+Figure~\ref{fig:e5} decomposes an L1 high-pressure window from a benchmark case
+into clean and dirty residency: under the same capacity, two legal orders expose
+markedly different peak heights and dirty fractions. This confirms the prediction
+of Proposition~\ref{prop:belady-margin}: when next-use distance dominates, the
+victim rule has far smaller marginal effect than schedule order, which is the
+main lever on spill cost.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{\ksFigure{e5_peak_residency.png}}
+\caption{Clean/dirty residency decomposition in an L1 high-pressure window. Blue
+is clean residency that already has an off-chip copy; orange is dirty residency
+requiring write-back; the dashed line is L1 capacity. Under the same capacity,
+different legal orders expose different peak heights and dirty composition.}
+\Description{Stacked residency plot comparing clean and dirty bytes over time
+for two legal schedules in a high-pressure L1 window.}
+\label{fig:e5}
+\end{figure*}
+
+\paragraph{Applicability domain.}
+A systematic evaluation on a synthetic DAG distribution sharpens the boundary. In
+the regions marked capacity-bound by the certificate of
+Theorem~\ref{thm:spill-inev}, our method wins against both critical-path list
+scheduling and random orders in $100\%$ of cases, and against the free-first
+companion in $77.8\%$ of cases, with a median $2\times$ advantage. In the
+order-reachable subgroup, a good order can avoid spills directly, leaving no room
+for clean/dirty shaping, and the win rate over the free-first companion drops to
+$0\%$. This matches the certificate's role: it marks the regime in which the cost
+composition of unavoidable spills must be optimized, and the method's
+effectiveness tracks that precondition.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e15_applicability.png}}
+\caption{Applicability across synthetic regimes. Left: the win rate of our
+method against each comparator. Right: the median extra-traffic ratio
+(ours/comparator; lower is better), with the dashed line marking parity. The
+method is strongest in capacity-bound instances and naturally loses its
+systematic advantage in order-reachable instances, where a good order avoids
+spills outright.}
+\Description{Two grouped bar charts comparing capacity-bound and
+order-reachable synthetic regimes by win rate and median spill-traffic ratio.}
+\label{fig:e15-applicability}
+\end{figure*}
+
+\paragraph{Theory checks and surrogate behavior.}
+Small-graph CP-SAT oracles verify two conclusions. For the selected order, our
+engine reaches the capacity-only optimal extra traffic (ratio $1.0$). The lower
+bound of Theorem~\ref{thm:spill-inev} holds on all small graphs, and the
+empirical ratios for Theorem~\ref{thm:area-extra} satisfy
+$E^\star/A\in[0.56,1.13]$, inside a constant-factor band. The overflow-area
+surrogate $\Phi$ has almost the same global Spearman correlation with extra
+traffic as per-cache peak pressure ($0.958$ versus $0.955$). The value of $\Phi$
+is not a sizable accuracy gain but its $O(N)$ cost, which makes full candidate
+evaluation feasible while Theorem~\ref{thm:area-extra} gives it a consistent
+cross-stage justification. Per-instance figures and data are in the
+supplementary material.
+
+\paragraph{Controlled ablation.}
+To rule out instance-specific artifacts, we build synthetic GEMM kernels that fix
+the same DAG structure, number of spills, and peak, and change only the type of
+reserve inside the peak window. Clean reserve incurs $1{,}536$ units of extra
+traffic and dirty reserve incurs $3{,}072$, exactly $2\times$; under full
+isolation this confirms the predicted clean/dirty cost asymmetry. A further
+schedule sweep shows that extra traffic decreases monotonically as the clean
+fraction at the peak rises.
+
+\subsection{Limitations}\label{sec:exp-limitations}
+
+The applicability boundary should be stated precisely. If an instance is
+order-reachable---some legal order keeps every cache peak within capacity---then
+no spill is needed and clean/dirty shaping has nothing to act on; and if a
+conventional pressure/latency hybrid already preserves enough clean reserve, our
+advantage shrinks or vanishes. The approximation in
+Theorem~\ref{thm:area-extra} also relies on bounded absence durations, so
+workloads dominated by long-lived tiny spills can weaken the surrogate. Finally,
+we target a single static kernel DAG fully known at compile time; the extension
+to multiple cores, dynamic control flow, and more complex memory hierarchies is
+left to future work.

@@ -1,0 +1,6 @@
+cache,capacity
+L1,4096
+UB,1024
+L0A,256
+L0B,256
+L0C,512

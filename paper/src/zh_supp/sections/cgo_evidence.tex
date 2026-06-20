@@ -1,0 +1,189 @@
+\section{附加实验证据}\label{sec:supp-cgo}
+
+正文实验节只保留了最能支撑主线的图表。本节补充更细粒度的证据，并按论证角色组织：同引擎换序对照与敏感性分析用于隔离"调度序"这一自由度；合成分布用于说明方法适用域；CP-SAT oracle 用于核验理论下界与给定序最优性；代理目标、工作集和预取窗口实验用于解释算法设计；clean/dirty 消融用于隔离 $2\times$ 代价梯度。
+
+\subsection{调度序的作用}\label{sec:supp-e12}
+
+正文 \S\ref{sec:exp-mechanism} 的受控对照表明固定序时驱逐规则差异不超过 $4\%$，但不同序的 extra 可摆动一个数量级。本节用三组互补的实验量化这一发现：同引擎换序对照、驱逐策略敏感性分析、以及跨序摆动可视化。
+
+表~\ref{tab:supp-e12} 给出六个公开实例在 P2 视角下的受控对照。所有方法共享同一地址分配与 spill 引擎，仅替换输入拓扑序。因此，extra 的差异可归因于调度序改变了高压窗口内的驻留构成，而不是归因于不同分配器或不同 victim policy。
+
+\begin{table}[htbp]
+\centering\small
+\caption{受控对照：P2 溢出流量（同一地址/spill 引擎，仅替换调度序）。}
+\label{tab:supp-e12}
+\begin{tabular*}{0.88\linewidth}{@{\extracolsep{\fill}}lrrrrr@{}}
+\toprule
+Case & CP-list & CP-free & pressure & G--Hsu & ours \\
+\midrule
+Conv\_Case0    & 694{,}506     & 212{,}956 & 207{,}932     & 210{,}844     & 88{,}044 \\
+Conv\_Case1    & 1{,}695{,}264 & 73{,}348  & 1{,}048{,}524 & 1{,}053{,}484 & 72{,}520 \\
+FA\_Case0      & 211{,}784     & 3{,}904   & 101{,}356     & 90{,}092      & 3{,}904 \\
+FA\_Case1      & 965{,}944     & 33{,}152  & 445{,}876     & 418{,}228     & 32{,}920 \\
+Matmul\_Case0  & 823{,}168     & 34{,}944  & 296{,}064     & 298{,}240     & 34{,}688 \\
+Matmul\_Case1  & 6{,}506{,}240 & 460{,}800 & 2{,}556{,}928 & 2{,}560{,}640 & 460{,}800 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+clean/dirty 无感的内存压力调度器（uniform pressure 与 Goodman--Hsu）在全部真实 case 上均显著高于本文序，extra 倍数约为 $2.4$--$26\times$。关键路径导向的 CP-list 差距更大。相比之下，CP-free 是一个强 companion：它通过优先释放节点间接缩短生命期，在多数组合上接近本文序，但在 Conv\_Case0 等 clean 储备对代价起决定作用的实例上仍明显落后。这一结果说明，仅降低活跃字节或提前释放并不足以解释全部收益；高压窗口中 clean/dirty 组成的差异是必要因素。
+
+为直接检验驱逐策略的边际效应，图~\ref{fig:supp-e2} 在固定调度序上替换四种 Belady 风格 victim rule，比较各 case 的 extra 变化。结果显示多数 Matmul 与 FlashAttention 实例上四种策略完全重合，Conv 行存在可见差异但量级仍远小于跨序差异。这与命题~\ref{prop:belady-margin} 的理论预测一致：在距离主导条件下，驱逐策略的边际收益有限。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e2_victim_sensitivity.png}}
+\caption{固定调度序下的 victim rule 敏感性。多数 Matmul 与 FlashAttention 行完全重合；Conv 行存在可见差异，但量级仍小于跨序差异。}
+\label{fig:supp-e2}
+\end{figure}
+
+反过来，图~\ref{fig:supp-e3} 展示不同合法拓扑序在同一引擎下的 extra 摆动。替换合法拓扑序会显著改变高压窗口中可驱逐缓冲的组成，因此带来远大于驱逐规则微调的 extra 差距。这两组实验从正反两面确认：驱逐策略仅是局部修补，调度序才是驱动溢出代价的主要自由度。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e3_order_sensitivity.png}}
+\caption{调度序敏感性。相比在固定序上微调驱逐规则，替换合法拓扑序会显著改变高压窗口中可驱逐缓冲的组成，因此带来更大的 extra 摆动。}
+\label{fig:supp-e3}
+\end{figure}
+
+三组证据共同支持"调度序是主要优化自由度"的论点。表~\ref{tab:supp-e12} 量化了同引擎换序的差距，图~\ref{fig:supp-e2} 表明固定序下驱逐策略的边际有限，图~\ref{fig:supp-e3} 给出跨序摆动的数量级差异。可见溢出代价的差距主要来自调度序对峰值窗口中 clean/dirty 驻留构成的塑形，而非驱逐规则可单独弥补。
+
+本文涉及两种比较口径。表~\ref{tab:supp-e12} 为同引擎换序对照，用于隔离科学机制；表~\ref{tab:supp-headline} 为端到端参考对照，比较各自完整输出。前者支撑"调度序塑形驻留构成"的论点，后者反映最终求解器在公开实例上的提交质量，二者不应混用。
+
+\subsection{合成分布与适用域}\label{sec:supp-e13}
+
+正文图~\ref{fig:e15-applicability} 展示了 capacity-bound 区域的系统优势。本节给出完整的 36 个合成实例的逐实例数据与分区统计。
+
+图~\ref{fig:supp-e13} 与表~\ref{tab:supp-e13} 报告 36 个合成实例上的分布结果。我们将实例分为 capacity-bound 与 order-reachable 两类：前者在容量压力下不可避免需要 spill，后者存在可通过好序直接避免 spill 的空间。该划分对应正文溢出不可避免性证书的使用方式：它不是完整可行性判定，而是识别"必须优化 spill 代价构成"的区域。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\textwidth]{\ksFigure{e13_synth_suite.png}}
+\caption{合成实例分布。(a) 逐实例 extra 比值；(b) 按 capacity-bound 与 order-reachable 分区统计胜率。优势主要集中在容量受限区域。}
+\label{fig:supp-e13}
+\end{figure}
+
+\begin{table}[htbp]
+\centering\small
+\caption{合成 suite 分布统计。中位倍数为 ours/comparator，数值越低表示本文序越优。}
+\label{tab:supp-e13}
+\begin{tabular*}{0.72\linewidth}{@{\extracolsep{\fill}}llrr@{}}
+\toprule
+Comparator & Regime & 中位 ours/comp & 胜率 \\
+\midrule
+\ksName{CP-list}        & all              & 0.39 & 83.3\% \\
+                         & capacity\_bound  & 0.40 & 100\% \\
+                         & order\_reachable & 0.00 & 66.7\% \\
+\midrule
+\ksName{CP-free} & all              & 1.00 & 38.9\% \\
+                         & capacity\_bound  & 0.50 & 77.8\% \\
+                         & order\_reachable & 1.00 & 0\% \\
+\midrule
+\ksName{Pressure} & all            & 1.00 & 36.1\% \\
+                         & capacity\_bound  & 0.84 & 55.6\% \\
+                         & order\_reachable & 1.00 & 16.7\% \\
+\midrule
+\ksName{G--Hsu}    & all              & 0.67 & 52.8\% \\
+                         & capacity\_bound  & 1.00 & 38.9\% \\
+                         & order\_reachable & 0.00 & 66.7\% \\
+\midrule
+\ksName{Random-best}    & all              & 0.34 & 75.0\% \\
+                         & capacity\_bound  & 0.34 & 100\% \\
+                         & order\_reachable & 0.50 & 50.0\% \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+结果与理论定位一致。capacity-bound 子群中，本文相对 CP-list 与 random-best 全胜，相对 CP-free 的中位优势为 $2\times$。order-reachable 子群中，好序可以直接消除 spill，clean/dirty 塑形自然不再提供系统优势；本文相对 CP-free 的胜率降为 $0\%$。因此，方法的目标不是支配所有 DAG，而是在 spill 不可避免时降低每单位 spill 的真实代价。
+
+\subsection{CP-SAT oracle}\label{sec:supp-e14}
+
+正文 \S\ref{sec:exp-mechanism} 报告了 CP-SAT oracle 的汇总结论。本节给出逐实例数据，包括容量约束比、理论下界和固定序最优 extra。小图 oracle 用于回答两个问题：给定本文选择的序，地址/spill 引擎是否达到 capacity-only 最优；理论下界与面积代理是否在精确解上保持一致。
+
+表~\ref{tab:supp-e14} 给出 8 个 capacity-bound 小图的结果。$\mathrm{ratio}_{W^\star}=W^\star/\Capc>1$ 表示该实例处于容量受限状态；$\mathrm{lb}_{T1}$ 是正文溢出不可避免性证书给出的下界；$E^\star$ 是固定序下的最优 extra。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{\ksFigure{e14_oracle.png}}
+\caption{CP-SAT oracle 验证。(a) 溢出面积 $A(S)$ 与固定序最优 extra $E^\star(S)$ 的经验常数带；(b) 溢出不可避免性下界与固定序最优 extra 的对照。}
+\label{fig:supp-e14}
+\end{figure}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Oracle 逐实例数据。所有实例均满足 $\mathrm{lb}_{T1}\le E^\star$，且本文引擎在固定序上达到 $E^\star$。}
+\label{tab:supp-e14}
+\begin{tabular*}{0.82\linewidth}{@{\extracolsep{\fill}}lrrrrrr@{}}
+\toprule
+inst & bound & $\Capc$ & $\mathrm{ratio}_{W^\star}$ & $\mathrm{lb}_{T1}$ & $E^\star$ & $E^\star/A$ \\
+\midrule
+oracle\_000 & L0C & 512  & 1.375 & 192 & 352  & 0.564 \\
+oracle\_001 & UB  & 1024 & 1.375 & 384 & 1408 & 1.128 \\
+oracle\_002 & L0C & 512  & 1.375 & 192 & 704  & 1.128 \\
+oracle\_003 & UB  & 1024 & 1.375 & 384 & 704  & 0.564 \\
+oracle\_004 & L0C & 512  & 1.375 & 192 & 352  & 0.564 \\
+oracle\_005 & UB  & 1024 & 1.375 & 384 & 1408 & 1.128 \\
+oracle\_006 & L0C & 512  & 1.375 & 192 & 704  & 1.128 \\
+oracle\_007 & UB  & 1024 & 1.375 & 384 & 704  & 0.564 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+所有小图上，本文引擎相对固定序最优的 gap 为 $1.0$，说明在该组 oracle 中瓶颈不在分配/驱逐实现，而在序选择。溢出不可避免性下界均成立，且 $E^\star/A\in[0.56,1.13]$，落在正文所述常数因子解释范围内。跨序联合最优模型需要将排列变量与驻留变量耦合，CP-SAT 求解频繁超时；因此本文不声称相对全局最优的 gap，只使用固定序 oracle 验证局部最优性和理论界。
+
+\subsection{代理目标与诊断工具}\label{sec:supp-mechanism}
+
+正文 \S\ref{sec:exp-mechanism} 以汇总形式报告了溢出面积代理、工作集证书和预取窗口的实验结论。本节给出这些诊断工具的逐实例数据和可视化，并补充 P1 与 P2/P3 错配的量化分析。
+
+\paragraph{溢出面积代理。}
+图~\ref{fig:supp-e6} 比较溢出面积代理 $\Phi$ 与逐 cache 峰值压力对 P2 extra 的解释能力。两者的 Spearman 相关性非常接近（$0.958$ 与 $0.955$）。因此，本文不把 $\Phi$ 表述为经验上显著更强的预测器；它的价值在于计算代价低、可在候选序筛选中稳定使用，并且与正文的面积--extra 近似解释一致。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e6_surrogate.png}}
+\caption{溢出面积代理 $\Phi$ 与峰值压力的对照。(a) $\Phi$ 对 P2 extra 的解释能力；(b) 逐 cache 峰值超容量对 P2 extra 的解释能力。二者相关性接近，$\Phi$ 的主要作用是作为便宜且跨阶段一致的选择信号。}
+\label{fig:supp-e6}
+\end{figure}
+
+\paragraph{工作集证书。}
+图~\ref{fig:supp-e9} 报告近最优 extra 子集上的工作集/容量比。该限定很重要：若跨所有序无约束地取最小峰值，一个 P2 代价很高的低峰值序可能会错误地削弱容量受限诊断。Matmul\_Case1/L1 的近最优口径为 $8.5$，说明该实例处于强 capacity-bound 区域，剩余优化空间主要来自 spill 代价构成，而非简单消除 spill。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e9_working_set.png}}
+\caption{近最优 extra 子集上的工作集/容量比。红色项显示 Matmul\_Case1/L1 在近最优口径下远超容量。}
+\label{fig:supp-e9}
+\end{figure}
+
+\paragraph{P1 与 P2/P3 的目标错配。}
+P1 以压低逐 cache 峰值为目标，但正文 \S\ref{sec:theory} 指出低峰值不等价于低 spill 代价。图~\ref{fig:supp-e7} 量化了这一错配：单独压低 P1 目标不保证容量受限下的可行性或低 spill 代价。在一些实例上，P1 最优序的 P2 extra 反而高于本文方法选出的序，原因在于 P1 不区分 clean/dirty 储备：一个以低峰值为唯一目标的序可能在高压窗口中堆积大量 dirty 缓冲，导致实际驱逐代价上升。溢出面积代理 $\Phi$ 的选择信号更直接地反映多 cache 溢出压力，从而避免了这种错配。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e7_misalignment_worst_ratio.png}}
+\caption{P1 与 P2/P3 的错配。单独压低 P1 目标不保证容量受限下的可行性或低 spill 代价；$\Phi$ 选择更直接反映多 cache 溢出压力。}
+\label{fig:supp-e7}
+\end{figure}
+
+\paragraph{预取窗口解耦。}
+图~\ref{fig:supp-e8} 展示预取窗口 $H$ 对 P3 time 与 extra 的影响。非零窗口可能明显降低时间，但 extra 往往保持不变或小幅上升。这说明 spill 集合选择与重载放置是两个相关但可分离的自由度：P2 需要保守控制流量，P3 则可以用更宽窗口换取流水重叠。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e8_decoupling.png}}
+\caption{预取窗口 $H$ 对时间与额外搬运量的影响。(a) P3 time 随 $H$ 的变化；(b) extra 随 $H$ 的变化。预取主要移动 \ksOp{spill-in} 的放置时机，而不是重新定义 spill 集合。}
+\label{fig:supp-e8}
+\end{figure}
+
+\subsection{Clean/dirty 受控消融}\label{sec:supp-clean-dirty}
+
+正文 \S\ref{sec:exp-mechanism} 的消融实验报告了 clean 储备 extra 为 $1{,}536$、dirty 为 $3{,}072$ 的 $2\times$ 代价差异。本节给出完整的实验设计和结果，以排除公开样例的 motif 偶然性。
+
+图~\ref{fig:supp-e11} 使用合成 GEMM 核隔离 clean/dirty 代价梯度。其中 (a) 固定 DAG 结构、峰值和 spill 数，仅改变高压窗口中可供驱逐的储备类型，clean 储备的 extra 为 $1536$，dirty 储备为 $3072$，恰为 $2\times$；(b) 在同一 clean 实例上扫描多种序，可见 peak residency 中 clean 占比越高，extra 越低。该实验排除了公开样例 motif 的影响，直接验证正文关于 clean/dirty $2\times$ 代价非对称的机制论点。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{\ksFigure{e11_synth_generality.png}}
+\caption{合成核上的 clean/dirty 机制验证。(a) 受控消融隔离 $2\times$ 代价梯度；(b) extra 随峰值处 clean 占比上升而下降。}
+\label{fig:supp-e11}
+\end{figure}

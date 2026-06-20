@@ -181,7 +181,7 @@ def solve(instance: ProblemInstance, config: dict) -> Schedule:
 exp{NNN}_{algorithm}_{variant}
 ```
 
-示例：`exp001_baseline_gpt`, `exp002_greedy_v1`
+示例：`exp001_baseline01`, `exp002_greedy_v1`
 
 ---
 

@@ -1,0 +1,123 @@
+\section{实验}\label{sec:experiments}
+
+本节围绕论文的核心问题展开实验验证：当容量溢出不可避免时，调度序能否通过改变峰值窗口内的 clean/dirty 驻留构成来降低真实溢出代价。实验从四个递进层面构建证据：公开 NPU 风格基准实例上的受控换序对照、机制分解与适用域分析、精确 oracle 对理论界的验证、以及 clean/dirty 代价差异的受控消融，以避免将结论建立在单一黑盒比较上。
+
+\subsection{实验设置}\label{sec:exp-setup}
+
+实验在一组公开的 NPU 核内调度实例上进行，这些实例由编译器风格的微操作 DAG 构成，覆盖卷积、注意力（FlashAttention）与矩阵乘三类主流算子，图规模从约 $1.7\times10^3$ 到 $3.6\times10^4$ 个节点不等，足以体现核函数级调度在容量受限下的典型行为（规模统计见表~\ref{tab:benchmark}）。硬件抽象为 5 类片上 cache，其抽象容量分别为 L1\,=\,4{,}096、UB\,=\,1{,}024、L0A\,=\,256、L0B\,=\,256、L0C\,=\,512。所有实例仅用于评估，本文方法不依赖任何针对特定算子结构的硬编码。
+
+\begin{table}[H]
+\centering\small
+\caption{基准实例概况（FA = FlashAttention）。}\label{tab:benchmark}
+\begin{tabular}{llrrr}
+\toprule
+实例 & 算子类型 & $|V|$ & $|E|$ & 缓冲数 \\
+\midrule
+Conv\_Case0         & 卷积   &  2{,}580 &  3{,}869 &    831 \\
+Conv\_Case1         & 卷积   & 36{,}086 & 85{,}653 & 12{,}013 \\
+FA\_Case0           & 注意力 &  1{,}716 &  2{,}712 &    572 \\
+FA\_Case1           & 注意力 &  6{,}952 & 11{,}184 &  2{,}328 \\
+Matmul\_Case0       & 矩阵乘 &  4{,}160 &  7{,}104 &  1{,}216 \\
+Matmul\_Case1       & 矩阵乘 & 30{,}976 & 55{,}040 &  8{,}960 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+为避免结论建立在单一黑盒比较之上，评估沿四个递进层面组织证据（表~\ref{tab:evidence}）：公开实例上的同引擎换序对照、合成分布上的适用域分析、小图上的精确 oracle 验证，以及隔离 clean/dirty 代价机制的受控消融。其核心是一致的同引擎口径：所有对照方法与本文方法共享同一 best-fit 地址分配与溢出引擎（Algorithm~\ref{alg:assign-spill}），仅替换输入的拓扑序，从而将溢出流量的差异干净地归因于序对 clean/dirty 驻留构成的塑形，而非驱逐策略的实现差异。评估指标沿 \S\ref{sec:formulation} 的三个视角展开——P1 度量逐 cache 峰值驻留，P2 度量总溢出流量 $E(S)$，P3 度量流水化执行时间——其中 P2 直接刻画本文关注的溢出代价，故作为主要报告口径。
+
+\begin{table}[H]
+\centering\small
+\caption{实验中的四层证据。}\label{tab:evidence}
+\begin{tabularx}{\linewidth}{l l X}
+\toprule
+层级 & 规模 & 作用 \\
+\midrule
+公开 NPU case & 6 个 DAG & 同引擎换序对照，检验编译器风格实例上的流量差异。 \\
+合成分布 & 36 个 DAG & 区分 capacity-bound 与 order-reachable 两类区域。 \\
+CP-SAT oracle & 8 个小图 & 验证给定序下的最优性与理论界。 \\
+clean/dirty 消融 & GEMM 变体 & 隔离 $2\times$ 储备代价机制。 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+对照方法取自经典的延迟导向与内存压力导向范式，且均对 clean/dirty 区分无感。关键路径表调度~\citep{kwok1999listscheduling,topcuoglu2002heft} 以最小化关键路径延迟为目标而不考虑内存压力；均匀压力贪心最小化逐步活跃字节峰值，但将 clean 与 dirty 缓冲等同看待；Goodman--Hsu 风格的延迟/压力切换~\citep{goodman1988integrated} 代表经典的 integrated-prepass 思路，在关键路径优先与压力降低之间动态切换。在此之外，本文引入 free-first critical-path companion 作为一个更强的对照——它在关键路径序上优先调度释放节点以缩短活跃区间，对分配器更友好但仍不含显式的代价感知，用以检验"提前释放、延后分配"本身能在多大程度上解释本文方法的收益。
+
+在效率上，本文求解器对最大实例仍保持实用的运行开销。P1 仅生成单个调度序，所有实例均在 $0.2$ 秒内完成；P2、P3 因需在候选序与预取窗口的笛卡尔积上模拟，开销随实例规模增长，最大实例 Conv\_Case1 的 P3 用时约 $73$ 秒（表~\ref{tab:runtime}，3 次重复中位数）。
+
+\begin{table}[H]
+\centering\small
+\caption{求解器 wall-clock 运行时间（秒，3 次重复中位数）。}\label{tab:runtime}
+\begin{tabular}{lrrr}
+\toprule
+实例 & P1 & P2 & P3 \\
+\midrule
+Conv\_0   & 0.009 & 0.391 & 0.683 \\
+Conv\_1   & 0.189 & 57.971 & 73.141 \\
+FA\_0     & 0.006 & 0.220 & 0.328 \\
+FA\_1     & 0.027 & 2.723 & 3.356 \\
+Matmul\_0 & 0.014 & 0.701 & 1.137 \\
+Matmul\_1 & 0.126 & 19.402 & 32.328 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{主对照结果}\label{sec:exp-baselines}
+
+图~\ref{fig:e12} 和表~\ref{tab:main-results} 给出 6 个公开基准 case 上各调度序在同一引擎下的 P2 溢出流量（对数轴）。内存压力感知但 clean/dirty 无感的均匀压力贪心与 Goodman--Hsu 混合调度，在所有 case 上均显著劣于本文方法，额外付出 $2.4\text{--}26\times$ 的溢出流量（中位约 $11\times$）。纯延迟导向的关键路径表调度差距更大，约 $8\text{--}54\times$。这一系统性差距表明，仅压低总活跃字节峰值或关键路径延迟不足以逼近真实的溢出代价下界；关键在于把峰值窗口中的可驱逐储备塑形成更便宜的 clean 字节。在全部 $6$ 个 case、$3$ 个视角、$4$ 个对照方法共 $72$ 个组合中，本文序均取得了更低或持平的评估目标。
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{\ksFigure{e12_baselines.png}}
+\caption{标准调度器对照（P2 溢出流量，对数轴）。所有方法共享同一地址分配/溢出引擎，仅替换调度序。}\label{fig:e12}
+\end{figure}
+
+\begin{table}[t]
+\centering\small
+\caption{P2 溢出流量 $E(S)$ 对照（同引擎口径）。FA = FlashAttention。最优值加粗。}\label{tab:main-results}
+\begin{tabular}{lrrrrr}
+\toprule
+实例 & cp\_list & pressure & g\_hsu & cp\_free & 本文 \\
+\midrule
+Conv\_0   & 694{,}506   & 207{,}932   & 210{,}844   & 212{,}956 & \textbf{88{,}044} \\
+Conv\_1   & 1{,}695{,}264 & 1{,}048{,}524 & 1{,}053{,}484 & 73{,}348  & \textbf{72{,}520} \\
+FA\_0     & 211{,}784   & 101{,}356   & 90{,}092    & \textbf{3{,}904}   & \textbf{3{,}904} \\
+FA\_1     & 965{,}944   & 445{,}876   & 418{,}228   & 33{,}152  & \textbf{32{,}920} \\
+Matmul\_0 & 823{,}168   & 296{,}064   & 298{,}240   & 34{,}944  & \textbf{34{,}688} \\
+Matmul\_1 & 6{,}506{,}240 & 2{,}556{,}928 & 2{,}560{,}640 & \textbf{460{,}800} & \textbf{460{,}800} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+值得注意的是，free-first critical-path companion 是一个具有竞争力的强基线：除 Conv\_Case0（落后 $2.4\times$）外，其 P2 溢出流量与本文方法的中位差距仅约 $1\%$，在 FA\_Case0 和 Matmul\_Case1 上完全持平。这表明对分配器友好的延迟序已能通过缩短活跃区间间接减少溢出，捕获一部分收益。然而，该基线缺乏显式的 clean/dirty 代价塑形，因此在 Conv\_Case0 等 clean 储备对代价有决定性影响的实例上仍被系统性拉开差距，且在多目标评估中一致被本文方法压制。
+
+\subsection{机制验证与适用域分析}\label{sec:exp-mechanism}
+
+上节的对照实验表明溢出流量存在系统性差距，本节进一步追问收益的来源与适用边界。
+
+\paragraph{调度序与驱逐策略的边际效应}
+固定调度序时，4 种 Belady 风格驱逐变体的 extra 在 Matmul 与 FA 实例上完全相同（变异系数 $\mathrm{CV}=0$），Conv 行 CV 最高约 $4\%$；而同一引擎下不同序的 extra 摆动可达 $10\times$ 以上。图~\ref{fig:e5} 将一个基准 case 的 L1 高压窗口分解为 clean 与 dirty 驻留：两个合法序在相同容量约束下，暴露出显著不同的 dirty 占比与峰值高度。这一结果印证了 Proposition~\ref{prop:belady-margin} 的理论预测：在距离主导条件下驱逐策略的边际收益远小于调度序，后者才是影响溢出代价的主要自由度。
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{\ksFigure{e5_peak_residency.png}}
+\caption{基准 case 上的 clean/dirty 驻留分解（仅显示 L1 高压窗口）。蓝色为已有片外备份的 clean 驻留，橙色为需写回的 dirty 驻留，虚线为 L1 容量。同一容量约束下，不同调度序暴露不同的峰值高度与 dirty 构成。}\label{fig:e5}
+\end{figure}
+
+\paragraph{适用域}\label{sec:exp-suite}
+合成 DAG 分布上的系统评测进一步界定了方法的适用边界。在 Theorem~\ref{thm:spill-inev} 证书标记为 capacity-bound 的区域，本文方法相对关键路径表调度和随机序的胜率均为 $100\%$，相对 free-first companion 的胜率为 $77.8\%$（中位 $2\times$ 优势）。而在 order-reachable 子群中，好序可直接避免溢出，clean/dirty 塑形无从发挥，本文方法相对 free-first companion 的胜率降至 $0\%$。这一分布与理论证书高度一致：证书标记的是"必须优化溢出代价构成"的区域，方法的有效性严格对应于这一前提条件。
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{\ksFigure{e15_applicability.png}}
+\caption{合成分布上的适用域。左图为本文方法相对各 comparator 的胜率；右图为 extra 中位比值（ours/comparator，越低越好），虚线表示持平。本文方法在 capacity-bound 区域优势最明显，而在好序可直接避免溢出的 order-reachable 区域自然失去系统优势。}\label{fig:e15-applicability}
+\end{figure}
+
+\paragraph{理论验证与代理目标}\label{sec:exp-oracle}
+小图 CP-SAT oracle 验证了两项结论：给定所选序，本文引擎达到 capacity-only 最优 extra（比值为 $1.0$）；Theorem~\ref{thm:spill-inev} 的下界在全部小图成立，Theorem~\ref{thm:area-extra} 的经验比 $E^\star/A\in[0.56,1.13]$ 落在常数因子带内。溢出面积代理 $\Phi$ 与逐 cache 峰值的全局 Spearman 相关性几乎相同（$0.958$ vs $0.955$）；$\Phi$ 的价值不在于显著提高预测精度，而在于 $O(N)$ 计算代价使候选序全量评估可行，且 Theorem~\ref{thm:area-extra} 为其提供跨阶段一致的理论支撑。详图与逐实例数据见补充材料。
+
+\paragraph{受控消融}\label{sec:exp-generality}
+为排除样例特异性，本文构建合成 GEMM 核并固定同一 DAG 结构、相同 spill 数和相同峰值，仅改变峰值窗口中的储备类型。clean 储备的 extra 为 1{,}536，dirty 储备为 3{,}072，恰为 $2\times$，在完全隔离的条件下印证了 clean 与 dirty 缓冲间 $2\times$ 代价非对称的理论预测。进一步扫描调度序可见，extra 随峰值处 clean 占比的上升而单调下降。
+
+\subsection{局限性}\label{sec:limitations}
+
+本文方法的适用边界需要明确界定。若实例处于 order-reachable 区域，即存在某个合法序可使所有 cache 峰值驻留不超过容量，则无需溢出，clean/dirty 塑形无从发挥；若某个传统压力/延迟混合序已保留了足够的 clean 储备，本文方法的优势也会缩小甚至消失。此外，Theorem~\ref{thm:area-extra} 的近似解释依赖有界缺席时长假设，长寿命小溢出的场景可能削弱代理目标的有效性。本文亦仅针对编译期完全已知的单核静态 DAG，多核、动态控制流与更复杂存储层次下的推广留待后续工作。

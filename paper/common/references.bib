@@ -1,0 +1,247 @@
+%%
+%% 参考文献数据库
+%% 使用 BibTeX 格式，配合 ACM-Reference-Format 引用样式
+%%
+%% 推荐使用 Google Scholar 导出 BibTeX 条目
+%% 或从 ACM DL / DBLP 直接获取
+%%
+
+%% === 神经网络编译器 ===
+
+@inproceedings{chen2018tvm,
+  author    = {Chen, Tianqi and Moreau, Thierry and Jiang, Ziheng and Zheng, Lianmin and Yan, Eddie and Shen, Haichen and Cowan, Meghan and Wang, Leyuan and Hu, Yuwei and Ceze, Luis and Guestrin, Carlos and Krishnamurthy, Arvind},
+  title     = {{TVM}: An Automated End-to-End Optimizing Compiler for Deep Learning},
+  booktitle = {Proceedings of the 13th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  year      = {2018},
+  pages     = {578--594},
+  publisher = {USENIX Association},
+  address   = {Carlsbad, CA},
+  url       = {https://www.usenix.org/conference/osdi18/presentation/chen},
+}
+
+@inproceedings{lattner2021mlir,
+  author    = {Lattner, Chris and Amini, Mehdi and Bondhugula, Uday and Cohen, Albert and Davis, Andy and Pienaar, Jacques and Riddle, River and Shpeisman, Tatiana and Vasilache, Nicolas and Zinenko, Oleksandr},
+  title     = {{MLIR}: Scaling Compiler Infrastructure for Domain Specific Computation},
+  booktitle = {Proceedings of the IEEE/ACM International Symposium on Code Generation and Optimization (CGO)},
+  year      = {2021},
+  pages     = {2--14},
+  doi       = {10.1109/CGO51591.2021.9370308},
+}
+
+%% === DAG 调度理论 ===
+
+@article{topcuoglu2002heft,
+  author  = {Topcuoglu, Haluk and Hariri, Salim and Wu, Min-You},
+  title   = {Performance-effective and Low-complexity Task Scheduling for Heterogeneous Computing},
+  journal = {IEEE Transactions on Parallel and Distributed Systems},
+  volume  = {13},
+  number  = {3},
+  pages   = {260--274},
+  year    = {2002},
+  doi     = {10.1109/71.993206},
+}
+
+@article{kwok1999listscheduling,
+  author  = {Kwok, Yu-Kwong and Ahmad, Ishfaq},
+  title   = {Static Scheduling Algorithms for Allocating Directed Task Graphs to Multiprocessors},
+  journal = {ACM Computing Surveys},
+  volume  = {31},
+  number  = {4},
+  pages   = {406--471},
+  year    = {1999},
+}
+
+%% === 专用处理器 ===
+
+@inproceedings{jouppi2017tpu,
+  author    = {Jouppi, Norman P. and Young, Cliff and Patil, Nishant and Patterson, David and others},
+  title     = {In-Datacenter Performance Analysis of a Tensor Processing Unit},
+  booktitle = {Proceedings of the 44th Annual International Symposium on Computer Architecture (ISCA)},
+  year      = {2017},
+  pages     = {1--12},
+}
+
+%% === 寄存器压力感知调度 (Register-Pressure-Aware Scheduling) ===
+
+@inproceedings{goodman1988integrated,
+  author    = {Goodman, James R. and Hsu, Wei-Chung},
+  title     = {Code Scheduling and Register Allocation in Large Basic Blocks},
+  booktitle = {Proceedings of the 2nd International Conference on Supercomputing (ICS)},
+  year      = {1988},
+  pages     = {442--452},
+}
+
+@article{shobaki2013preallocation,
+  author  = {Shobaki, Ghassan and Shawabkeh, Saeed and Abu-Rmaileh, Najm Eldeen},
+  title   = {Preallocation Instruction Scheduling with Register Pressure Minimization Using a Combinatorial Optimization Approach},
+  journal = {ACM Transactions on Architecture and Code Optimization},
+  volume  = {10},
+  number  = {4},
+  year    = {2013},
+}
+
+@article{shobaki2022register,
+  author  = {Shobaki, Ghassan and Al Qutami, Ahmad and Abu-Rmaileh, Najm Eldeen},
+  title   = {Register-Pressure-Aware Instruction Scheduling Using Ant Colony Optimization},
+  journal = {ACM Transactions on Architecture and Code Optimization},
+  volume  = {19},
+  number  = {4},
+  year    = {2022},
+}
+
+@inproceedings{liberatore1999evaluation,
+  author    = {Liberatore, Vincenzo and Farach-Colton, Martin and Kremer, Ulrich},
+  title     = {Evaluation of Algorithms for Local Register Allocation},
+  booktitle = {Proceedings of the 8th International Conference on Compiler Construction (CC)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {1575},
+  pages     = {137--153},
+  publisher = {Springer},
+  year      = {1999},
+  doi       = {10.1007/978-3-540-49051-7_10},
+}
+
+@inproceedings{guo2004belady,
+  author    = {Guo, Jia and Garzaran, Maria Jesus and Padua, David},
+  title     = {The Power of {Belady}'s Algorithm in Register Allocation for Long Basic Blocks},
+  booktitle = {Languages and Compilers for Parallel Computing (LCPC)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {2958},
+  pages     = {374--389},
+  publisher = {Springer},
+  year      = {2004},
+  doi       = {10.1007/978-3-540-24644-2_24},
+}
+
+%% === 缓存替换与分页理论 (Cache Replacement / Paging Theory) ===
+
+@article{belady1966study,
+  author  = {Belady, L. A.},
+  title   = {A Study of Replacement Algorithms for a Virtual-Storage Computer},
+  journal = {IBM Systems Journal},
+  volume  = {5},
+  number  = {2},
+  pages   = {78--101},
+  year    = {1966},
+}
+
+@inproceedings{coester2022blockaware,
+  author    = {Coester, Christian and Levin, Roie and Naor, Joseph (Seffi) and Talmon, Ohad},
+  title     = {Competitive Algorithms for Block-Aware Caching},
+  booktitle = {Proceedings of the 34th ACM Symposium on Parallelism in Algorithms and Architectures (SPAA)},
+  year      = {2022},
+}
+
+@inproceedings{gupta2019elastic,
+  author    = {Gupta, Anupam and Krishnaswamy, Ravishankar and Panigrahi, Debmalya},
+  title     = {Elastic Caching},
+  booktitle = {Proceedings of the 2019 Annual ACM-SIAM Symposium on Discrete Algorithms (SODA)},
+  year      = {2019},
+}
+
+@article{denning1968working,
+  author  = {Denning, Peter J.},
+  title   = {The Working Set Model for Program Behavior},
+  journal = {Communications of the ACM},
+  volume  = {11},
+  number  = {5},
+  pages   = {323--333},
+  year    = {1968},
+}
+
+%% === 重物化 / 激活检查点 (Rematerialization / Activation Checkpointing) ===
+
+@article{chen2016training,
+  author  = {Chen, Tianqi and Xu, Bing and Zhang, Chiyuan and Guestrin, Carlos},
+  title   = {Training Deep Nets with Sublinear Memory Cost},
+  journal = {arXiv preprint},
+  volume  = {abs/1604.06174},
+  year    = {2016},
+}
+
+@inproceedings{jain2019checkmate,
+  author    = {Jain, Paras and Jain, Ajay N. and Nrusimha, Aniruddha and Gholami, Amir and Abbeel, Pieter and Keutzer, Kurt and Stoica, Ion and Gonzalez, Joseph E.},
+  title     = {Checkmate: Breaking the Memory Wall with Optimal Tensor Rematerialization},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  year      = {2020},
+}
+
+%% === 算法组合与代理目标 (Algorithm Portfolios \& Surrogate Objectives) ===
+
+@article{gomes2001algorithm,
+  author  = {Gomes, Carla P. and Selman, Bart},
+  title   = {Algorithm Portfolios},
+  journal = {Artificial Intelligence},
+  volume  = {126},
+  number  = {1--2},
+  pages   = {43--62},
+  year    = {2001},
+}
+
+@article{xu2011satzilla,
+  author  = {Xu, Lin and Hutter, Frank and Hoos, Holger H. and Leyton-Brown, Kevin},
+  title   = {{SATzilla}: Portfolio-Based Algorithm Selection for {SAT}},
+  journal = {Journal of Artificial Intelligence Research},
+  volume  = {32},
+  pages   = {565--606},
+  year    = {2008},
+}
+
+@inproceedings{ferber2023surco,
+  author    = {Ferber, Aaron M. and Huang, Taoan and Zha, Daochen and Schubert, Martin and Steiner, Benoit and Dilkina, Bistra and Tian, Yuandong},
+  title     = {{SurCo}: Learning Linear Surrogates for Combinatorial Optimization Problems},
+  booktitle = {Proceedings of the 40th International Conference on Machine Learning (ICML)},
+  year      = {2023},
+}
+
+%% === DNN 内存感知调度 (Memory-Aware DNN Scheduling) ===
+
+@inproceedings{parashar2019timeloop,
+  author    = {Parashar, Angshuman and Raina, Priyanka and Shao, Yakun Sophia and Chen, Yu-Hsin and Ying, Victor A. and Mukkara, Anurag and Venkatesan, Rangharajan and Khailany, Brucek and Keckler, Stephen W. and Emer, Joel},
+  title     = {Timeloop: A Systematic Approach to {DNN} Accelerator Evaluation},
+  booktitle = {2019 IEEE International Symposium on Performance Analysis of Systems and Software (ISPASS)},
+  pages     = {304--315},
+  year      = {2019},
+}
+
+@article{mei2020zigzag,
+  author  = {Mei, Linyan and Houshmand, Pouya and Jain, Vikram and Giraldo, Sebastian and Verhelst, Marian},
+  title   = {ZigZag: A Memory-Centric Rapid {DNN} Accelerator Design Space Exploration Framework},
+  journal = {arXiv preprint},
+  volume  = {abs/2007.11360},
+  year    = {2020},
+}
+
+@article{li2023combined,
+  author  = {Li, Yi and Gupta, Aarti and Malik, Sharad},
+  title   = {Combined Scheduling, Memory Allocation and Tensor Replacement for Minimizing Off-Chip Data Accesses of {DNN} Accelerators},
+  journal = {arXiv preprint},
+  volume  = {abs/2311.18246},
+  year    = {2023},
+}
+
+@article{lee2026peakmemory,
+  author  = {Lee, Jaeho and others},
+  title   = {Peak-Memory-Aware Partitioning and Scheduling for Multi-Tenant {DNN} Inference},
+  journal = {Journal of Systems Architecture},
+  volume  = {157},
+  pages   = {103096},
+  year    = {2026},
+}
+
+%% === 编译优化 (Compiler Optimizations) ===
+
+@inproceedings{chatarasi2026spillfree,
+  author    = {Chatarasi, Prasanth and Gatea, Alex and Wang, Wei and Bowler, Chris and Jain, Shubham and Jaliseh, Masoud Ataei and Khoun, Nicole and Mannari, Alberto and Mahjour, Bardia and Srinivasan, Viji and Venkataramani, Swagath},
+  title     = {Enabling Spill-Free Compilation via Affine-Based Live Range Reduction Optimization},
+  booktitle = {Proceedings of the IEEE/ACM International Symposium on Code Generation and Optimization (CGO)},
+  year      = {2026},
+  pages     = {1--13},
+}
+
+@inproceedings{li2026t2t,
+  author    = {Li, Shuaijiang and Zhao, Jiacheng and Liu, Ying and Zhang, Shuoming and Chen, Lei and Li, Yijin and Zhang, Yangyu and others},
+  title     = {From Threads to Tiles: {T2T}, a Compiler for {CUDA}-to-{NPU} Translation via {2D} Vectorization},
+  booktitle = {Proceedings of the IEEE/ACM International Symposium on Code Generation and Optimization (CGO)},
+  year      = {2026},
+}

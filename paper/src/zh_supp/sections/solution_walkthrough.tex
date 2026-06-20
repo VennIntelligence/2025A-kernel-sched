@@ -1,0 +1,176 @@
+\section{方法细节与端到端对照}\label{sec:supp-solution}
+
+正文 \S\ref{sec:method} 以算法伪代码给出了候选序生成与地址分配的整体结构。本节展开三个方面的设计细节：候选序的互补设计理由（\S\ref{sec:supp-framework}）、端到端结果与外部参考解的对照（\S\ref{sec:supp-p1}--\S\ref{sec:supp-headline}）、以及差距来源的诊断分析（\S\ref{sec:supp-failure}）。
+
+\subsection{候选序设计与溢出分离原则}\label{sec:supp-framework}
+
+正文将调度序作为优化溢出代价的主要自由度。这一策略要求候选序集合能够覆盖峰值窗口内 clean/dirty 构成的不同形态，而非仅追求单一指标的局部最优。以下先说明三个候选序为何互补，再讨论预取窗口与溢出选择的分离设计。
+
+\paragraph{候选序。}
+三个候选序均为结构无关的拓扑序，共享同一内存感知表调度框架（释放优先、分配延后），仅在就绪集排序策略上形成差异。
+
+\begin{enumerate}
+  \item 压力感知序（\ksName{p1}）是正文算法~\ref{alg:assign-spill} 使用的内存感知表调度序，各级就绪集内采用内存感知优先级。\ksOp{alloc} 节点按后继入度/后继就绪度排序：入度越低说明消费者越快就绪，分配被推迟到接近使用时放行，从而将分配时机压到峰值最不敏感处。该序是 P1 的直接输出，也是 P2/P3 的一个候选。
+  \item 容量节流序（\ksName{capfit-id}）各级就绪集内沿用内存感知的释放/操作优先级，但 \ksOp{alloc} 改按最小节点标识排序，并在此基序上叠加容量门控：若某个 \ksOp{alloc} 会使对应 cache 超过容量，则暂缓该分配；当所有就绪分配均被阻塞、无法再推迟时，强制放行最快解锁后续工作的那个（权重按 $1/\Capc_c$ 归一化）。该序的角色是直接约束峰值高度，代价是牺牲部分缓冲的连续驻留机会。
+  \item 标识保留序（\ksName{id-raw}）在释放、操作、分配三级就绪集内一律取最小标识，既无内存感知优先级也无容量门控。其作用是保留 \ksOp{copy-in} clean 缓冲的原始驻留顺序，使这些 clean 缓冲更容易在计算窗口内常驻，从而在高压窗口留下可半价换出的 clean 储备。这一效果无法由前两个序可靠地产生，因为它们的排序策略都会打乱输入缓冲的原始顺序。
+\end{enumerate}
+
+三个序的互补性体现在对 clean/dirty 构成的不同塑形路径：容量节流序（\ksName{capfit-id}）通过容量门控降低峰值总量，压力感知序（\ksName{p1}）通过延迟分配缩短活跃区间，标识保留序（\ksName{id-raw}）通过顺序保持维持 clean 储备。正文 \S\ref{sec:liveness-shaping} 已指出，候选集扩展具有单调性，加入新候选只改善或持平。
+
+\paragraph{地址分配与代价感知驱逐。}
+给定拓扑序后，沿序执行 best-fit 地址分配。容量不足时按代价加权的 Belady 分数选择驱逐对象：
+\begin{equation}\label{eq:supp-victim}
+\mathrm{victim}=\arg\max_b d(b)\frac{s_b}{e_b}
+=\arg\max_b
+\begin{cases}
+d(b), & b\ \text{clean},\\
+d(b)/2, & b\ \text{dirty},
+\end{cases}
+\end{equation}
+其中 $d(b)$ 是缓冲 $b$ 到下一次使用的距离。dirty 缓冲的有效距离折半，使引擎优先驱逐廉价的 clean 缓冲：只有当某个 dirty 缓冲的未来使用足够远时，才会优先于同等大小的 clean 缓冲被换出。正文命题~\ref{prop:belady-margin} 表明，在距离主导条件下该评分规则与其他代价加权变体选出相同的驱逐集合，因此驱逐策略的边际收益远小于调度序。
+
+\paragraph{预取窗口与溢出选择的分离。}
+溢出集合的选择与重载放置是两个可分离的自由度。前者决定 $\extra$ 的总量，后者影响重载能否与计算重叠，进而影响 P3 时间。将二者耦合会使时间优化无约束地污染流量目标。方法的设计选择是将二者拆开。预取窗口 $H$ 仅控制 \ksOp{spill-in} 的前移：若某个已换出缓冲将在 $\le H$ 步内被使用，且 cache 有空闲，则提前重载，但不为预取触发额外驱逐。P2 使用紧网格 $H\in\{0,5,40\}$ 以最小化流量；P3 使用宽网格 $H\in\{0,5,40,80,120\}$ 以最小化时间。
+
+\paragraph{选优机制。}
+对 3 个候选序与预取窗口的笛卡尔积逐一执行完整模拟：P2 按 $(\extra,\#\mathrm{spills},T)$ 词典键选优，P3 按 $(T,\extra,\#\mathrm{spills})$。最终输出为候选集上的最小项。
+
+\begin{algorithm}[htbp]
+\caption{P1/P2/P3 的统一求解框架}\label{alg:supp-portfolio}
+\begin{algorithmic}[1]
+\Require DAG $G=(V,E)$，问题类型 $p\in\{1,2,3\}$
+\Ensure 调度；P2/P3 同时输出地址分配 $\mathit{mem}$ 与 spill 列表 $\mathit{spill}$
+\If{$p=1$}
+  \State \Return $\mathrm{MemoryAwareOrder}(G)$
+\EndIf
+\State $\mathcal{H}\gets\{0,5,40\}$ \textbf{if} $p=2$ \textbf{else} $\{0,5,40,80,120\}$
+\State $\mathit{best}\gets\bot$
+\For{$\sigma\in\{\ksName{capfit-id},\ksName{p1},\ksName{id-raw}\}$}
+  \For{$H\in\mathcal{H}$}
+    \State $(\pi,\mathit{mem},\mathit{spill})\gets \mathrm{AssignAndSpill}(G,\sigma,H)$
+    \State $E\gets\sum_{(b,\cdot)\in\mathit{spill}} e_b$;\quad $T\gets \mathrm{SimTime}(\pi,\mathit{mem},\mathit{spill})$
+    \State $k\gets(E,|\mathit{spill}|,T)$ \textbf{if} $p=2$ \textbf{else} $(T,E,|\mathit{spill}|)$
+    \State $\mathit{best}\gets\min\bigl(\mathit{best},(k,\pi,\mathit{mem},\mathit{spill})\bigr)$
+  \EndFor
+\EndFor
+\State \Return $\mathit{best}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{P1：峰值驻留与目标错配}\label{sec:supp-p1}
+
+P1 评判逐 cache 峰值驻留，其结果直接回答"给定 DAG 能否在某个合法序下降低峰值"。然而 P1 最优序并不自动转化为 P2/P3 最优，这正是正文强调的目标错配现象。
+
+端到端结果显示，本文序在全部六个实例上的 L1 峰值均低于外部参考解：Conv\_Case0 从 $7488$ 降至 $6912$，Conv\_Case1 从 $14040$ 降至 $13786$；FlashAttention 与 Matmul 实例的降幅更大，P1 峰值分别降至 $256/256/128/128$。但 P1 低峰值不等价于低 spill 代价。以 FlashAttention\_Case1 为例，P1 序使 UB 峰值达到 $33010$，远超 $\Capc_{\mathrm{UB}}=1024$：降低 L1 峰值的序反而在 UB 上造成了更严重的容量超限。这一 case 直接解释了为什么方法需要从 P1 单峰值指标过渡到 P2 的溢出流量指标：在多 cache 体系下，跨 cache 的峰值分布才是决定真实溢出代价的关键。
+
+\subsection{P2：调度序塑形 clean/dirty 构成}\label{sec:supp-p2}
+
+P2 的核心目标是最小化总溢出流量 $\extra$。与仅在固定序上替换驱逐策略不同，本文通过调度序改变高压窗口中 clean 与 dirty 缓冲的构成，使驱逐器在容量超限时能以 $s_b$（clean）而非 $2s_b$（dirty）的代价释放空间。
+
+相对外部参考解，P2 在六个实例中三胜三负。胜出实例揭示了塑形机制的有效性：Conv\_Case1（$73240\to72520$）中，本文序将更多 clean 缓冲保留到高压窗口；Matmul\_Case0（$34944\to34688$）同理；Matmul\_Case1 的 $\extra$ 与 spill 数均与参考解持平（$460800$、$3600$），但时间第三键更优。三个失利实例则指向同一机制的反面：参考序在关键高压窗口中恰好保留了更合适的 clean 缓冲。例如 Conv\_Case0 中参考解的 $\extra$ 为 $73500$，低于本文的 $88044$，差距并非来自驱逐规则的差异（命题~\ref{prop:belady-margin} 表明固定序上不同驱逐变体的 extra 差异很小），而是参考序使更多 clean 缓冲在溢出发生时仍然驻留，正体现了调度序对驻留构成的塑形效果。
+
+胜与负共同印证了正文的核心论点：溢出代价的主要决定因素是序对 clean/dirty 构成的塑形，而非驱逐规则本身。
+
+\subsection{P3：预取窗口与计算重叠}\label{sec:supp-p3}
+
+P3 以流水化执行时间为首要目标。非零预取窗口将部分 \ksOp{spill-in} 从直接使用点前移，使重载与计算或其他管线搬运重叠，降低用户节点的等待阻塞。由于预取仅在存在空闲区间时发生且不触发额外驱逐，它主要调整重载放置时机，而非重新定义 spill 集合。
+
+端到端结果为四胜二负。本文在两个 FlashAttention 与两个 Matmul 实例上取得更短时间：FlashAttention\_Case1 从 $193059$ 降至 $180364$，Matmul\_Case0 从 $194331$ 降至 $186820$。两个 Conv 实例时间落后，其中 Conv\_Case1 尤其具有诊断价值：本文 $\extra$ 更低（$73578<86690$），但参考解时间更短（$1073322<1111778$）。这一反例说明更低的流量不自动转化为更短的时间：重载与计算的重叠程度是另一个独立的维度。当参考序的重载恰好被安排在计算管线的空闲间隙中时，即使总流量更高，阻塞时间仍可更短。这一观察进一步支持了方法将溢出选择与重载放置分离的设计决策。
+
+\subsection{端到端参考对照}\label{sec:supp-headline}
+
+表~\ref{tab:supp-headline} 汇总六个公开实例在 P1/P2/P3 上的端到端结果，合计 13/18 胜。这里的比较口径与正文主实验不同：正文 \S\ref{sec:exp-baselines} 使用"同引擎换序"口径，所有方法共享同一地址分配/溢出引擎、仅替换调度序，以隔离序对 clean/dirty 构成的塑形效果。端到端对照则使用各自完整的调度、地址分配和 spill 列表，反映两个完整系统的最终输出质量。两类口径回答不同的问题，端到端数据作为系统性能的综合参照。
+
+\begin{table}[H]
+\centering
+\caption{本文方法与外部参考解 baseline01 的端到端对照（每格为"本文/参考"）。}
+\label{tab:supp-headline}
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llrrrrc@{}}
+\toprule
+Case & P & \(\max_{\mathrm{L1}}\) & spills & \(\extra\) & \(T\) & 结果 \\
+\midrule
+Conv\_Case0   & P1 & 6912/7488   & 0/0       & 0/0           & 394430/359570   & 胜 \\
+              & P2 & 6912/7488   & 339/141   & 88044/73500   & 615694/535312   & 负 \\
+              & P3 & 6912/7488   & 342/141   & 92652/73500   & 553280/535312   & 负 \\
+\addlinespace
+Conv\_Case1   & P1 & 13786/14040 & 0/0       & 0/0           & 650044/573395   & 胜 \\
+              & P2 & 14040/14040 & 1963/1828 & 72520/73240   & 1159169/1150333 & 胜 \\
+              & P3 & 14040/14040 & 1951/1290 & 73578/86690   & 1111778/1073322 & 负 \\
+\addlinespace
+FA\_Case0     & P1 & 256/3328    & 0/0       & 0/0           & 31063/31429     & 胜 \\
+              & P2 & 3328/3328   & 31/41     & 3904/3692     & 51700/53374     & 负 \\
+              & P3 & 4096/3328   & 58/24     & 5832/4128     & 46167/46761     & 胜 \\
+\addlinespace
+FA\_Case1     & P1 & 256/5376    & 0/0       & 0/0           & 112458/113445   & 胜 \\
+              & P2 & 5376/5376   & 229/146   & 32920/32840   & 214361/193059   & 负 \\
+              & P3 & 5376/5376   & 229/146   & 34432/32840   & 180364/193059   & 胜 \\
+\addlinespace
+Matmul\_Case0 & P1 & 128/9216    & 0/0       & 0/0           & 82308/82773     & 胜 \\
+              & P2 & 9216/9216   & 271/273   & 34688/34944   & 192380/194331   & 胜 \\
+              & P3 & 9216/9216   & 273/273   & 34944/34944   & 186820/194331   & 胜 \\
+\addlinespace
+Matmul\_Case1 & P1 & 128/34816   & 0/0       & 0/0           & 629076/583525   & 胜 \\
+              & P2 & 34816/34816 & 3600/3600 & 460800/460800 & 1783145/1800218 & 胜 \\
+              & P3 & 34816/34816 & 3601/3600 & 460928/460800 & 1771132/1800218 & 胜 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{差距来源分析}\label{sec:supp-failure}
+
+五个失利项的核心发现一致：参考解在这些实例中的优势不削弱正文论点，反而从反面印证了同一机制，即差距主要来自调度序对 clean/dirty 驻留构成的塑形，而非固定序上的驱逐策略差异。
+
+两类诊断交叉验证了这一判断。第一，将参考解的序输入本文地址分配/溢出引擎后，若干失利项的流量可被接近复现，说明差距来自高压窗口中可供驱逐的缓冲构成，而非引擎实现的差异。第二，在固定序上替换四类 Belady 风格 victim policy，P2 $\extra$ 的差异通常很小（正文 \S\ref{sec:exp-mechanism} 报告 CV $\le 4\%$）；相反，不同合法序之间的 $\extra$ 可相差一个数量级。
+
+本文保留这些失利项而不通过算子族特化规则去拟合，是因为此类拟合会破坏方法的结构无关性：算法只使用 DAG 依赖、缓冲大小、cache 类型、clean/dirty 属性和容量信息，不包含按算子类别定制的排序规则。一旦引入特化，结论将从"调度序塑形 clean/dirty 构成降低溢出代价"退化为"针对特定算子结构做专门排序"，削弱方法的一般性。
+
+\subsection{运行效率}\label{sec:supp-runtime}
+
+表~\ref{tab:supp-runtime} 给出完整的 3 次重复统计（中位数、最小值、最大值），补充正文表~\ref{tab:runtime} 的中位数数据。
+
+\begin{table}[htbp]
+\centering\small
+\caption{Wall-clock 运行时间（秒，3 次重复）。}\label{tab:supp-runtime}
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llrrrr@{}}
+\toprule
+实例 & P & 中位数 & 最小值 & 最大值 & 节点数 \\
+\midrule
+Conv\_Case0 & P1 & 0.009 & 0.009 & 0.010 & 2\,580 \\
+            & P2 & 0.391 & 0.390 & 0.392 & \\
+            & P3 & 0.683 & 0.677 & 0.706 & \\
+\addlinespace
+Conv\_Case1 & P1 & 0.189 & 0.186 & 0.190 & 36\,086 \\
+            & P2 & 57.97 & 57.46 & 58.62 & \\
+            & P3 & 73.14 & 73.10 & 73.28 & \\
+\addlinespace
+FA\_Case0   & P1 & 0.006 & 0.006 & 0.007 & 1\,716 \\
+            & P2 & 0.220 & 0.218 & 0.222 & \\
+            & P3 & 0.328 & 0.326 & 0.328 & \\
+\addlinespace
+FA\_Case1   & P1 & 0.027 & 0.026 & 0.030 & 6\,952 \\
+            & P2 & 2.723 & 2.723 & 2.757 & \\
+            & P3 & 3.356 & 3.316 & 3.367 & \\
+\addlinespace
+Matmul\_Case0 & P1 & 0.014 & 0.014 & 0.016 & 4\,160 \\
+              & P2 & 0.701 & 0.695 & 0.703 & \\
+              & P3 & 1.137 & 1.136 & 1.170 & \\
+\addlinespace
+Matmul\_Case1 & P1 & 0.126 & 0.111 & 0.126 & 30\,976 \\
+              & P2 & 19.40 & 19.33 & 19.46 & \\
+              & P3 & 32.33 & 32.19 & 32.34 & \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\paragraph{运行时间的主导因素。}
+P1 仅生成单个调度序，所有实例均低于 $0.2$ 秒。P2/P3 的运行时间主要受两个因素支配：(1) 候选序 $\times$ 预取窗口的网格大小（P2 评估 $3\times3=9$ 个组合，P3 评估 $3\times5=15$ 个组合）；(2) 地址分配中 Belady 驱逐选择的二次最坏开销。Conv\_Case1 和 Matmul\_Case1 的缓冲数分别为 12\,013 和 8\,960，驱逐扫描构成运行时间的主要部分。三次重复的最小/最大值紧密包围中位数（变异系数 $<2\%$），说明计时结果稳定。
+
+\paragraph{时间复杂度。}
+设 $N=|V|$ 为节点数，$E=|E|$ 为边数，$B$ 为缓冲数，$K=3$ 为候选序数，$W$ 为预取窗口网格大小。各阶段复杂度如下：
+\begin{itemize}
+  \item \textbf{候选序生成}：$O(K(N\log N+E))$，基于堆维护的就绪集拓扑排序。
+  \item \textbf{地址分配与溢出插入}：$O(N+E+B^2)$ 每个 $(\text{序},\text{窗口})$ 组合。沿序扫描线性，Belady 驱逐的最坏开销为 $B$ 次分配各扫描 $O(B)$ 个驻留缓冲。
+  \item \textbf{流水模拟}：$O(N+E)$ 每个组合。
+  \item \textbf{Portfolio 选优}：$O(KW)$ 个组合的枚举。
+\end{itemize}
+综合为 $O(KW(N\log N+E+B^2))$。由于 $K$、$W$ 为小常数，渐近主项为 $O(N\log N+E+B^2)$。空间复杂度为 $O(N+E+B)$。

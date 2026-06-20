@@ -10,11 +10,13 @@ from pathlib import Path
 import networkx as nx
 import pandas as pd
 
+from ks_core.constants import CACHE_CAPACITIES
 from ks_core.graph import load_csv, load_json, list_cases
 from ks_core.types import Node, ProblemInstance
 
 
-CACHE_CAPACITY = {"L1": 4096, "UB": 1024, "L0A": 256, "L0B": 256, "L0C": 512}
+# Backward-compatible alias; the single source of truth lives in ks_core.constants.
+CACHE_CAPACITY = CACHE_CAPACITIES
 CACHE_OPS = {"ALLOC", "FREE"}
 
 

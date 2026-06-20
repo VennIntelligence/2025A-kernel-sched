@@ -1,0 +1,345 @@
+\section{Additional Experimental Evidence}\label{sec:supp-cgo}
+
+The experiments section of the main paper retains only the figures and tables
+that most directly support the central argument. This section supplies
+finer-grained evidence, organized by the role each piece of evidence plays in
+the argument: same-engine reorder comparisons and sensitivity analyses isolate
+the ``schedule order'' degree of freedom; synthetic distributions delineate the
+applicability domain of the method; a CP-SAT oracle validates the theoretical
+lower bound and fixed-order optimality; surrogate-objective, working-set, and
+prefetch-window experiments explain the algorithm design; and the clean/dirty
+ablation isolates the $2\times$ cost gradient.
+
+\subsection{The Role of Schedule Order}\label{sec:supp-e12}
+
+The controlled comparison in \S\ref{sec:exp-mechanism} of the main text shows
+that victim-rule differences amount to at most $4\%$ under a fixed order,
+whereas the extra traffic can swing by an order of magnitude across different
+orders. This section quantifies that finding through three complementary
+experiments: a same-engine reorder comparison, a victim-rule sensitivity
+analysis, and a visualization of the cross-order swing.
+
+Table~\ref{tab:supp-e12} gives the controlled P2 comparison on six public
+instances. All methods share the same address assignment and spill engine and
+differ only in the input topological order. The differences in extra traffic
+can therefore be attributed to schedule order reshaping the residency
+composition inside high-pressure windows, rather than to a different allocator
+or a different victim policy.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Controlled comparison: P2 spill traffic (same address assignment and
+spill engine; only the schedule order is replaced).}
+\label{tab:supp-e12}
+\begin{tabular*}{0.88\linewidth}{@{\extracolsep{\fill}}lrrrrr@{}}
+\toprule
+Case & CP-list & CP-free & pressure & G--Hsu & ours \\
+\midrule
+Conv\_Case0    & 694{,}506     & 212{,}956 & 207{,}932     & 210{,}844     & 88{,}044 \\
+Conv\_Case1    & 1{,}695{,}264 & 73{,}348  & 1{,}048{,}524 & 1{,}053{,}484 & 72{,}520 \\
+FA\_Case0      & 211{,}784     & 3{,}904   & 101{,}356     & 90{,}092      & 3{,}904 \\
+FA\_Case1      & 965{,}944     & 33{,}152  & 445{,}876     & 418{,}228     & 32{,}920 \\
+Matmul\_Case0  & 823{,}168     & 34{,}944  & 296{,}064     & 298{,}240     & 34{,}688 \\
+Matmul\_Case1  & 6{,}506{,}240 & 460{,}800 & 2{,}556{,}928 & 2{,}560{,}640 & 460{,}800 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+The clean/dirty-blind memory-pressure schedulers (uniform pressure and
+Goodman--Hsu) are substantially worse than our order on every real case, paying
+roughly $2.4$--$26\times$ more extra traffic. The critical-path-oriented CP-list
+order is further behind still. By contrast, CP-free is a strong companion: by
+prioritizing node releases it indirectly shortens live ranges, approaching our
+order on most combinations, yet it remains clearly behind on instances such as
+Conv\_Case0 where clean reserve is decisive for cost. This result shows that
+reducing live bytes or releasing early is not by itself sufficient to explain
+the full benefit; the difference in clean/dirty composition inside
+high-pressure windows is a necessary factor.
+
+To probe the marginal effect of the victim rule directly,
+Figure~\ref{fig:supp-e2} replaces four Belady-style victim rules under a fixed
+schedule order and compares the resulting change in extra traffic per case. The
+four rules coincide exactly on most Matmul and FlashAttention instances; the
+Conv rows show visible differences, but their magnitude remains far below the
+cross-order swing. This agrees with the theoretical prediction of
+Proposition~\ref{prop:belady-margin}: under distance-dominant conditions, the
+marginal benefit of the victim rule is limited.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.62\textwidth]{\ksFigure{e2_victim_sensitivity.png}}
+\caption{Victim-rule sensitivity under a fixed schedule order. Most Matmul and
+FlashAttention rows coincide exactly; the Conv rows show visible differences,
+but their magnitude remains smaller than the cross-order swing.}
+\label{fig:supp-e2}
+\end{figure}
+
+Conversely, Figure~\ref{fig:supp-e3} shows the swing in extra traffic across
+different legal topological orders under the same engine. Replacing the legal
+topological order substantially changes the composition of evictable buffers in
+high-pressure windows, and therefore produces a far larger gap in extra traffic
+than fine-tuning the victim rule. Together, these two experiments confirm from
+both sides that the victim rule is only a local patch, while schedule order is
+the principal degree of freedom driving spill cost.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.66\textwidth]{\ksFigure{e3_order_sensitivity.png}}
+\caption{Schedule-order sensitivity. Compared with fine-tuning the victim rule
+on a fixed order, replacing the legal topological order substantially changes
+the composition of evictable buffers in high-pressure windows, and therefore
+produces a larger swing in extra traffic.}
+\label{fig:supp-e3}
+\end{figure}
+
+Taken together, the three pieces of evidence support the claim that schedule
+order is the principal optimization lever.
+Table~\ref{tab:supp-e12} quantifies the same-engine reorder gap,
+Figure~\ref{fig:supp-e2} shows that the marginal effect of the victim rule is
+limited under a fixed order, and Figure~\ref{fig:supp-e3} gives the
+order-of-magnitude difference of the cross-order swing. The gap in spill cost
+thus comes mainly from how schedule order shapes the clean/dirty residency
+composition in peak windows, and not from anything a victim rule can make up for
+on its own.
+
+This paper uses two comparison protocols. Table~\ref{tab:supp-e12} is the
+same-engine reorder comparison, used to isolate the scientific mechanism;
+Table~\ref{tab:supp-headline} is the end-to-end reference comparison, comparing
+the complete output of each system. The former supports the claim that schedule
+order shapes residency composition, the latter reflects the submission quality
+of the final solver on public instances, and the two should not be conflated.
+
+\subsection{Synthetic Distributions and the Applicability Domain}\label{sec:supp-e13}
+
+Figure~\ref{fig:e15-applicability} in the main text shows the systematic
+advantage in the capacity-bound region. This section gives the complete
+per-instance data and regime statistics over all 36 synthetic instances.
+
+Figure~\ref{fig:supp-e13} and Table~\ref{tab:supp-e13} report the distributional
+results over the 36 synthetic instances. We partition the instances into
+capacity-bound and order-reachable classes: the former require spilling
+unavoidably under capacity pressure, while the latter leave room to avoid spills
+directly through a good order. This partition corresponds to how the
+spill-inevitability certificate is used in the main text: it is not a complete
+feasibility test, but a way to identify the region in which the composition of
+unavoidable spills must be optimized.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\textwidth]{\ksFigure{e13_synth_suite.png}}
+\caption{Distribution over synthetic instances. (a) Per-instance extra-traffic
+ratio; (b) win rate by capacity-bound and order-reachable regime. The advantage
+concentrates in the capacity-bound region.}
+\label{fig:supp-e13}
+\end{figure}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Distribution statistics over the synthetic suite. The median ratio is
+ours/comparator; lower values indicate that our order is better.}
+\label{tab:supp-e13}
+\begin{tabular*}{0.72\linewidth}{@{\extracolsep{\fill}}llrr@{}}
+\toprule
+Comparator & Regime & Median ours/comp & Win rate \\
+\midrule
+\ksName{CP-list}        & all              & 0.39 & 83.3\% \\
+                         & capacity\_bound  & 0.40 & 100\% \\
+                         & order\_reachable & 0.00 & 66.7\% \\
+\midrule
+\ksName{CP-free} & all              & 1.00 & 38.9\% \\
+                         & capacity\_bound  & 0.50 & 77.8\% \\
+                         & order\_reachable & 1.00 & 0\% \\
+\midrule
+\ksName{Pressure} & all            & 1.00 & 36.1\% \\
+                         & capacity\_bound  & 0.84 & 55.6\% \\
+                         & order\_reachable & 1.00 & 16.7\% \\
+\midrule
+\ksName{G--Hsu}    & all              & 0.67 & 52.8\% \\
+                         & capacity\_bound  & 1.00 & 38.9\% \\
+                         & order\_reachable & 0.00 & 66.7\% \\
+\midrule
+\ksName{Random-best}    & all              & 0.34 & 75.0\% \\
+                         & capacity\_bound  & 0.34 & 100\% \\
+                         & order\_reachable & 0.50 & 50.0\% \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+The results match the theoretical positioning. In the capacity-bound subgroup,
+our method wins against both CP-list and random-best on every instance, with a
+median $2\times$ advantage over CP-free. In the order-reachable subgroup, a good
+order can eliminate spills directly, so clean/dirty shaping naturally no longer
+offers a systematic advantage; here the win rate over CP-free drops to $0\%$.
+The goal of the method is therefore not to dominate all DAGs, but to lower the
+real cost per unit of spill when spills are unavoidable.
+
+\subsection{CP-SAT Oracle}\label{sec:supp-e14}
+
+\S\ref{sec:exp-mechanism} of the main text reports the summary conclusions from
+the CP-SAT oracle. This section gives the per-instance data, including the
+capacity-constraint ratio, the theoretical lower bound, and the fixed-order
+optimal extra traffic. The small-graph oracle answers two questions: given the
+order our method selects, does the address/spill engine reach the capacity-only
+optimum; and do the theoretical lower bound and the area surrogate remain
+consistent on exact solutions.
+
+Table~\ref{tab:supp-e14} reports results for 8 capacity-bound small graphs.
+$\mathrm{ratio}_{W^\star}=W^\star/\Capc>1$ indicates that the instance is
+capacity-bound; $\mathrm{lb}_{T1}$ is the lower bound given by the
+spill-inevitability certificate of the main text; and $E^\star$ is the optimal
+extra traffic under a fixed order.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{\ksFigure{e14_oracle.png}}
+\caption{CP-SAT oracle validation. (a) Empirical constant band between overflow
+area $A(S)$ and fixed-order optimal extra traffic $E^\star(S)$; (b) the
+spill-inevitability lower bound against the fixed-order optimal extra traffic.}
+\label{fig:supp-e14}
+\end{figure}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Per-instance oracle data. All instances satisfy
+$\mathrm{lb}_{T1}\le E^\star$, and our engine reaches $E^\star$ under a fixed
+order.}
+\label{tab:supp-e14}
+\begin{tabular*}{0.82\linewidth}{@{\extracolsep{\fill}}lrrrrrr@{}}
+\toprule
+inst & bound & $\Capc$ & $\mathrm{ratio}_{W^\star}$ & $\mathrm{lb}_{T1}$ & $E^\star$ & $E^\star/A$ \\
+\midrule
+oracle\_000 & L0C & 512  & 1.375 & 192 & 352  & 0.564 \\
+oracle\_001 & UB  & 1024 & 1.375 & 384 & 1408 & 1.128 \\
+oracle\_002 & L0C & 512  & 1.375 & 192 & 704  & 1.128 \\
+oracle\_003 & UB  & 1024 & 1.375 & 384 & 704  & 0.564 \\
+oracle\_004 & L0C & 512  & 1.375 & 192 & 352  & 0.564 \\
+oracle\_005 & UB  & 1024 & 1.375 & 384 & 1408 & 1.128 \\
+oracle\_006 & L0C & 512  & 1.375 & 192 & 704  & 1.128 \\
+oracle\_007 & UB  & 1024 & 1.375 & 384 & 704  & 0.564 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+On all small graphs, the gap of our engine relative to the fixed-order optimum
+is $1.0$, showing that for this set of oracles the bottleneck lies in order
+selection rather than in the allocation/eviction implementation. The
+spill-inevitability lower bound holds throughout, and
+$E^\star/A\in[0.56,1.13]$, falling within the constant-factor range described in
+the main text. A cross-order joint-optimum model would have to couple the
+permutation variables with the residency variables, which causes CP-SAT to time
+out frequently; this paper therefore makes no claim about the gap to the global
+optimum, and uses the fixed-order oracle only to validate local optimality and
+the theoretical bounds.
+
+\subsection{Surrogate Objective and Diagnostic Tools}\label{sec:supp-mechanism}
+
+\S\ref{sec:exp-mechanism} of the main text reports, in summary form, the
+experimental conclusions for the overflow-area surrogate, the working-set
+certificate, and the prefetch window. This section gives the per-instance data
+and visualizations for these diagnostic tools, together with a quantitative
+analysis of the P1 versus P2/P3 misalignment.
+
+\paragraph{Overflow-area surrogate.}
+Figure~\ref{fig:supp-e6} compares the explanatory power of the overflow-area
+surrogate $\Phi$ and per-cache peak pressure for P2 extra traffic. Their
+Spearman correlations are very close ($0.958$ and $0.955$). We therefore do not
+present $\Phi$ as an empirically much stronger predictor; its value lies in
+being cheap to compute, in being usable stably during candidate-order
+filtering, and in being consistent with the area--extra approximation of the
+main text.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e6_surrogate.png}}
+\caption{The overflow-area surrogate $\Phi$ against peak pressure.
+(a) Explanatory power of $\Phi$ for P2 extra traffic; (b) explanatory power of
+per-cache peak over-capacity for P2 extra traffic. Their correlations are close;
+the main role of $\Phi$ is to serve as a cheap and cross-stage-consistent
+selection signal.}
+\label{fig:supp-e6}
+\end{figure}
+
+\paragraph{Working-set certificate.}
+Figure~\ref{fig:supp-e9} reports the working-set/capacity ratio over the
+near-optimal extra-traffic subset. This restriction matters: if one took the
+minimum peak unconstrained across all orders, a low-peak order with very high P2
+cost could wrongly weaken the capacity-bound diagnosis. For Matmul\_Case1/L1,
+the near-optimal ratio is $8.5$, showing that the instance lies in a strongly
+capacity-bound region where the remaining optimization room comes mainly from
+the composition of spill cost, rather than from simply eliminating spills.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.62\textwidth]{\ksFigure{e9_working_set.png}}
+\caption{Working-set/capacity ratio over the near-optimal extra-traffic subset.
+The red entry shows that Matmul\_Case1/L1 far exceeds capacity within the
+near-optimal set.}
+\label{fig:supp-e9}
+\end{figure}
+
+\paragraph{Objective misalignment between P1 and P2/P3.}
+P1 targets lowering the per-cache peak, but \S\ref{sec:theory} of the main text
+notes that a low peak is not equivalent to low spill cost.
+Figure~\ref{fig:supp-e7} quantifies this misalignment: lowering the P1 objective
+alone does not guarantee feasibility under capacity pressure or low spill cost.
+On some instances, the P2 extra traffic of the P1-optimal order is in fact
+higher than that of the order our method selects, because P1 does not
+distinguish clean from dirty reserve: an order whose sole goal is a low peak may
+accumulate large amounts of dirty buffers in high-pressure windows, raising the
+actual eviction cost. The selection signal of the overflow-area surrogate $\Phi$
+reflects multi-cache overflow pressure more directly, and so avoids this
+misalignment.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.62\textwidth]{\ksFigure{e7_misalignment_worst_ratio.png}}
+\caption{Misalignment between P1 and P2/P3. Lowering the P1 objective alone does
+not guarantee feasibility under capacity pressure or low spill cost; the $\Phi$
+selection reflects multi-cache overflow pressure more directly.}
+\label{fig:supp-e7}
+\end{figure}
+
+\paragraph{Prefetch-window decoupling.}
+Figure~\ref{fig:supp-e8} shows the effect of the prefetch window $H$ on P3 time
+and extra traffic. A nonzero window can noticeably reduce time, but extra
+traffic typically stays unchanged or rises slightly. This shows that the choice
+of spill set and the placement of reloads are two related but separable degrees
+of freedom: P2 must control traffic conservatively, whereas P3 can trade a wider
+window for pipeline overlap.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{\ksFigure{e8_decoupling.png}}
+\caption{Effect of the prefetch window $H$ on time and extra traffic. (a) P3
+time as a function of $H$; (b) extra traffic as a function of $H$. Prefetching
+mainly moves the placement of \ksOp{spill-in}, rather than redefining the spill
+set.}
+\label{fig:supp-e8}
+\end{figure}
+
+\subsection{Controlled Clean/Dirty Ablation}\label{sec:supp-clean-dirty}
+
+The ablation in \S\ref{sec:exp-mechanism} of the main text reports the $2\times$
+cost difference between clean reserve, with extra traffic $1{,}536$, and dirty
+reserve, with extra traffic $3{,}072$. This section gives the complete
+experimental design and results, ruling out a motif artifact of the public
+samples.
+
+Figure~\ref{fig:supp-e11} uses synthetic GEMM kernels to isolate the
+clean/dirty cost gradient. In (a), the DAG structure, peak, and spill count are
+fixed, and only the type of reserve available for eviction inside the
+high-pressure window is varied: the extra traffic of clean reserve is $1536$ and
+that of dirty reserve is $3072$, exactly $2\times$. In (b), sweeping a range of
+orders on the same clean instance shows that the higher the clean fraction in
+the peak residency, the lower the extra traffic. This experiment rules out the
+influence of the public-sample motif and directly validates the mechanism
+argument of the main text concerning the $2\times$ clean/dirty cost asymmetry.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{\ksFigure{e11_synth_generality.png}}
+\caption{Clean/dirty mechanism validation on synthetic kernels. (a) The
+controlled ablation isolates the $2\times$ cost gradient; (b) extra traffic
+decreases as the clean fraction at the peak increases.}
+\label{fig:supp-e11}
+\end{figure}

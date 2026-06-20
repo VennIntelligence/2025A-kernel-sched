@@ -1,0 +1,91 @@
+case,problem,comparator,key_kind,ours_key,comparator_key,result
+Conv_Case0,1,cp_list,p1_bytes_proxy,"(6912, 0, 0, 17776, 0, 615694)","(133031, 0, 0, 17776, 0, 1870377)",WIN
+Conv_Case0,1,cp_free_first,p1_bytes_proxy,"(6912, 0, 0, 17776, 0, 615694)","(14592, 0, 0, 96, 0, 816548)",WIN
+Conv_Case0,1,pressure_uniform,p1_bytes_proxy,"(6912, 0, 0, 17776, 0, 615694)","(45242, 0, 0, 17696, 0, 957492)",WIN
+Conv_Case0,1,goodman_hsu,p1_bytes_proxy,"(6912, 0, 0, 17776, 0, 615694)","(44474, 0, 0, 17480, 0, 957457)",WIN
+Conv_Case0,1,baseline,p1_bytes_proxy,"(6912, 0, 0, 17776, 0, 615694)","(7488, 0, 0, 96, 0, 585652)",WIN
+Conv_Case0,2,cp_list,p2_official,"(88044, 339, 615694)","(694506, 1311, 1870377)",WIN
+Conv_Case0,2,cp_free_first,p2_official,"(88044, 339, 615694)","(212956, 241, 816548)",WIN
+Conv_Case0,2,pressure_uniform,p2_official,"(88044, 339, 615694)","(207932, 769, 957492)",WIN
+Conv_Case0,2,goodman_hsu,p2_official,"(88044, 339, 615694)","(210844, 766, 957457)",WIN
+Conv_Case0,2,baseline,p2_official,"(88044, 339, 615694)","(88768, 164, 585652)",WIN
+Conv_Case0,3,cp_list,p3_official,"(553280, 92652, 342)","(1870377, 694506, 1311)",WIN
+Conv_Case0,3,cp_free_first,p3_official,"(553280, 92652, 342)","(816548, 212956, 241)",WIN
+Conv_Case0,3,pressure_uniform,p3_official,"(553280, 92652, 342)","(957492, 207932, 769)",WIN
+Conv_Case0,3,goodman_hsu,p3_official,"(553280, 92652, 342)","(957457, 210844, 766)",WIN
+Conv_Case0,3,baseline,p3_official,"(553280, 92652, 342)","(585652, 88768, 164)",WIN
+Conv_Case1,1,cp_list,p1_bytes_proxy,"(13786, 0, 0, 186528, 0, 2545951)","(383112, 0, 0, 187056, 0, 7130304)",WIN
+Conv_Case1,1,cp_free_first,p1_bytes_proxy,"(13786, 0, 0, 186528, 0, 2545951)","(14040, 0, 0, 96, 0, 1168182)",WIN
+Conv_Case1,1,pressure_uniform,p1_bytes_proxy,"(13786, 0, 0, 186528, 0, 2545951)","(290298, 0, 0, 186528, 0, 5357535)",WIN
+Conv_Case1,1,goodman_hsu,p1_bytes_proxy,"(13786, 0, 0, 186528, 0, 2545951)","(289978, 0, 0, 186528, 0, 5366678)",WIN
+Conv_Case1,1,baseline,p1_bytes_proxy,"(13786, 0, 0, 186528, 0, 2545951)","(14040, 0, 0, 96, 0, 1168182)",WIN
+Conv_Case1,2,cp_list,p2_official,"(72520, 1963, 1159169)","(1695264, 18446, 7130304)",WIN
+Conv_Case1,2,cp_free_first,p2_official,"(72520, 1963, 1159169)","(73348, 1978, 1168182)",WIN
+Conv_Case1,2,pressure_uniform,p2_official,"(72520, 1963, 1159169)","(1048524, 11951, 5357535)",WIN
+Conv_Case1,2,goodman_hsu,p2_official,"(72520, 1963, 1159169)","(1053484, 11975, 5366678)",WIN
+Conv_Case1,2,baseline,p2_official,"(72520, 1963, 1159169)","(73348, 1978, 1168182)",WIN
+Conv_Case1,3,cp_list,p3_official,"(1111778, 73578, 1951)","(7130304, 1695264, 18446)",WIN
+Conv_Case1,3,cp_free_first,p3_official,"(1111778, 73578, 1951)","(1168182, 73348, 1978)",WIN
+Conv_Case1,3,pressure_uniform,p3_official,"(1111778, 73578, 1951)","(5357535, 1048524, 11951)",WIN
+Conv_Case1,3,goodman_hsu,p3_official,"(1111778, 73578, 1951)","(5366678, 1053484, 11975)",WIN
+Conv_Case1,3,baseline,p3_official,"(1111778, 73578, 1951)","(1168182, 73348, 1978)",WIN
+FlashAttention_Case0,1,cp_list,p1_bytes_proxy,"(256, 8258, 3072, 4096, 1024, 168286)","(10240, 25352, 8192, 8192, 12288, 716486)",WIN
+FlashAttention_Case0,1,cp_free_first,p1_bytes_proxy,"(256, 8258, 3072, 4096, 1024, 168286)","(3328, 1428, 128, 128, 512, 53030)",WIN
+FlashAttention_Case0,1,pressure_uniform,p1_bytes_proxy,"(256, 8258, 3072, 4096, 1024, 168286)","(256, 25352, 8192, 8192, 256, 384116)",WIN
+FlashAttention_Case0,1,goodman_hsu,p1_bytes_proxy,"(256, 8258, 3072, 4096, 1024, 168286)","(4096, 25352, 8192, 8192, 256, 339636)",WIN
+FlashAttention_Case0,1,baseline,p1_bytes_proxy,"(256, 8258, 3072, 4096, 1024, 168286)","(3328, 1428, 128, 128, 256, 50993)",WIN
+FlashAttention_Case0,2,cp_list,p2_official,"(3904, 31, 51700)","(211784, 1085, 716486)",WIN
+FlashAttention_Case0,2,cp_free_first,p2_official,"(3904, 31, 51700)","(3904, 31, 53030)",WIN
+FlashAttention_Case0,2,pressure_uniform,p2_official,"(3904, 31, 51700)","(101356, 559, 384116)",WIN
+FlashAttention_Case0,2,goodman_hsu,p2_official,"(3904, 31, 51700)","(90092, 515, 339636)",WIN
+FlashAttention_Case0,2,baseline,p2_official,"(3904, 31, 51700)","(3904, 31, 50993)",LOSS
+FlashAttention_Case0,3,cp_list,p3_official,"(46167, 5832, 58)","(716486, 211784, 1085)",WIN
+FlashAttention_Case0,3,cp_free_first,p3_official,"(46167, 5832, 58)","(53030, 3904, 31)",WIN
+FlashAttention_Case0,3,pressure_uniform,p3_official,"(46167, 5832, 58)","(384116, 101356, 559)",WIN
+FlashAttention_Case0,3,goodman_hsu,p3_official,"(46167, 5832, 58)","(339636, 90092, 515)",WIN
+FlashAttention_Case0,3,baseline,p3_official,"(46167, 5832, 58)","(50993, 3904, 31)",WIN
+FlashAttention_Case1,1,cp_list,p1_bytes_proxy,"(256, 33010, 14336, 16384, 2048, 829679)","(28672, 105616, 32768, 32768, 49152, 3227726)",WIN
+FlashAttention_Case1,1,cp_free_first,p1_bytes_proxy,"(256, 33010, 14336, 16384, 2048, 829679)","(5376, 2468, 128, 128, 512, 227533)",WIN
+FlashAttention_Case1,1,pressure_uniform,p1_bytes_proxy,"(256, 33010, 14336, 16384, 2048, 829679)","(256, 105616, 32768, 32768, 256, 1660093)",WIN
+FlashAttention_Case1,1,goodman_hsu,p1_bytes_proxy,"(256, 33010, 14336, 16384, 2048, 829679)","(4096, 105616, 32768, 32768, 256, 1560913)",WIN
+FlashAttention_Case1,1,baseline,p1_bytes_proxy,"(256, 33010, 14336, 16384, 2048, 829679)","(5376, 2468, 128, 128, 256, 226085)",WIN
+FlashAttention_Case1,2,cp_list,p2_official,"(32920, 229, 214361)","(965944, 4848, 3227726)",WIN
+FlashAttention_Case1,2,cp_free_first,p2_official,"(32920, 229, 214361)","(33152, 224, 227533)",WIN
+FlashAttention_Case1,2,pressure_uniform,p2_official,"(32920, 229, 214361)","(445876, 2479, 1660093)",WIN
+FlashAttention_Case1,2,goodman_hsu,p2_official,"(32920, 229, 214361)","(418228, 2371, 1560913)",WIN
+FlashAttention_Case1,2,baseline,p2_official,"(32920, 229, 214361)","(33152, 224, 226085)",WIN
+FlashAttention_Case1,3,cp_list,p3_official,"(180364, 34432, 229)","(3227726, 965944, 4848)",WIN
+FlashAttention_Case1,3,cp_free_first,p3_official,"(180364, 34432, 229)","(227533, 33152, 224)",WIN
+FlashAttention_Case1,3,pressure_uniform,p3_official,"(180364, 34432, 229)","(1660093, 445876, 2479)",WIN
+FlashAttention_Case1,3,goodman_hsu,p3_official,"(180364, 34432, 229)","(1560913, 418228, 2371)",WIN
+FlashAttention_Case1,3,baseline,p3_official,"(180364, 34432, 229)","(226085, 33152, 224)",WIN
+Matmul_Case0,1,cp_list,p1_bytes_proxy,"(128, 0, 7296, 57344, 2048, 936347)","(16384, 0, 65536, 65536, 16384, 2173329)",WIN
+Matmul_Case0,1,cp_free_first,p1_bytes_proxy,"(128, 0, 7296, 57344, 2048, 936347)","(9216, 0, 128, 128, 256, 194331)",WIN
+Matmul_Case0,1,pressure_uniform,p1_bytes_proxy,"(128, 0, 7296, 57344, 2048, 936347)","(9216, 0, 65536, 65536, 256, 897262)",WIN
+Matmul_Case0,1,goodman_hsu,p1_bytes_proxy,"(128, 0, 7296, 57344, 2048, 936347)","(10752, 0, 65536, 65536, 256, 917054)",WIN
+Matmul_Case0,1,baseline,p1_bytes_proxy,"(128, 0, 7296, 57344, 2048, 936347)","(9216, 0, 128, 128, 256, 194331)",WIN
+Matmul_Case0,2,cp_list,p2_official,"(34688, 271, 192380)","(823168, 2719, 2173329)",WIN
+Matmul_Case0,2,cp_free_first,p2_official,"(34688, 271, 192380)","(34944, 273, 194331)",WIN
+Matmul_Case0,2,pressure_uniform,p2_official,"(34688, 271, 192380)","(296064, 1293, 897262)",WIN
+Matmul_Case0,2,goodman_hsu,p2_official,"(34688, 271, 192380)","(298240, 1310, 917054)",WIN
+Matmul_Case0,2,baseline,p2_official,"(34688, 271, 192380)","(34944, 273, 194331)",WIN
+Matmul_Case0,3,cp_list,p3_official,"(186820, 34944, 273)","(2173329, 823168, 2719)",WIN
+Matmul_Case0,3,cp_free_first,p3_official,"(186820, 34944, 273)","(194331, 34944, 273)",WIN
+Matmul_Case0,3,pressure_uniform,p3_official,"(186820, 34944, 273)","(897262, 296064, 1293)",WIN
+Matmul_Case0,3,goodman_hsu,p3_official,"(186820, 34944, 273)","(917054, 298240, 1310)",WIN
+Matmul_Case0,3,baseline,p3_official,"(186820, 34944, 273)","(194331, 34944, 273)",WIN
+Matmul_Case1,1,cp_list,p1_bytes_proxy,"(128, 0, 30848, 491520, 4096, 5602797)","(65536, 0, 524288, 524288, 65536, 13045367)",WIN
+Matmul_Case1,1,cp_free_first,p1_bytes_proxy,"(128, 0, 30848, 491520, 4096, 5602797)","(34816, 0, 128, 128, 256, 1800218)",WIN
+Matmul_Case1,1,pressure_uniform,p1_bytes_proxy,"(128, 0, 30848, 491520, 4096, 5602797)","(34816, 0, 524288, 524288, 256, 6461391)",WIN
+Matmul_Case1,1,goodman_hsu,p1_bytes_proxy,"(128, 0, 30848, 491520, 4096, 5602797)","(36608, 0, 524288, 524288, 256, 6471953)",WIN
+Matmul_Case1,1,baseline,p1_bytes_proxy,"(128, 0, 30848, 491520, 4096, 5602797)","(34816, 0, 128, 128, 256, 1800218)",WIN
+Matmul_Case1,2,cp_list,p2_official,"(460800, 3600, 1783145)","(6506240, 21510, 13045367)",WIN
+Matmul_Case1,2,cp_free_first,p2_official,"(460800, 3600, 1783145)","(460800, 3600, 1800218)",WIN
+Matmul_Case1,2,pressure_uniform,p2_official,"(460800, 3600, 1783145)","(2556928, 11788, 6461391)",WIN
+Matmul_Case1,2,goodman_hsu,p2_official,"(460800, 3600, 1783145)","(2560640, 11817, 6471953)",WIN
+Matmul_Case1,2,baseline,p2_official,"(460800, 3600, 1783145)","(460800, 3600, 1800218)",WIN
+Matmul_Case1,3,cp_list,p3_official,"(1771132, 460928, 3601)","(13045367, 6506240, 21510)",WIN
+Matmul_Case1,3,cp_free_first,p3_official,"(1771132, 460928, 3601)","(1800218, 460800, 3600)",WIN
+Matmul_Case1,3,pressure_uniform,p3_official,"(1771132, 460928, 3601)","(6461391, 2556928, 11788)",WIN
+Matmul_Case1,3,goodman_hsu,p3_official,"(1771132, 460928, 3601)","(6471953, 2560640, 11817)",WIN
+Matmul_Case1,3,baseline,p3_official,"(1771132, 460928, 3601)","(1800218, 460800, 3600)",WIN

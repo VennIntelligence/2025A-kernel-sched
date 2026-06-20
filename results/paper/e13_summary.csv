@@ -1,0 +1,16 @@
+comparator,regime,n_instances,median_ours_over_comparator_extra,q25_ours_over_comparator_extra,q75_ours_over_comparator_extra,ours_win_rate
+cp_list,all,36,0.38686361,0,0.54166667,0.83333333
+cp_list,capacity_bound,18,0.4,0.35069216,0.5,1
+cp_list,order_reachable,18,0,0,1,0.66666667
+cp_free_first,all,36,1,0.5,1,0.38888889
+cp_free_first,capacity_bound,18,0.5,0.5,0.66666667,0.77777778
+cp_free_first,order_reachable,18,1,1,1,0
+pressure_uniform,all,36,1,0.66666667,1,0.36111111
+pressure_uniform,capacity_bound,18,0.83864781,0.66666667,1,0.55555556
+pressure_uniform,order_reachable,18,1,1,1,0.16666667
+goodman_hsu,all,36,0.66666667,0,1,0.52777778
+goodman_hsu,capacity_bound,18,1,0.66666667,1,0.38888889
+goodman_hsu,order_reachable,18,0,0,1,0.66666667
+random_best,all,36,0.33617779,0.14088398,0.75,0.75
+random_best,capacity_bound,18,0.33617779,0.26749184,0.44968124,1
+random_best,order_reachable,18,0.5,0,1,0.5
