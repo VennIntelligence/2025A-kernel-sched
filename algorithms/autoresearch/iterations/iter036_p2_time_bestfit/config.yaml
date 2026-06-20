@@ -1,0 +1,21 @@
+experiment:
+  name: autoresearch_iter036_p2_time_bestfit
+  author: autoresearch
+  description: AutoResearch iteration iter036_p2_time_bestfit
+algorithm:
+  name: autoresearch
+  params: {}
+cases:
+- Conv_Case0
+- Conv_Case1
+- FlashAttention_Case0
+- FlashAttention_Case1
+- Matmul_Case0
+- Matmul_Case1
+problems:
+- 1
+- 2
+- 3
+output:
+  dir: results/autoresearch/iter036_p2_time_bestfit
+  save_schedules: true

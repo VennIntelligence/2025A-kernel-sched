@@ -1,0 +1,16 @@
+experiment:
+  name: autoresearch_iter032_d2s_copyin_feed_alloc_first
+  author: autoresearch
+  description: AutoResearch iteration iter032_d2s_copyin_feed_alloc_first
+algorithm:
+  name: autoresearch
+  params: {}
+cases:
+- Conv_Case0
+- FlashAttention_Case0
+- Matmul_Case0
+problems:
+- 1
+output:
+  dir: results/autoresearch/iter032_d2s_copyin_feed_alloc_first
+  save_schedules: true

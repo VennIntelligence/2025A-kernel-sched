@@ -1,0 +1,12 @@
+[project]
+name = "ks-autoresearch"
+version = "0.1.0"
+description = "Iterative AutoResearch solver for kernel scheduling"
+requires-python = ">=3.12"
+dependencies = [
+    "ks-core",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

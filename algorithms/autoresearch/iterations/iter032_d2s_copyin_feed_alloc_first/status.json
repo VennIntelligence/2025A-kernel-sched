@@ -1,0 +1,17 @@
+{
+  "iteration": "iter032_d2s_copyin_feed_alloc_first",
+  "suite": "p1_fast",
+  "result_dir": "results/autoresearch/iter032_d2s_copyin_feed_alloc_first",
+  "returncode": 0,
+  "promoted": false,
+  "previous_best": "iter031_d2s_transfer_feed_alloc_first_full",
+  "baseline_comparison": {
+    "wins": 2,
+    "losses": 1,
+    "ties": 0
+  },
+  "comparison": {
+    "reason": "promotion disabled",
+    "valid": true
+  }
+}

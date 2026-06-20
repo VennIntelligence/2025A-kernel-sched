@@ -1,0 +1,21 @@
+experiment:
+  name: autoresearch_iter037_p3_prefetch_grid
+  author: autoresearch
+  description: AutoResearch iteration iter037_p3_prefetch_grid
+algorithm:
+  name: autoresearch
+  params: {}
+cases:
+- Conv_Case0
+- Conv_Case1
+- FlashAttention_Case0
+- FlashAttention_Case1
+- Matmul_Case0
+- Matmul_Case1
+problems:
+- 1
+- 2
+- 3
+output:
+  dir: results/autoresearch/iter037_p3_prefetch_grid
+  save_schedules: true

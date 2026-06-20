@@ -1,0 +1,21 @@
+experiment:
+  name: autoresearch_iter035_p3_time_select
+  author: autoresearch
+  description: AutoResearch iteration iter035_p3_time_select
+algorithm:
+  name: autoresearch
+  params: {}
+cases:
+- Conv_Case0
+- Conv_Case1
+- FlashAttention_Case0
+- FlashAttention_Case1
+- Matmul_Case0
+- Matmul_Case1
+problems:
+- 1
+- 2
+- 3
+output:
+  dir: results/autoresearch/iter035_p3_time_select
+  save_schedules: true

@@ -1,0 +1,20 @@
+{
+  "iteration": "iter034_capfit_p123",
+  "suite": "full",
+  "result_dir": "results/autoresearch/iter034_capfit_p123",
+  "returncode": 0,
+  "promoted": true,
+  "previous_best": "iter031_d2s_transfer_feed_alloc_first_full",
+  "baseline_comparison": {
+    "wins": 8,
+    "losses": 10,
+    "ties": 0
+  },
+  "comparison": {
+    "reason": "candidate is no-worse and improves at least one row",
+    "valid": true,
+    "wins": 12,
+    "losses": 0,
+    "ties": 6
+  }
+}

@@ -1,0 +1,18 @@
+experiment:
+  name: autoresearch_iter033_unified_p123
+  author: autoresearch
+  description: AutoResearch iteration iter033_unified_p123
+algorithm:
+  name: autoresearch
+  params: {}
+cases:
+- Conv_Case0
+- FlashAttention_Case0
+- Matmul_Case0
+problems:
+- 1
+- 2
+- 3
+output:
+  dir: results/autoresearch/iter033_unified_p123
+  save_schedules: true

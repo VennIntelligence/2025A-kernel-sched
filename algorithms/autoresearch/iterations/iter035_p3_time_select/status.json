@@ -1,0 +1,20 @@
+{
+  "iteration": "iter035_p3_time_select",
+  "suite": "full",
+  "result_dir": "results/autoresearch/iter035_p3_time_select",
+  "returncode": 0,
+  "promoted": true,
+  "previous_best": "iter034_capfit_p123",
+  "baseline_comparison": {
+    "wins": 10,
+    "losses": 8,
+    "ties": 0
+  },
+  "comparison": {
+    "reason": "candidate is no-worse and improves at least one row",
+    "valid": true,
+    "wins": 4,
+    "losses": 0,
+    "ties": 14
+  }
+}

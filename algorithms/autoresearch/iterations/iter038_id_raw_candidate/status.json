@@ -1,0 +1,20 @@
+{
+  "iteration": "iter038_id_raw_candidate",
+  "suite": "full",
+  "result_dir": "results/autoresearch/iter038_id_raw_candidate",
+  "returncode": 0,
+  "promoted": true,
+  "previous_best": "iter037_p3_prefetch_grid",
+  "baseline_comparison": {
+    "wins": 13,
+    "losses": 5,
+    "ties": 0
+  },
+  "comparison": {
+    "reason": "candidate is no-worse and improves at least one row",
+    "valid": true,
+    "wins": 7,
+    "losses": 0,
+    "ties": 11
+  }
+}
