@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 
@@ -106,15 +105,27 @@ class Schedule:
     order: list[int] = field(default_factory=list)
     # Problem 2/3: spill decisions
     spills: list[SpillDecision] = field(default_factory=list)
+    # Problem 2/3: concrete memory layout and spill artifact format
+    memory: dict[int, int] = field(default_factory=dict)
+    spill_entries: list[tuple[int, int]] = field(default_factory=list)
     # Computed metrics (filled by simulator)
     metrics: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class Metrics:
-    """Standardized evaluation metrics."""
-    total_time: int = 0       # Total execution cycles
-    num_spills: int = 0       # Number of spill operations
-    extra_memory: int = 0     # Extra off-chip memory used
+    """Standardized evaluation metrics (summary view of canonical metric dict)."""
+    total_time: int = 0       # Maps to canonical key ``time``
+    num_spills: int = 0       # Maps to canonical key ``spills``
+    extra_memory: int = 0     # Maps to canonical key ``extra``
     violations: int = 0       # Constraint violations (must be 0)
-    schedule_length: int = 0  # Number of steps in schedule
+    schedule_length: int = 0  # Maps to canonical key ``schedule_len``
+
+
+@dataclass
+class EvaluationResult:
+    """Result of evaluating a complete scheduling solution."""
+    valid: bool
+    errors: list[str]
+    metrics: dict[str, int]
+    violations: int = 0
