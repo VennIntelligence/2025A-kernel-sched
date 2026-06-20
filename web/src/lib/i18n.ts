@@ -191,8 +191,8 @@ export const copy: Record<Language, Copy> = {
       ],
       affiliation: '东南大学 · 文氏智能',
       links: [
-        { label: '论文', kind: 'paper', href: `${REPO}/tree/master/paper` },
-        { label: '代码', kind: 'code', href: `${REPO}/tree/master/algorithms/autoresearch` },
+        { label: '论文', kind: 'paper', href: `${REPO}/blob/master/paper/dist/en_conf.pdf` },
+        { label: '代码', kind: 'code', href: REPO },
         { label: '数据', kind: 'data', href: `${REPO}/tree/master/data` },
         { label: '结果', kind: 'results', href: `${REPO}/tree/master/results` },
       ],
@@ -577,8 +577,8 @@ export const copy: Record<Language, Copy> = {
       ],
       affiliation: 'Southeast University · Venn Intelligence',
       links: [
-        { label: 'Paper', kind: 'paper', href: `${REPO}/tree/master/paper` },
-        { label: 'Code', kind: 'code', href: `${REPO}/tree/master/algorithms/autoresearch` },
+        { label: 'Paper', kind: 'paper', href: `${REPO}/blob/master/paper/dist/en_conf.pdf` },
+        { label: 'Code', kind: 'code', href: REPO },
         { label: 'Data', kind: 'data', href: `${REPO}/tree/master/data` },
         { label: 'Results', kind: 'results', href: `${REPO}/tree/master/results` },
       ],
