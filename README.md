@@ -17,9 +17,11 @@ Southeast University · Venn Intelligence Foundation
 
 ![Concept: spill-cost-aware liveness shaping](web/public/figures/concept.png)
 
-*Two legal schedules can have similar capacity pressure yet expose very
+Two legal schedules can have similar capacity pressure yet expose very
 different clean/dirty compositions to eviction. Keeping clean buffers resident in
-high-pressure windows provides low-cost eviction reserve and cuts off-chip traffic.*
+high-pressure windows provides low-cost eviction reserve and cuts off-chip traffic.
+
+🌐 **[Project Website](https://vennintelligence.github.io/2025A-kernel-sched/)**
 
 ## Abstract
 
@@ -34,8 +36,6 @@ reload. The two consume identical on-chip capacity but differ by **2×** in spil
 cost. We exploit this with *spill-cost-aware liveness shaping*: pick a legal
 schedule order that keeps cheap clean bytes resident as eviction reserve inside
 capacity-pressure windows.
-
-**→ Project website:** <https://vennintelligence.github.io/2025A-kernel-sched/>
 
 ## Method
 
