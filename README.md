@@ -1,16 +1,17 @@
 # Spill-Cost-Aware Liveness Shaping for NPU Intra-Kernel Scheduling
 
-> Change the *schedule order* — not the victim rule — to control the clean/dirty
-> composition of overflow windows, keeping cheap eviction reserve available when
-> on-chip cache capacity is tight.
+<div align="center">
 
-**Authors:** Chengzhi Gao · Jun Huang · Qin Ye
-**Affiliation:** Southeast University · Venn Intelligence
-**Venue:** CGO '27 submission (compiler optimization)
+[![Website](https://img.shields.io/badge/Project%20Page-vennintelligence.github.io-4A90D9?style=flat-square)](https://vennintelligence.github.io/2025A-kernel-sched/)
+[![Paper](https://img.shields.io/badge/Paper-PDF-D93F3F?style=flat-square)](paper/dist/en_conf.pdf)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![Venue](https://img.shields.io/badge/Venue-CGO%20'27-2E7D32?style=flat-square)]()
 
-> Note: the conference paper PDFs (`paper/dist/*_conf.pdf`) are intentionally
-> de-identified for double-blind review. The author info above comes from the
-> repo's non-blind web sources and is used here for the (non-blind) README.
+Chengzhi Gao ([contact@vennai.org](mailto:contact@vennai.org)) · Jun Huang ([hj992881627@outlook.com](mailto:hj992881627@outlook.com)) · Qin Ye ([yq020319@163.com](mailto:yq020319@163.com))
+
+Southeast University · Venn Intelligence Foundation
+
+</div>
 
 ---
 
@@ -20,7 +21,7 @@
 different clean/dirty compositions to eviction. Keeping clean buffers resident in
 high-pressure windows provides low-cost eviction reserve and cuts off-chip traffic.*
 
-## Overview
+## Abstract
 
 Deep-learning compilers lower neural operators into kernel-level DAGs whose nodes
 mix micro-operations, short-lived tensors, and heterogeneous execution pipes.
@@ -33,6 +34,8 @@ reload. The two consume identical on-chip capacity but differ by **2×** in spil
 cost. We exploit this with *spill-cost-aware liveness shaping*: pick a legal
 schedule order that keeps cheap clean bytes resident as eviction reserve inside
 capacity-pressure windows.
+
+**→ Project website:** <https://vennintelligence.github.io/2025A-kernel-sched/>
 
 ## Method
 
@@ -58,6 +61,13 @@ approximation, Belady-margin stability) delimit exactly the regime where the
 method pays off.
 
 ## Key results
+
+![Clean/dirty residency decomposition in an L1 high-pressure window](paper/assets/figures/e5_peak_residency.png)
+
+*Clean/dirty residency decomposition in an L1 high-pressure window. Blue is clean
+residency (already has an off-chip copy); orange is dirty residency (requires
+write-back); dashed line is L1 capacity. Under the same capacity, different legal
+orders expose different peak heights and dirty composition.*
 
 - **2.4–26×** more P2 spill traffic paid by clean/dirty-blind pressure schedulers
   in capacity-bound regimes (median ~11×); pure critical-path orders are 8–54×
