@@ -61,20 +61,6 @@ export type ProblemCopy = {
   data: DataSectionCopy
 }
 
-export type ResidencyCopy = {
-  kicker: string
-  title: string
-  idRaw: string
-  baseline: string
-  capacity: string
-  phi: string
-  clean: string
-  dirty: string
-  cleanAtPeak: string
-  caption: string
-  surrogateNote: string
-}
-
 export type Copy = {
   nav: {
     brand: string
@@ -109,8 +95,8 @@ export type Copy = {
     lead: string
     figLabel: string
     figCaption: string
-    clean: { term: string; body: string }
-    dirty: { term: string; body: string }
+    backed: { term: string; body: string }
+    unbacked: { term: string; body: string }
     asideTitle: string
     asideBody: string
     viewsTitle: string
@@ -124,11 +110,12 @@ export type Copy = {
     stages: Array<{ n: string; title: string; body: string }>
     pipelineLabel: string
     pipelineCaption: string
+    exactLabel: string
+    exactCaption: string
     ordersTitle: string
     orders: Array<{ tag: string; name: string; body: string }>
     victimTitle: string
     victimBody: string
-    residency: ResidencyCopy
   }
   theory: {
     eyebrow: string
@@ -142,24 +129,43 @@ export type Copy = {
     eyebrow: string
     title: string
     lead: string
+    headlineLabel: string
+    headlineCaption: string
     mainTitle: string
     mainCaption: string
-    mainCols: { instance: string; cpList: string; pressure: string; gHsu: string; cpFree: string; ours: string }
+    mainCols: {
+      instance: string
+      official: string
+      scalable: string
+      outcome: string
+    }
     lowerBetter: string
-    baselinesLabel: string
-    baselinesCaption: string
-    applicTitle: string
-    applicBody: string
-    applicLabel: string
-    applicCaption: string
-    ablationTitle: string
-    ablationBody: string
+    win: string
+    tie: string
+    loss: string
+    evidenceTitle: string
+    evidenceCaption: string
+    evidenceCols: { instance: string; repair: string; exact: string; status: string }
+    evidenceStatus: {
+      probe: string
+      certificate: string
+      timeout: string
+      feasibleFa1: string
+      feasibleMm0: string
+      notRun: string
+    }
+    accountingTitle: string
+    accountingBody: string
+    accountingLabel: string
+    accountingCaption: string
+    robustnessTitle: string
+    robustnessBody: string
     benchTitle: string
     benchCaption: string
     benchCols: { instance: string; opType: string; nodes: string; edges: string; buffers: string }
-    runtimeTitle: string
-    runtimeCaption: string
-    runtimeCols: { instance: string; p1: string; p2: string; p3: string }
+    p3Title: string
+    p3Caption: string
+    p3Cols: { instance: string; official: string; scalable: string; outcome: string }
     capTitle: string
     capBody: string
   }
@@ -174,7 +180,7 @@ const REPO = 'https://github.com/VennIntelligence/2025A-kernel-sched'
 export const copy: Record<Language, Copy> = {
   zh: {
     nav: {
-      brand: 'Liveness Shaping',
+      brand: 'Frontier Scheduling',
       overview: '概览',
       problem: '赛题图解',
       method: '方法',
@@ -182,61 +188,61 @@ export const copy: Record<Language, Copy> = {
       cite: '引用',
     },
     meta: {
-      venue: '编译优化 · 投稿 CGO ’27',
-      title: '调度序驱动的驻留构成优化：面向 NPU 的溢出代价感知方法',
+      venue: '编译优化 · Exact-to-Heuristic Scheduling',
+      title: '面向 NPU 核函数的依赖前沿调度与非对称代价溢出规划',
       authors: [
         { name: '高成志', email: 'contact@vennai.org' },
         { name: '黄骏', email: 'hj992881627@outlook.com' },
         { name: '叶勤', email: 'yq020319@163.com' },
       ],
-      affiliation: '东南大学 · 文氏智能',
+      affiliation: '东南大学 · 文氏智能基金会',
       links: [
         { label: '论文', kind: 'paper', href: `${REPO}/blob/master/paper/dist/en_conf.pdf` },
         { label: '代码', kind: 'code', href: REPO },
         { label: '数据', kind: 'data', href: `${REPO}/tree/master/data` },
         { label: '结果', kind: 'results', href: `${REPO}/tree/master/results` },
       ],
-      fig1Label: '图 1 · 概念图',
+      fig1Label: '研究主线',
       fig1Caption:
-        '溢出代价感知的活跃度塑形。两个容量压力相近的合法调度，会向驱逐过程暴露出不同的 clean/dirty 构成。当 clean 缓冲在高压窗口保持常驻时，同等大小的换出可避免写回，从而降低额外搬运。',
-      fig2Label: '方法总览',
+        'Conv0 的完整证据阶梯：production solver 相对官方工件降低 9.1%，探索性 order repair 再降低 1.9%，fixed-order planner 达到 57,408 字节下界并形成证书。',
+      fig2Label: '方法层级',
       fig2Caption:
-        '优化框架的三个阶段：(1) 判定溢出是否不可避免，决定是否需要优化；(2) 通过活跃度塑形生成三条互补的候选拓扑序；(3) 沿每条序执行地址分配与 spill 插入，再以字典序键在候选序与预取窗口之间择优。',
+        '生产求解器、非统一 repair 个案与 fixed-order oracle 是三个不同层级；后两者不是默认 solve 的隐藏阶段。',
     },
     abstract: {
       title: '摘要',
       body:
-        '深度学习编译器在将算子编译为核函数时，会产生由微操作、短生命周期张量和异构流水线组成的有向无环图。由于片上缓存容量有限，不同的合法调度顺序会导致差异巨大的内存峰值和数据溢出流量。本文揭示了现有调度算法常忽略的一个结构性非对称特征：从主存读入且已有备份的“干净”数据在被驱逐时无需写回，而计算产生的“脏”数据则必须写回，两者的溢出代价截然不同。基于此，本文提出一种溢出代价感知的活跃度（liveness）塑形方法，通过主动调整容量受限时干净与脏数据的驻留比例，优先驱逐低代价数据，从而保留片上缓存储备。理论上，本文给出单侧的溢出必然性证书，用于判定溢出在近最优调度中是否不可避免，并建立了溢出面积与额外访存流量之间的有条件常数近似关系。基于公开 NPU 风格调度实例、合成分布、小图 oracle 与受控消融的实验表明，clean/dirty 无感的内存压力调度器在容量受限区域会多付 2.4–26× 的 P2 溢出流量。',
+        'NPU 核函数调度需联合选择微操作 DAG 的合法拓扑序、片上缓冲区连续地址和容量不足时的 spill 计划。本文构建以 dependency-frontier order 为核心的有界 production portfolio，并直接按 P2 流量或 P3 时间选择完整工件。对固定拓扑序，加权 residency-gap CP-SAT 给出流量下界；若连续打包后的合法工件达到该下界，即得到 fixed-order traffic certificate。六个公开 DAG 上，production solver 的 P2 为五胜一平，P3 时间为五快一慢。证据支持一条可审计的 exact-to-heuristic bridge，而不是普适的 clean/dirty 构成定律。',
     },
     highlights: {
       title: '核心结果',
       items: [
-        { value: '2.4–26×', label: 'clean/dirty 无感调度器多付的 P2 溢出流量（中位约 11×）' },
-        { value: '2×', label: 'clean 与 dirty 换出代价的精确差距' },
-        { value: '4 个层级', label: '公开基准 · 合成分布 · 小图 oracle · 受控消融' },
+        { value: '5 胜 + 1 平', label: 'production solver 的 canonical P2 结果，全部 0 violations' },
+        { value: '5 快 + 1 慢', label: 'P3 pipeline time；Conv1 回退 4.23%' },
+        { value: '3 份证书', label: '覆盖两个公开实例的 fixed-order traffic optimum' },
       ],
     },
     contributions: {
       title: '三项贡献',
-      lead: '从一个被现有调度器忽略的结构性非对称出发，给出可诊断、可解释、可泛化的方法与理论。',
+      lead: '把 production portfolio、固定序证书和审计式评价分层陈述，让每个结论都对应可复验 artifact。',
       items: [
         {
           tag: '贡献 1',
-          name: '溢出代价感知的活跃度塑形',
+          name: 'Dependency-frontier 调度',
           body:
-            '为 NPU 核内 DAG 形式化“活跃度塑形”：通过改变合法拓扑序控制溢出窗口内的 clean/dirty 驻留构成，在容量紧张时保留低成本的可换出储备。',
+            '识别 successor-wait 规则会让单输入 stream 饿死多输入 consumer，并以 ready predecessor group completion 尽快解锁依赖前沿；该新信号不读取 case 名、算子 motif 或 buffer 类别。',
         },
         {
           tag: '贡献 2',
-          name: '溢出区间的理论刻画',
+          name: '加权 residency-gap planning',
           body:
-            '溢出必然性证书给出单侧、线性时间的诊断，识别任何近最优调度都无法避免溢出的情形；Belady-margin 稳定性说明调度序而非驱逐规则是主要优化自由度；溢出面积定理在有界缺席时长下把廉价代理与最优溢出流量以常数因子相连。',
+            '对固定序，把相邻 mandatory buffer event 之间的驻留 gap 作为 optional interval，以 evaluator 的真实 backed 1× / unbacked 2× 代价求解并生成连续物理布局。',
         },
         {
           tag: '贡献 3',
-          name: '四层级系统实验',
+          name: 'Exact-to-heuristic bridge',
           body:
-            '在公开 NPU 基准、合成 DAG 分布、小图 oracle 与受控消融四个层级上验证：收益恰好集中在定理判定为容量受限的区域，而 clean/dirty 无感的压力调度器要多付 2.4–26× 的溢出流量。',
+            '研究评估报告 fixed-order traffic lower bound 与 contiguous-packing certificate；production 在所有规模使用有界 portfolio，repair 个案、exact gap 和超时边界均单独披露。',
         },
       ],
     },
@@ -283,7 +289,7 @@ export const copy: Record<Language, Copy> = {
           tab: 'Spill',
           title: 'Problem 2 · Spill 重定位',
           detail:
-            '插入 SPILL_OUT / SPILL_IN 对：W 暂存 DDR，X2 占据 [0, 640)，W 以 NewOffset = 640 重载回片上。因为 W 源自 COPY_IN，SPILL_OUT 为 0 cycle，额外 DDR 搬运量仅 Size = 128——这正是 Problem 2 的代价度量。',
+            '插入 SPILL_OUT / SPILL_IN 对：W 暂存 DDR，X2 占据 [0, 640)，W 以 NewOffset = 640 重载回片上。W 带静态 COPY_IN-backed 标签，SPILL_OUT 为 0 cycle，额外 DDR 搬运量仅 Size = 128——这正是 Problem 2 的 artifact 计费。',
         },
         {
           tab: 'Pipeline',
@@ -303,7 +309,7 @@ export const copy: Record<Language, Copy> = {
           label: 'Problem 2',
           title: '地址分配与 Spill',
           formula: 'min Σ spill cost',
-          body: '为 buffer 分配物理偏移，满足容量与不重叠约束；放不下时插入 spill，COPY_IN 来源代价 Size，否则 2×Size。',
+          body: '为 buffer 分配物理偏移，满足容量与不重叠约束；放不下时插入 spill，静态 COPY_IN-backed 标签计 Size，否则计 2×Size。',
         },
         {
           label: 'Problem 3',
@@ -361,23 +367,23 @@ export const copy: Record<Language, Copy> = {
     },
     model: {
       eyebrow: '问题模型',
-      title: '干净 / 脏缓冲，与三个嵌套视角',
+      title: '静态 backed 标签与三个评价视角',
       lead:
-        '输入是神经算子的微操作图 G。节点分两类：算子节点执行计算或数据搬运，携带执行单元、时延与读写缓冲集；缓存管理节点标记缓冲生命周期的起止。每个逻辑缓冲 b 有大小 s_b、缓存类型 τ(b) 与容量 Cap_c。调度 S 是全部节点的一个合法拓扑序。',
+        '输入是神经算子的微操作图 G。算子节点携带 pipe、cycles 与缓冲列表，缓存节点标记 ALLOC / FREE。每个逻辑缓冲 b 有大小 s_b 与缓存类型 τ(b)，调度 S 是全部节点的合法拓扑序。当前 evaluator 没有显式 read/write role，因此 COPY_IN membership 是静态 backed 标签，而不是动态更新的脏位。',
       figLabel: '图 2 · 微操作 DAG',
       figCaption:
-        '一个微操作 DAG。粉色节点是缓存管理事件（分配/释放），蓝色节点是算子。缓冲 b₀ 由片外读入、已有备份，故为 clean（κ=1）；b₁ 由计算产生，故为 dirty（κ=2）。',
-      clean: {
-        term: 'Clean 缓冲',
-        body: '由从片外读数据的算子写入，片外已有备份；换出时无需写回，仅产生重载代价 e_b = s_b。',
+        '微操作 DAG 中，粉色节点是 ALLOC / FREE，蓝色节点是计算或数据搬运。COPY_IN 标记的 backed 缓冲按一次 reload 计费；其他 generated-or-unbacked 缓冲按 write + reload 计费。',
+      backed: {
+        term: 'Backed（COPY_IN 标签）',
+        body: 'evaluator 假定片外已有副本，spill 只计 reload：e_b = s_b。该标签在当前模型中不会随后续写入动态改变。',
       },
-      dirty: {
-        term: 'Dirty 缓冲',
-        body: '由计算产生；若后续仍被使用，换出需先写回再重载，额外流量 e_b = 2 s_b。',
+      unbacked: {
+        term: 'Generated / unbacked',
+        body: 'evaluator 按 write + reload 计费：e_b = 2s_b。由于缺少读写角色，这是一种 artifact 级分类。',
       },
-      asideTitle: '相同容量，2× 代价',
+      asideTitle: '目标恒等式，不是单一机制定理',
       asideBody:
-        'clean 与 dirty 缓冲占用相同的片上空间，溢出代价却相差 2×。因此，让溢出窗口内保留更多 clean 储备的调度序，可同时改善驻留、流量与时序。这一非对称是本文方法的核心建模特征。',
+        '若 backed 与 unbacked spill volume 分别为 C、D，则 E=C+2D=(C+D)+D=V+D。非对称代价确实进入目标；但总 spill volume V 与 unbacked volume D 都会改变，不能只凭峰值构成归因。',
       viewsTitle: '三个嵌套的评价视角',
       views: [
         {
@@ -390,177 +396,180 @@ export const copy: Record<Language, Copy> = {
           tag: 'P2',
           title: '溢出流量',
           formula: 'E(S) = Σ_b∈Spills e_b',
-          body: '加入物理地址分配与 spill 插入，最小化总额外搬运。本文以 P2 为主视角，它直接度量活跃度塑形所针对的溢出代价。',
+          body: '加入连续地址分配与 spill 插入，按静态 backed/unbacked 计费并最小化总额外搬运。',
         },
         {
           tag: 'P3',
           title: '流水线时间',
           formula: 'T = maxᵥ E(v)',
-          body: '在固定序下，计入依赖与流水线约束模拟最早完成时间。三个视角共享同一套 clean/dirty 非对称流量模型。',
+          body: '计入原始依赖、spill 依赖、地址复用与 pipe 串行约束，最小化最终完成时间。',
         },
       ],
     },
     method: {
       eyebrow: '方法',
-      title: '优化调度序，而非驱逐规则',
+      title: '结构前沿、真实代价选择与有界精确规划',
       lead:
-        '已有调度器把溢出当作容量超限后的局部后果，在固定序上套一个驱逐规则。我们的实验表明这是错误的主自由度：在固定序上，四种 Belady 式驱逐变体的额外流量通常相差不超过 4%，而不同的合法序可摆动一个数量级以上。因此本方法转而优化调度序，塑形溢出窗口内的 clean/dirty 构成。',
+        'Production solver 枚举四种合法拓扑序、best-fit 放置、两种 victim policy 与有限 reload window，并直接用 canonical P2/P3 key 选择完整工件。Dependency frontier 是新加入的结构序；repair 与 exact planner 只作为独立研究证据。',
       stagesTitle: '三个阶段',
       stages: [
         {
           n: '1',
-          title: '溢出诊断',
+          title: 'Dependency frontier',
           body:
-            '判定给定 DAG 与容量下溢出是否不可避免。若不可避免，目标便从“消除溢出”转为“降低其代价”，溢出面积 Φ 成为廉价的跨阶段代理。',
+            '当某个 consumer 的剩余 predecessor 全部是 ready ALLOC 时，完成这组分配并尽快执行 consumer，避免多输入节点被连续的单输入 transfer 长期饿死。',
         },
         {
           n: '2',
-          title: '候选序生成与地址分配',
+          title: 'Scalable placement 与 policy portfolio',
           body:
-            '生成三条互补的拓扑序，沿每条序执行 best-fit 放置与代价感知的 spill 插入（见地址分配算法）。',
+            '沿合法序执行 true best-fit；在容量或碎片压力下比较 distance/cost 与 backed-share/fragmentation-adaptive victim policy，并跳过无法生成合法 placement 的组合。',
         },
         {
           n: '3',
-          title: '择优',
+          title: '真实目标选择与 fallback',
           body:
-            '模拟候选序 × 预取窗口的笛卡尔积，按真实字典序键择优：P2 用 (E, n, T)，P3 用 (T, E, n)。加入新候选只会改善或持平所选目标，永不回退。',
+            'P2 直接按 (extra, spills, time)，P3 按 (time, extra, spills) 选择。Fixed-order exact planner 目前是独立研究分支，尚未进入默认 solver；未来集成必须在超时或 packing 失败时回退 validated scalable portfolio。',
         },
       ],
       pipelineLabel: '方法总览',
       pipelineCaption:
-        '三阶段流水线：先判定溢出必然性，再围绕溢出面积生成与筛选候选，最后在真实官方键上择优。',
-      ordersTitle: '三条互补的候选拓扑序',
+        'Dependency frontier 将同一 consumer 的 ready operand 集中完成：示意例中的 operand residency 从 18 降至 6 operand-steps。该图解释结构机制，不是公开 benchmark 的数值结果。',
+      exactLabel: '图 · Fixed-order certificate 链',
+      exactCaption:
+        'CP-SAT 先选择加权 residency gap 并给出流量下界，再做连续 offset 打包和 canonical validation；只有合法工件达到下界时才形成 fixed-order traffic certificate。',
+      ordersTitle: '三个实现层级',
       orders: [
         {
-          tag: '序 1',
-          name: '压力感知序',
-          body: '分配节点按后继入度排序：入度越小，消费者越快就绪，故可把分配延迟到接近使用处。',
+          tag: '默认',
+          name: 'Production portfolio',
+          body: '四种结构序 + true best-fit + 两种 victim policy + canonical objective selection；六个 P2 artifact 全部有效。',
         },
         {
-          tag: '序 2',
-          name: '容量节流序',
-          body: '在压力感知序上加入容量门控：会超出缓存容量的分配被推迟，直到无法再延；容量权重按 1/Cap_c 归一化以平衡不同稀缺度的缓存。',
+          tag: '证据',
+          name: 'Cost-aware repair case studies',
+          body: 'Conv0 与 Conv1 使用不同搜索程序和预算，只接受 asymmetric P2 cost 严格下降；它们是探索性 case study，不是一套统一的六例算法。',
         },
         {
-          tag: '序 3',
-          name: 'ID 储备序',
-          body: '在三类节点内取最小编号、不做容量节流。它是方法的候选而非外部基线：用于保留稳定的输入缓冲顺序，让 clean 的 COPY_IN 缓冲贯穿计算窗口常驻，在溢出区留下廉价储备。',
+          tag: 'Oracle',
+          name: 'Fixed-order exact planner',
+          body: 'CP-SAT 选择 weighted residency gap，独立的 NoOverlap2D 或 validated greedy packing 检查连续 offset，再做 canonical validation；只对 fixed order 给 traffic 证书。',
         },
       ],
-      victimTitle: '序主导，驱逐规则次要',
+      victimTitle: 'Cost awareness 的真实位置',
       victimBody:
-        '给定一条序，引擎按 argmaxᵦ d(b)·s_b/e_b 选择驱逐对象——即 clean 取 d(b)、dirty 取 d(b)/2——因此在 next-use 距离相近时偏好廉价的 clean 换出。由 Belady-margin 命题，当 next-use 距离占主导时所有此类规则选同一组驱逐对象：固定序上四种驱逐变体仅相差 ≤4%，而不同合法序可让额外流量摆动 10× 以上。',
-      residency: {
-        kicker: 'E5 · E6 容量溢出积分',
-        title: 'Φ：把“溢出面积”当作代理目标',
-        idRaw: 'id_raw（我们）',
-        baseline: 'baseline',
-        capacity: '容量 4096',
-        phi: 'Φ 溢出面积',
-        clean: 'clean 驻留',
-        dirty: 'dirty 驻留',
-        cleanAtPeak: '峰值处 clean 储备',
-        caption:
-          'Conv_Case0 的 L1 逻辑驻留沿调度序展开：超过容量线的阴影面积即容量溢出积分 Φ。我们的 id_raw 序在溢出峰值处保留了更多 clean 缓冲（廉价可驱逐），baseline 则几乎全是 dirty。切换两条曲线对比峰值处的 clean 储备。',
-        surrogateNote: 'Φ ↔ extra 的 Spearman = 0.958，与 peak ↔ extra（0.955）几乎等价——Φ 是廉价而可靠的代理信号。',
-      },
+        '新 dependency-frontier 信号是结构性的；静态 backed/generated 成本进入 victim score、真实流量计算和最终 P2 key。两个非统一 Conv repair 个案分别再降 1.94% / 2.47%，不能外推为统一六例算法。',
     },
     theory: {
-      eyebrow: '理论',
-      title: '方法在何处生效',
-      lead: '三条结果界定了本方法的适用区间，并解释了“驱逐规则不敏感、调度序高度敏感”的实验现象。证明见补充材料。',
-      wsLabel: '图 5 · 工作集下界',
+      eyebrow: '可证明与可验证的边界',
+      title: '从目标恒等式到 fixed-order certificate',
+      lead: '只保留与实现和 artifact 一一对应的论断：一个会计恒等式、一个容量松弛下界、达到下界后的固定序证书，以及明确的全局最优边界。',
+      wsLabel: '图 · 几何压力不是可靠排序代理',
       wsCaption:
-        '每个 (算例, 缓存) 在近最优 extra 子集上的工作集 / 容量比。比值 > 1 意味着即便最优重排也放不下、溢出不可避免。红色的 Matmul_Case1 / L1 高达 8.5，在近最优口径下远超容量——正是溢出必然性证书（定理 1）的实证。',
+        'Conv0 的 dependency-frontier order 具有更大的逻辑 L1 overflow area，却把 certified fixed-order traffic 从 81,504 降至 57,408 字节；仅靠峰值或面积不能可靠排序。',
       items: [
         {
-          tag: '定理 1',
-          name: '溢出必然性证书',
+          tag: '恒等式',
+          name: 'Extra 的 volume 分解',
           statement:
-            '若近最优序集合上的工作集下界 W̲ᶜ_ε 仍超过容量 Cap_c，则其中每个调度都必须在缓存 c 上溢出，且 extra(P) ≥ maxₜ(Wᶜ(t) − Cap_c)₊。这是一个单侧、线性时间的诊断：它确认溢出何时不可避免，从而标出“必须优化代价构成”的区域。',
-          note: '在全部小图 CP-SAT oracle 上成立。',
+            '令 backed spill volume 为 Cl、generated spill volume 为 Dt，总 volume 为 Vol=Cl+Dt，则 Tr=Cl+2Dt=Vol+Dt。优化可减少总 spill volume、generated surcharge，或二者。',
+          note: '这是 evaluator 的计费恒等式，不是 composition 主导性的因果证明。',
         },
         {
-          tag: '命题 1',
-          name: 'Belady-margin 稳定性',
+          tag: '证书',
+          name: 'Fixed-order traffic certificate',
           statement:
-            '对代价因子比 ρ = g_max/g_min ≤ 2 的距离主导评分规则：若所选驱逐者中最小的 next-use 距离大于 ρ 倍的非驱逐者最大距离，则所有此类规则选出相同的驱逐集合——这解释了为何调度序而非驱逐调参才是主要自由度。',
-          note: '固定序驱逐 CV：Matmul/FA 上 ≈ 0，Conv 上 ≤ 4%。',
+            '对给定拓扑序，每个相邻 mandatory event gap 是带收益的 optional interval；cumulative lower bound 后另做连续 offset packing，并以 canonical evaluator 验证 artifact。',
+          note: 'Conv0/frontier：objective = bound = 57,408；所选段可连续打包，0 violations。证书不优化 spill-count/time tie-break。',
         },
         {
-          tag: '定理 2',
-          name: '溢出面积的有条件近似',
+          tag: '边界',
+          name: 'Exact-to-heuristic 边界',
           statement:
-            '在缺席时长有界时，溢出面积 A(S) 双边界定最优溢出流量：(1/L)·A(S) ≤ E⋆(S) ≤ (2λ/ℓ)·A(S)。这为 O(N) 的代理 Φ 在容量受限区域给出了一致的跨阶段依据。',
-          note: '实测 E⋆/A ∈ [0.56, 1.13]；Spearman(Φ, extra)=0.958 vs peak 0.955。',
+            'Exact planner 当前仅作研究 oracle，scalable portfolio 始终是正式默认。未来若集成 exact path，timeout 或 packing 失败时必须使用经验证的 scalable fallback。',
+          note: 'FA1 120s 后仍有 576-byte gap；Conv1 未在研究预算内完成 exact + packing。',
         },
       ],
     },
     results: {
       eyebrow: '实验',
-      title: '四个层级的证据',
+      title: '生产结果与研究证据分层报告',
       lead:
-        '实验检验本文的核心论断：当容量溢出不可避免时，调度序能否通过改变峰值窗口内的 clean/dirty 构成降低真实溢出代价。关键是“同引擎口径”——每个对照与本方法共享同一套 best-fit 地址分配与 spill 引擎，只替换输入拓扑序，从而把流量差异干净地归因于序如何塑形驻留构成。',
-      mainTitle: '共享 spill 引擎下的 P2 溢出流量 E(S)',
+        '公开 headline 只包含 canonical-valid 的 production artifact。Repair 与 fixed-order exact 另表报告：前者是非统一个案，后者只认证给定拓扑序下的最小 traffic，不能混入默认算法的胜负统计。',
+      headlineLabel: '图 · 六个公开实例的 P2 / P3 主结果',
+      headlineCaption:
+        'P2 相对 official 为五次严格胜出、一次持平；P3 time 为五快一慢。Repair 与 fixed-order oracle 均未混入本图。',
+      mainTitle: 'Canonical P2 extra traffic',
       mainCaption:
-        '越低越好，每行最优值加粗。clean/dirty 无感的压力序与 Goodman–Hsu 序在每个算例上都多付 2.4–26×（中位约 11×）；纯关键路径序更远，达 8–54×。在全部 6 算例 × 3 视角 × 4 对照（72 个组合）中，我们的序在每一个上都不劣。',
-      mainCols: { instance: '算例', cpList: 'CP list', pressure: 'Pressure', gHsu: 'G–Hsu', cpFree: 'CP-free', ours: 'Ours' },
+        'Production solver 对 official 为 5 次严格胜出、1 次持平，最大下降 9.08%，中位下降 0.866%；六个工件均为 0 violations。',
+      mainCols: { instance: '算例', official: 'Official', scalable: 'Production', outcome: '结果' },
       lowerBetter: '越低越好',
-      baselinesLabel: '图 3 · 标准调度器对比',
-      baselinesCaption:
-        '对数坐标下的标准调度器 P2 溢出流量对比。所有序共享同一套地址分配与 spill 引擎，只改变拓扑序。',
-      applicTitle: '方法的适用边界',
-      applicBody:
-        '在一个合成 DAG 分布上，证书判定为容量受限的区域里，本方法对关键路径序与随机序 100% 取胜、对更强的 free-first 对照 77.8% 取胜，中位 2× 优势；而在“序可达”实例中，好的序本就能避免溢出，系统性优势随之消失（对 free-first 为 0%）。方法的有效性与证书的前提条件高度吻合。',
-      applicLabel: '图 4 · 合成区间上的适用性',
-      applicCaption:
-        '不同合成区间上的适用性。左：本方法对各对照的胜率。右：额外流量中位比（ours/对照，越低越好），虚线为持平线。',
-      ablationTitle: '受控 clean / dirty 消融',
-      ablationBody:
-        '合成 GEMM 核固定相同的 DAG 结构、spill 次数与峰值，只改变峰值窗口内储备的类型：clean 储备产生 1,536 单位额外流量，dirty 储备 3,072——恰好 2×。进一步的序扫描显示，额外流量随峰值处 clean 占比上升而单调下降。',
+      win: '胜',
+      tie: '平',
+      loss: '负',
+      evidenceTitle: '有界研究证据：repair 与 fixed-order oracle',
+      evidenceCaption:
+        'Repair 使用非统一搜索程序和预算；Exact 仅优化 fixed-order traffic。破折号表示没有完成结果或未运行，不表示零 traffic。',
+      evidenceCols: { instance: '算例', repair: 'Cost repair', exact: 'Fixed-order exact', status: '状态' },
+      evidenceStatus: {
+        probe: 'probe',
+        certificate: 'Traffic certificate',
+        timeout: 'Packing timeout',
+        feasibleFa1: 'Feasible；LB 31,936',
+        feasibleMm0: 'Feasible；LB 29,952',
+        notRun: '未运行',
+      },
+      accountingTitle: 'Tr = Vol + Dt 的六例计账',
+      accountingBody:
+        '所有严格 P2 胜例都降低总 spill volume；但 generated surcharge Dt 的变化并不统一：Conv1 在 Dt 增加 171 字节时仍获胜，Matmul0 则在 Dt=0 的纯 backed 区域获胜。',
+      accountingLabel: '图 · Public cases 的 Vol / Dt 平面',
+      accountingCaption:
+        '箭头从 official 指向 production artifact。六例覆盖 generated-only、mixed 与 backed-only 区域，因此不存在统一的类别构成解释。',
+      robustnessTitle: 'Robustness 支持非回归，不支持新的泛化结论',
+      robustnessBody:
+        '最新 canonical synthetic re-evaluation 中，production portfolio 与其候选子集前代在 36/36 例持平，并对四个未直接包含的固定实现观察到零负；8 个 17 节点 oracle 例均达到自身所选固定序的 traffic optimum。这是非回归和小规模同序吻合证据，不是相对前代的新泛化。',
       benchTitle: '评测算例',
       benchCaption: '六个公开 NPU 核内调度实例，覆盖三大算子族；|V| 从约 1.7k 到 36k 节点。',
       benchCols: { instance: '算例', opType: '算子族', nodes: '|V|', edges: '|E|', buffers: '缓冲区' },
-      runtimeTitle: '求解器运行时间',
-      runtimeCaption:
-        '墙钟秒数，三次重复取中位。P1 在每个实例上均于 0.2 s 内完成；P2/P3 随规模增长，最大算例 P3 约 73 s。',
-      runtimeCols: { instance: '算例', p1: 'P1 (s)', p2: 'P2 (s)', p3: 'P3 (s)' },
+      p3Title: 'Canonical P3 pipeline time',
+      p3Caption: 'Production solver 为 5/6 time wins，中位改善 3.77%。Conv1 回退 4.23%，明确保留为 loss；P3 extra 不能替代 P2 objective。',
+      p3Cols: { instance: '算例', official: 'Official time', scalable: 'Production time', outcome: '结果' },
       capTitle: '缓存容量',
       capBody: '五种片上缓存（抽象单位）：L1 4096，UB 1024，L0A 256，L0B 256，L0C 512。',
     },
     related: {
       title: '相关工作中的定位',
       body: [
-        '调度与内存优化的联合优化由来已久。COSMA 等工作以 ILP 联合优化算子调度、内存分配与张量替换，求解的是图级放置与替换问题。NPU 核内 scratchpad 调度的粒度细得多：clean/dirty 状态引入 2× 的溢出代价非对称，调度序不仅决定活跃峰值，更决定暴露给驱逐的缓冲的代价构成。',
-        '编译器后端早已认识到调度与活跃区间的耦合：Goodman–Hsu 式集成预调度、寄存器压力感知调度，以及“clean 值可免写回换出”的替换启发式。“调度影响活跃度”与“clean 驱逐更便宜”各自并不新；新的自由度在于请求序本身可被改变——编译器可主动塑形活跃区间重叠与 clean/dirty 构成，而不只是为固定流选择驱逐者。',
-        '重物化、激活检查点与免溢出编译从另一方向缓解内存压力，与本方法互补。在大规模核内调度中，容量约束常使部分溢出不可避免；此时可重载的输入缓冲构成天然的 clean 储备，核心问题便是调度序如何降低不可避免换出的写回代价。',
+        '联合 scheduling 与 memory optimization 并非本文首创。COSMA 已用 ILP 联合优化 operator schedule、memory allocation 与 tensor replacement；因此本文不能声称“首次联合优化”。',
+        'Goodman–Hsu、register-pressure-aware scheduling、Checkmate 与 DTR 分别覆盖调度/活跃区间耦合以及 optimal/online rematerialization。我们的具体问题更细：multi-cache NPU micro-op DAG、静态 backed/unbacked spill 计费、连续 offset 与 pipe timing。',
+        '可辩护的新意是 dependency-frontier scheduling、weighted fixed-order residency planning 与连续布局验证的组合，以及从小图 traffic certificate 到大图 heuristic 的可审计桥接。',
       ],
     },
     conclusion: {
       title: '结论',
       body:
-        'clean 与 dirty 溢出代价之间 2× 的非对称，意味着调度序不仅控制活跃峰值，还控制容量压力窗口内可供驱逐的缓冲的代价构成。当溢出不可避免时，保留更多廉价可换出的 clean 储备能显著降低真实片外流量。围绕这一发现，溢出必然性证书、有条件溢出面积近似与 Belady-margin 稳定性三条结果，共同解释了“驱逐规则不敏感、调度序高度敏感”的实验规律。',
+        '本文把 NPU kernel memory planning 拆成两个可审计的问题：哪种合法 order 暴露出可规划的 residency frontier，以及固定 order 下哪些 backed/generated gap 应保持驻留。Production portfolio 在公开 P2 上五胜一平、P3 上五快一慢；fixed-order planner 提供三份 traffic certificate。结果不是普适的 clean/dirty 调度原则，而是一条带明确失败边界的 exact-to-heuristic bridge。',
       futureTitle: '未来工作',
       future:
-        '将活跃度塑形扩展到多核调度与跨核缓存一致性；支持含动态控制流（分支、循环）的图；以及在更深的存储层次中建模跨级溢出级联。',
+        '补充明确的 buffer 读写角色与动态 backing-state transition；集成带门槛的 exact backend；并在六个公开 case 之外的新 workload 分布上检验 frontier scheduling 与统一 repair 算法。',
     },
     cite: {
       title: '引用',
       lead: '若本工作对你有帮助，欢迎引用。',
       bibtex:
-        '@inproceedings{gao2027liveness,\n  title     = {Spill-Cost-Aware Liveness Shaping for NPU Intra-Kernel Scheduling},\n  author    = {Gao, Chengzhi and Huang, Jun and Ye, Qin},\n  booktitle = {Proc. 2027 IEEE/ACM Int. Symp. on Code Generation and Optimization (CGO)},\n  year      = {2027}\n}',
+        '@inproceedings{gao2027frontier,\n  title     = {Dependency-Frontier Scheduling with Asymmetric-Cost Spill Planning for NPU Kernels},\n  author    = {Gao, Chengzhi and Huang, Jun and Ye, Qin},\n  booktitle = {Proc. 2027 IEEE/ACM Int. Symp. on Code Generation and Optimization (CGO)},\n  year      = {2027}\n}',
       copy: '复制',
       copied: '已复制',
     },
     footer: {
-      tagline: '调度序驱动的驻留构成优化 · 面向 NPU 的溢出代价感知方法',
-      note: '页面的图表与数字均取自本仓库的论文源文件与结果 CSV。',
+      tagline: 'Dependency-frontier scheduling · Weighted spill planning',
+      note: '页面 headline 取自 canonical production artifacts；repair、fixed-order oracle 与 synthetic boundary 均按证据范围单独报告。',
     },
   },
 
   en: {
     nav: {
-      brand: 'Liveness Shaping',
+      brand: 'Frontier Scheduling',
       overview: 'Overview',
       problem: 'Problem',
       method: 'Method',
@@ -568,61 +577,61 @@ export const copy: Record<Language, Copy> = {
       cite: 'Cite',
     },
     meta: {
-      venue: 'Compiler Optimization · CGO ’27 submission',
-      title: 'Spill-Cost-Aware Liveness Shaping for NPU Intra-Kernel Scheduling',
+      venue: 'Compiler Optimization · Exact-to-Heuristic Scheduling',
+      title: 'Dependency-Frontier Scheduling with Asymmetric-Cost Spill Planning for NPU Kernels',
       authors: [
         { name: 'Chengzhi Gao', email: 'contact@vennai.org' },
         { name: 'Jun Huang', email: 'hj992881627@outlook.com' },
         { name: 'Qin Ye', email: 'yq020319@163.com' },
       ],
-      affiliation: 'Southeast University · Venn Intelligence',
+      affiliation: 'Southeast University · Venn Intelligence Foundation',
       links: [
         { label: 'Paper', kind: 'paper', href: `${REPO}/blob/master/paper/dist/en_conf.pdf` },
         { label: 'Code', kind: 'code', href: REPO },
         { label: 'Data', kind: 'data', href: `${REPO}/tree/master/data` },
         { label: 'Results', kind: 'results', href: `${REPO}/tree/master/results` },
       ],
-      fig1Label: 'Figure 1 · Concept',
+      fig1Label: 'Research thesis',
       fig1Caption:
-        'Spill-cost-aware liveness shaping. Two legal schedules can have similar capacity pressure while exposing different clean/dirty compositions to the eviction process. Keeping clean buffers resident in high-pressure windows provides low-cost eviction reserve and reduces off-chip traffic.',
-      fig2Label: 'Method overview',
+        'The full Conv0 evidence ladder: production improves the official artifact by 9.1%, exploratory order repair adds 1.9%, and the fixed-order planner reaches its 57,408-byte lower bound.',
+      fig2Label: 'Method layers',
       fig2Caption:
-        'The optimization framework has three stages: (1) inevitable-spill determination decides whether optimization is needed; (2) three complementary candidate topological orders are generated via liveness shaping; (3) address assignment and spill insertion run along each order, followed by lexicographic-key selection across candidate orders and prefetch windows.',
+        'The production solver, nonuniform repair studies, and fixed-order oracle are distinct evidence layers; the latter two are not hidden stages of default solve.',
     },
     abstract: {
       title: 'Abstract',
       body:
-        'Deep-learning compilers lower neural operators into kernel-level DAGs whose nodes mix micro-operations, short-lived tensors, and heterogeneous execution pipes. Under tight on-chip cache capacity, two legal topological orders can have similar peak pressure yet induce very different off-chip spill traffic. This paper identifies a structural asymmetry that standard schedulers often miss: clean buffers loaded from off chip already have a backing copy and need not be written back when evicted, whereas dirty buffers produced by computation must be written before they are later reloaded. The two classes consume identical on-chip capacity but differ by a factor of two in spill cost. We introduce spill-cost-aware liveness shaping, which changes the legal schedule order to control the clean/dirty composition exposed inside capacity-pressure windows, keeping low-cost clean bytes available as eviction reserve. We prove a one-sided certificate for spill inevitability, give a linear-time overflow-area surrogate with a conditional constant-factor connection to optimal spill traffic, and explain why schedule order dominates victim-rule tuning. Experiments on public NPU-style instances, synthetic DAG distributions, small-graph oracles, and controlled ablations show that clean/dirty-blind pressure schedulers can pay 2.4–26× more P2 spill traffic in capacity-bound regimes.',
+        'NPU kernel scheduling jointly chooses a legal micro-operation order, contiguous on-chip addresses, and a spill plan under capacity. We build a bounded production portfolio around dependency-frontier ordering and select complete artifacts directly by the P2 traffic or P3 time objective. For a fixed topological order, a weighted residency-gap CP-SAT model supplies a traffic lower bound; a valid contiguous artifact that attains it becomes a fixed-order traffic certificate. On six public DAGs, production records five P2 wins and one tie, and five P3 time wins with one loss. The evidence supports an auditable exact-to-heuristic bridge rather than a universal clean/dirty composition law.',
     },
     highlights: {
       title: 'Headline results',
       items: [
-        { value: '2.4–26×', label: 'extra P2 spill traffic paid by clean/dirty-blind schedulers (median ~11×)' },
-        { value: '2×', label: 'exact clean-vs-dirty eviction-cost gap' },
-        { value: '4 layers', label: 'public benchmarks · synthetic · oracle · ablation' },
+        { value: '5 wins + 1 tie', label: 'canonical P2 outcome for the production solver; zero violations' },
+        { value: '5 faster + 1 slower', label: 'P3 pipeline time; Conv1 regresses by 4.23%' },
+        { value: '3 certificates', label: 'fixed-order traffic optima across two public instances' },
       ],
     },
     contributions: {
       title: 'Three contributions',
-      lead: 'From a structural asymmetry that existing schedulers overlook, to a diagnosable, interpretable, and generalizable method with theory.',
+      lead: 'We separate the production portfolio, fixed-order certificates, and audit-oriented evaluation so every statement maps to a validated artifact.',
       items: [
         {
           tag: 'Contribution 1',
-          name: 'Spill-cost-aware liveness shaping',
+          name: 'Dependency-frontier scheduling',
           body:
-            'We formulate liveness shaping for NPU intra-kernel DAGs: change the legal schedule order to control the clean/dirty residency composition in overflow windows, preserving low-cost eviction reserve when capacity is tight.',
+            'We identify how successor-wait rules can starve multi-input consumers behind one-input streams, then unlock the dependency frontier through ready-predecessor group completion without case names, operator motifs, or buffer classes.',
         },
         {
           tag: 'Contribution 2',
-          name: 'Theory of the regime',
+          name: 'Weighted residency-gap planning',
           body:
-            'A spill-inevitability certificate gives a one-sided, linear-time diagnostic for cases no near-optimal schedule can avoid spilling; a Belady-margin stability result shows schedule order, not the victim rule, is the main degree of freedom; an overflow-area theorem ties a cheap surrogate to optimal spill traffic within constant factors under bounded absence durations.',
+            'For a fixed order, gaps between mandatory buffer events become optional intervals weighted by the evaluator’s backed 1× versus unbacked 2× spill cost, followed by concrete contiguous packing.',
         },
         {
           tag: 'Contribution 3',
-          name: 'Four-level evaluation',
+          name: 'Exact-to-heuristic bridge',
           body:
-            'Across public NPU benchmarks, synthetic DAG distributions, small-graph oracles, and controlled ablations: benefits concentrate exactly in regions the certificate marks capacity-bound, where clean/dirty-blind pressure schedulers pay 2.4–26× more spill traffic.',
+            'Research evaluation reports fixed-order traffic bounds and contiguous-packing certificates; production uses a bounded portfolio at every size, while repair studies, nonzero gaps, and timeouts remain separate evidence.',
         },
       ],
     },
@@ -669,7 +678,7 @@ export const copy: Record<Language, Copy> = {
           tab: 'Spill',
           title: 'Problem 2 · spill relocation',
           detail:
-            'A SPILL_OUT / SPILL_IN pair is inserted: W parks in DDR, X2 takes [0, 640), and W reloads at NewOffset = 640. Since W originates from a COPY_IN, SPILL_OUT costs 0 cycles and the extra DDR traffic is only Size = 128 — precisely the Problem 2 cost metric.',
+            'A SPILL_OUT / SPILL_IN pair is inserted: W parks in DDR, X2 takes [0, 640), and W reloads at NewOffset = 640. W carries the static COPY_IN-backed label, so SPILL_OUT costs 0 cycles and extra DDR traffic is Size = 128 under the artifact metric.',
         },
         {
           tab: 'Pipeline',
@@ -689,7 +698,7 @@ export const copy: Record<Language, Copy> = {
           label: 'Problem 2',
           title: 'Cache address & spill',
           formula: 'min Σ spill cost',
-          body: 'Assign physical offsets under capacity and non-overlap constraints; insert spills when placement fails — cost Size for COPY_IN-origin buffers, 2×Size otherwise.',
+          body: 'Assign physical offsets under capacity and non-overlap constraints; insert spills when placement fails—Size for the static COPY_IN-backed class, 2×Size otherwise.',
         },
         {
           label: 'Problem 3',
@@ -747,23 +756,23 @@ export const copy: Record<Language, Copy> = {
     },
     model: {
       eyebrow: 'Problem model',
-      title: 'Clean and dirty buffers, three nested views',
+      title: 'Static backing labels and three evaluation views',
       lead:
-        'The input is a micro-operation graph G for a neural operator. Its nodes have two types: operation nodes execute computation or data movement and carry execution units, latencies, and read/write buffer sets; cache-management nodes mark the beginning and end of buffer lifetimes. Each logical buffer b has a size s_b, a cache type τ(b), and a capacity Cap_c. A schedule S is a topological order of all required nodes.',
+        'The input is a neural-operator micro-operation graph G. Operation nodes carry a pipe, latency, and buffer list; cache nodes mark ALLOC and FREE. Each logical buffer b has size s_b and cache type τ(b), and S is a legal topological order. The evaluator has no explicit read/write roles, so COPY_IN membership is a static backing label rather than a dynamically updated dirty bit.',
       figLabel: 'Figure 2 · Micro-operation DAG',
       figCaption:
-        'A micro-operation DAG. Pink nodes are cache-management events (allocation/free); blue nodes are operations. Buffer b₀ is loaded from off-chip memory and already has a backing copy, so it is clean (κ=1); b₁ is produced by computation, so it is dirty (κ=2).',
-      clean: {
-        term: 'Clean buffer',
-        body: 'Written by an operation that reads from off-chip memory; off-chip already holds a backing copy, so eviction needs no write-back and costs only a reload e_b = s_b.',
+        'In this micro-operation DAG, pink nodes are ALLOC/FREE and blue nodes are compute or transfer operations. COPY_IN-backed buffers are charged one reload; other generated-or-unbacked buffers are charged write plus reload.',
+      backed: {
+        term: 'Backed (COPY_IN label)',
+        body: 'The evaluator assumes an off-chip copy and charges reload only: e_b = s_b. This static label does not change after a possible later write.',
       },
-      dirty: {
-        term: 'Dirty buffer',
-        body: 'Produced by computation; if used again, eviction requires a write-back and a later reload, for extra traffic e_b = 2 s_b.',
+      unbacked: {
+        term: 'Generated / unbacked',
+        body: 'The evaluator charges write plus reload: e_b = 2s_b. Without explicit access roles, this is an artifact-level classification.',
       },
-      asideTitle: 'Identical capacity, 2× cost',
+      asideTitle: 'An objective identity, not a single-mechanism theorem',
       asideBody:
-        'Clean and dirty buffers occupy identical on-chip space, yet their spill costs differ by 2×. So an order that keeps more clean reserve in overflow windows can improve residency, traffic, and timing at once. This asymmetry is the core modeling feature of our method.',
+        'If backed and unbacked spill volumes are C and D, then E=C+2D=(C+D)+D=V+D. Asymmetric cost is real, but both total spill volume V and unbacked volume D can change; peak composition alone does not establish causality.',
       viewsTitle: 'Three nested evaluation views',
       views: [
         {
@@ -776,171 +785,174 @@ export const copy: Record<Language, Copy> = {
           tag: 'P2',
           title: 'Spill traffic',
           formula: 'E(S) = Σ_b∈Spills e_b',
-          body: 'Adds physical address assignment and spill insertion; minimizes total extra traffic. We take P2 as the primary view — it directly measures the spill cost liveness shaping targets.',
+          body: 'Adds contiguous address assignment and spill insertion, charging the static backed/unbacked classes and minimizing total extra traffic.',
         },
         {
           tag: 'P3',
           title: 'Pipelined time',
           formula: 'T = maxᵥ E(v)',
-          body: 'Simulates earliest completion under dependency and pipe constraints for a fixed order. All three views share one asymmetric clean/dirty traffic model.',
+          body: 'Accounts for original, spill, address-reuse, and serial-per-pipe constraints to minimize makespan.',
         },
       ],
     },
     method: {
       eyebrow: 'Method',
-      title: 'Optimize the schedule order, not the victim rule',
+      title: 'Structural frontiers, true-cost selection, and bounded exact planning',
       lead:
-        'Existing schedulers treat spills as a local consequence after capacity is exceeded, then apply a victim rule to a fixed order. Our experiments show this is the wrong primary degree of freedom: on a fixed order, four Belady-style victim variants usually differ by at most 4% in extra traffic, whereas legal schedule orders can vary by more than an order of magnitude. Our method therefore optimizes schedule order to shape the clean/dirty composition of overflow windows.',
+        'Production enumerates four legal topological orders, best-fit placement, two victim policies, and a bounded reload-window set, then selects complete artifacts by the canonical P2/P3 key. Dependency frontier is the new structural order; repair and exact planning remain separate research evidence.',
       stagesTitle: 'Three stages',
       stages: [
         {
           n: '1',
-          title: 'Spill diagnosis',
+          title: 'Dependency frontier',
           body:
-            'Decide whether spills are unavoidable for the given DAG and capacity. If they are, the objective shifts from eliminating spills to lowering their cost, and overflow area Φ becomes a cheap cross-stage surrogate.',
+            'When a consumer’s remaining predecessors are all ready allocations, complete the group and run the consumer promptly so a multi-input node is not starved behind one-input transfers.',
         },
         {
           n: '2',
-          title: 'Candidate orders & assignment',
+          title: 'Scalable placement and policy portfolio',
           body:
-            'Produce three complementary topological orders, then run best-fit placement with cost-aware spill insertion along each order (see the assignment algorithm).',
+            'Run true best-fit placement and compare distance/cost with backed-share/fragmentation-adaptive victim policies. Portfolio members that cannot produce a legal placement are discarded.',
         },
         {
           n: '3',
-          title: 'Selection',
+          title: 'True-objective selection and fallback',
           body:
-            'Simulate the Cartesian product of candidate orders and prefetch windows; pick the best by the true lexicographic key — (E, n, T) for P2, (T, E, n) for P3. Adding a candidate can only improve or tie the selected objective.',
+            'P2 selects (extra, spills, time); P3 selects (time, extra, spills). The fixed-order exact planner is currently a separate research branch, not part of the default solver; any future integration needs a validated scalable fallback.',
         },
       ],
       pipelineLabel: 'Method overview',
       pipelineCaption:
-        'A three-stage pipeline: determine spill inevitability, generate and filter candidates around overflow area, then select on the true official key.',
-      ordersTitle: 'Three complementary candidate orders',
+        'Dependency frontier completes one consumer’s ready operands together: in this schematic, total operand residency falls from 18 to 6 operand-steps. The figure explains the mechanism; it is not a public benchmark result.',
+      exactLabel: 'Figure · Fixed-order certificate chain',
+      exactCaption:
+        'CP-SAT selects weighted residency gaps and supplies a traffic lower bound; contiguous offset packing and canonical validation must then produce a valid artifact that reaches the bound.',
+      ordersTitle: 'Three implementation layers',
       orders: [
         {
-          tag: 'Order 1',
-          name: 'Pressure-aware',
-          body: 'Allocation nodes are ranked by successor indegree; a smaller indegree means consumers become ready soon, so the allocation can be delayed until close to use.',
+          tag: 'Default',
+          name: 'Production portfolio',
+          body: 'Four structural orders + true best-fit + two victim policies + canonical objective selection; all six P2 artifacts validate.',
         },
         {
-          tag: 'Order 2',
-          name: 'Capacity-throttled',
-          body: 'The pressure-aware order plus capacity gating: an allocation that would exceed cache capacity is skipped until no further delay is possible; capacity weights are normalized by 1/Cap_c to balance caches of different scarcity.',
+          tag: 'Evidence',
+          name: 'Cost-aware repair case studies',
+          body: 'Conv0 and Conv1 use different search procedures and budgets, accepting only strict asymmetric-P2 improvements. They are exploratory case studies, not one uniform six-case algorithm.',
         },
         {
-          tag: 'Order 3',
-          name: 'ID-reserve',
-          body: 'Minimum-identifier order with no throttling — a method candidate, not an external baseline: it preserves the stable input-buffer order that keeps clean COPY_IN buffers resident through compute windows, leaving cheap eviction reserve in overflow regions.',
+          tag: 'Oracle',
+          name: 'Fixed-order exact planner',
+          body: 'CP-SAT chooses weighted residency gaps; a separate NoOverlap2D or validated-greedy step checks contiguous offsets before canonical validation. Certificates cover fixed-order traffic only.',
         },
       ],
-      victimTitle: 'Order dominates the victim rule',
+      victimTitle: 'Where cost awareness actually enters',
       victimBody:
-        'Given an order, the engine picks the victim by argmaxᵦ d(b)·s_b/e_b — i.e. d(b) for clean buffers, d(b)/2 for dirty — so it prefers cheap clean evictions when next-use distances are comparable. By the Belady-margin result, when next-use distance dominates, all such rules select the same victims: on a fixed order four variants differ by ≤4%, while legal orders swing extra traffic by more than 10×.',
-      residency: {
-        kicker: 'E5 · E6 capacity-overflow integral',
-        title: 'Φ: treating the “overflow area” as a surrogate',
-        idRaw: 'id_raw (ours)',
-        baseline: 'baseline',
-        capacity: 'capacity 4096',
-        phi: 'Φ overflow area',
-        clean: 'clean residency',
-        dirty: 'dirty residency',
-        cleanAtPeak: 'clean reserve at peak',
-        caption:
-          'L1 logical residency for Conv_Case0 unrolled along the schedule: the shaded area above the capacity line is the capacity-overflow integral Φ. Our id_raw order keeps more clean buffers (cheaply evictable) resident at the overflow peak, while the baseline is almost all dirty. Toggle the two curves to compare the clean reserve at the peak.',
-        surrogateNote: 'Spearman(Φ, extra) = 0.958, nearly identical to Spearman(peak, extra) = 0.955 — Φ is a cheap, reliable surrogate.',
-      },
+        'The new dependency-frontier signal is structural. Static backed/generated cost enters victim scores, true traffic computation, and the final P2 key. Two nonuniform Conv repair studies lower traffic by another 1.94% / 2.47%; they are not one six-case algorithm.',
     },
     theory: {
-      eyebrow: 'Theory',
-      title: 'Where the method applies',
-      lead: 'Three results delimit the regime and explain the empirical pattern of an insensitive victim rule alongside a highly sensitive schedule order. Proofs are in the supplementary material.',
-      wsLabel: 'Figure 5 · Working-set bound',
+      eyebrow: 'Provable and verifiable boundaries',
+      title: 'From an objective identity to a fixed-order certificate',
+      lead: 'The account keeps only statements that map directly to implementation and artifacts: an accounting identity, a capacity-relaxation lower bound, a fixed-order certificate, and a clear global-optimality boundary.',
+      wsLabel: 'Figure · Geometric pressure is not a reliable ranking proxy',
       wsCaption:
-        'The near-optimal working-set / capacity ratio per (case, cache), computed over the near-optimal extra subset. A ratio > 1 means even an optimal reorder cannot fit — spills are unavoidable. Matmul_Case1 / L1 (red) reaches 8.5, far above capacity — an empirical instance of the spill-inevitability certificate (Theorem 1).',
+        'Conv0 dependency frontier has a larger logical L1 overflow area yet lowers certified fixed-order traffic from 81,504 to 57,408 bytes; peak or area alone cannot rank orders reliably.',
       items: [
         {
-          tag: 'Theorem 1',
-          name: 'Spill-inevitability certificate',
+          tag: 'Identity',
+          name: 'Volume decomposition of extra',
           statement:
-            'If the near-optimal working-set lower bound W̲ᶜ_ε still exceeds capacity Cap_c, then every schedule in that near-optimal set must spill on cache c, and extra(P) ≥ maxₜ(Wᶜ(t) − Cap_c)₊. A one-sided, linear-time diagnostic: it confirms when spills are unavoidable, marking the regime where the cost composition must be optimized.',
-          note: 'Holds on every small CP-SAT oracle graph.',
+            'Let backed spill volume be Cl and generated spill volume be Dt, with Vol=Cl+Dt. Then Tr=Cl+2Dt=Vol+Dt: optimization may reduce total spill volume, the generated surcharge, or both.',
+          note: 'This is an evaluator accounting identity, not causal proof that composition dominates.',
         },
         {
-          tag: 'Proposition 1',
-          name: 'Belady-margin stability',
+          tag: 'Certificate',
+          name: 'Fixed-order traffic certificate',
           statement:
-            'For distance-dominant scoring rules with cost-factor ratio ρ = g_max/g_min ≤ 2: if the smallest next-use distance among selected victims exceeds ρ times the largest distance among non-victims, all such rules select the same victim set — explaining why schedule order, not victim tuning, is the main lever.',
-          note: 'Fixed-order victim CV ≈ 0 on Matmul/FA, ≤ 4% on Conv.',
+            'For a given topological order, every mandatory-event gap is a weighted optional interval. A cumulative traffic bound is followed by separate contiguous packing and canonical artifact validation.',
+          note: 'Conv0/frontier: objective = bound = 57,408; selected segments pack and validate with zero violations. The certificate does not optimize spill-count/time tie-breaks.',
         },
         {
-          tag: 'Theorem 2',
-          name: 'Conditional overflow-area approximation',
+          tag: 'Boundary',
+          name: 'Exact-to-heuristic boundary',
           statement:
-            'Under bounded absence durations, the overflow area A(S) brackets optimal spill traffic: (1/L)·A(S) ≤ E⋆(S) ≤ (2λ/ℓ)·A(S). This gives the O(N) surrogate Φ a consistent cross-stage justification in capacity-bound regimes.',
-          note: 'Empirically E⋆/A ∈ [0.56, 1.13]; Spearman(Φ, extra) = 0.958 vs peak 0.955.',
+            'The exact planner is currently a research oracle, while the scalable portfolio remains the production default. Any future integration must use a validated scalable fallback after timeout or packing failure.',
+          note: 'FA1 retains a 576-byte gap after 120 s; Conv1 did not finish exact selection plus packing.',
         },
       ],
     },
     results: {
       eyebrow: 'Experiments',
-      title: 'Evidence at four levels',
+      title: 'Production results and bounded research evidence',
       lead:
-        'The experiments test the central claim: when capacity overflow is unavoidable, can schedule order reduce real spill cost by changing the clean/dirty composition inside peak-pressure windows? The common thread is a same-engine caliber — every comparator and our method share one best-fit address-assignment and spill engine, swapping only the input topological order, so traffic differences attribute cleanly to how order shapes residency.',
-      mainTitle: 'P2 spill traffic E(S) under a shared spill engine',
+        'Public headlines contain canonical-valid production artifacts only. Repair and fixed-order exact results appear separately: repair is nonuniform case-study evidence, while exact values certify traffic only under one given order.',
+      headlineLabel: 'Figure · Public P2 and P3 headline results',
+      headlineCaption:
+        'P2 records five strict wins and one tie against official artifacts; P3 time records five wins and one loss. Repair and the fixed-order oracle are excluded.',
+      mainTitle: 'Canonical P2 extra traffic',
       mainCaption:
-        'Lower is better; the best value in each row is bold. Clean/dirty-blind pressure and Goodman–Hsu orders pay 2.4–26× more (median ~11×); pure critical-path is 8–54× away. Across all 6 cases × 3 views × 4 comparators (72 combinations), our order is lower or equal in every one.',
-      mainCols: { instance: 'Instance', cpList: 'CP list', pressure: 'Pressure', gHsu: 'G–Hsu', cpFree: 'CP-free', ours: 'Ours' },
+        'Production records five strict wins and one tie against official artifacts, with a maximum reduction of 9.08% and median reduction of 0.866%; every row has zero violations.',
+      mainCols: { instance: 'Instance', official: 'Official', scalable: 'Production', outcome: 'Result' },
       lowerBetter: 'lower is better',
-      baselinesLabel: 'Figure 3 · Standard scheduler comparison',
-      baselinesCaption:
-        'Standard scheduler comparison for P2 spill traffic on a log scale. All orders use the same address-assignment and spill engine; only the topological order changes.',
-      applicTitle: 'Where the benefit applies',
-      applicBody:
-        'On a synthetic DAG distribution, in regions the certificate marks capacity-bound our method wins 100% against critical-path and random orders and 77.8% against the strong free-first companion, with a median 2× advantage. In order-reachable instances a good order avoids spills outright and the systematic advantage disappears (0% vs free-first). Effectiveness tracks the certificate’s precondition closely.',
-      applicLabel: 'Figure 4 · Applicability across synthetic regimes',
-      applicCaption:
-        'Applicability across synthetic regimes. Left: win rate of our method against each comparator. Right: median extra-traffic ratio (ours/comparator; lower is better), with the dashed line marking parity.',
-      ablationTitle: 'Controlled clean / dirty ablation',
-      ablationBody:
-        'Synthetic GEMM kernels fix the same DAG structure, spill count, and peak, changing only the reserve type inside the peak window. Clean reserve incurs 1,536 units of extra traffic, dirty reserve 3,072 — exactly 2×. A schedule sweep shows extra traffic decreasing monotonically as the clean fraction at the peak rises.',
+      win: 'win',
+      tie: 'tie',
+      loss: 'loss',
+      evidenceTitle: 'Bounded research evidence: repair and fixed-order oracle',
+      evidenceCaption:
+        'Repair uses nonuniform search procedures and budgets; Exact optimizes fixed-order traffic only. A dash means no completed result or not run, never zero traffic.',
+      evidenceCols: { instance: 'Instance', repair: 'Cost repair', exact: 'Fixed-order exact', status: 'Status' },
+      evidenceStatus: {
+        probe: 'probe',
+        certificate: 'Traffic certificate',
+        timeout: 'Packing timeout',
+        feasibleFa1: 'Feasible; LB 31,936',
+        feasibleMm0: 'Feasible; LB 29,952',
+        notRun: 'Not run',
+      },
+      accountingTitle: 'Six-case accounting under Tr = Vol + Dt',
+      accountingBody:
+        'Every strict P2 win reduces total spill volume, but the generated surcharge Dt does not move uniformly: Conv1 wins while Dt increases by 171 bytes, and Matmul0 wins in the Dt=0 backed-only regime.',
+      accountingLabel: 'Figure · Public cases on the Vol / Dt plane',
+      accountingCaption:
+        'Arrows run from official to production artifacts. The cases span generated-only, mixed, and backed-only regimes, so no single composition story explains the results.',
+      robustnessTitle: 'Robustness supports non-regression, not new generalization',
+      robustnessBody:
+        'In the latest canonical synthetic re-evaluation, production ties its predecessor candidate subset on all 36 cases and records no losses against four nonincluded fixed implementations; all eight 17-node oracle cases attain the traffic optimum under their own selected order. This is non-regression and small-scale same-order agreement, not new generalization over the predecessor.',
       benchTitle: 'Benchmark instances',
       benchCaption: 'Six public NPU intra-kernel scheduling instances across three operator families; |V| from about 1.7k to 36k nodes.',
       benchCols: { instance: 'Instance', opType: 'Op. type', nodes: '|V|', edges: '|E|', buffers: 'Buffers' },
-      runtimeTitle: 'Solver runtime',
-      runtimeCaption:
-        'Wall-clock seconds, median of three repetitions. P1 finishes within 0.2 s on every instance; P2/P3 grow with size, reaching about 73 s for P3 on the largest case.',
-      runtimeCols: { instance: 'Instance', p1: 'P1 (s)', p2: 'P2 (s)', p3: 'P3 (s)' },
+      p3Title: 'Canonical P3 pipeline time',
+      p3Caption: 'Production wins five of six time comparisons, with a median 3.77% improvement. Conv1 regresses by 4.23% and remains an explicit loss; P3 extra is not the P2 objective.',
+      p3Cols: { instance: 'Instance', official: 'Official time', scalable: 'Production time', outcome: 'Result' },
       capTitle: 'Cache capacities',
       capBody: 'Five on-chip caches (abstract units): L1 4096, UB 1024, L0A 256, L0B 256, L0C 512.',
     },
     related: {
       title: 'Positioning in related work',
       body: [
-        'Joint scheduling and memory optimization has a long history. Work such as COSMA optimizes operator schedule, memory allocation, and tensor replacement together with an ILP, solving a graph-level placement and replacement problem. NPU intra-kernel scratchpad scheduling operates at a far finer micro-operation granularity, where clean and dirty states introduce a 2× spill-cost asymmetry and order determines not only the live-byte peak but the cost composition of the buffers exposed to eviction.',
-        'Compiler back ends have long coupled scheduling with live ranges — Goodman–Hsu integrated prepass scheduling, register-pressure-aware schedulers, and clean-value-cheap replacement heuristics. “Schedule affects liveness” and “clean victims are cheaper” are each known in isolation; the new freedom here is that the request order itself can be changed, so a compiler can actively shape live-range overlap and clean/dirty composition rather than only choose victims for a fixed stream.',
-        'Rematerialization, activation checkpointing, and spill-free compilation attack memory pressure from a different direction and are complementary. In large kernel-level NPU schedules, capacity often makes some spills unavoidable; reloadable input buffers then form a natural clean reserve, and the central question becomes how schedule order reduces the write-back cost of unavoidable evictions.',
+        'Joint scheduling and memory optimization is not new: COSMA already combines operator scheduling, memory allocation, and tensor replacement in an ILP. We do not claim to be the first joint optimizer.',
+        'Goodman–Hsu and register-pressure-aware scheduling connect order with live ranges, while Checkmate and DTR cover optimal and online rematerialization. Our setting is narrower: multi-cache NPU micro-operation DAGs, static backed/unbacked spill charging, contiguous offsets, and pipeline timing.',
+        'The defensible contribution is the combination of dependency-frontier scheduling, weighted fixed-order residency planning, and contiguous-layout validation, plus an auditable bridge from traffic certificates to a scalable heuristic.',
       ],
     },
     conclusion: {
       title: 'Conclusion',
       body:
-        'The 2× asymmetry between clean and dirty spill costs means schedule order controls not only peak live bytes, but the cost composition of the buffers available for eviction in capacity-pressure windows. When spills are unavoidable, keeping more cheaply evictable clean reserve substantially reduces real off-chip traffic. Around this finding, a spill-inevitability certificate, a conditional overflow-area approximation, and a Belady-margin stability result together explain the empirical pattern of an insensitive victim rule alongside a highly sensitive schedule order.',
+        'This work separates NPU kernel memory planning into two auditable questions: which legal order exposes a tractable residency frontier, and which backed or generated gaps should remain resident under that order. Production records five P2 wins and one tie and five P3 time wins with one loss; the fixed-order planner supplies three traffic certificates. The result is not a universal clean/dirty scheduling principle, but an exact-to-heuristic bridge with explicit failure boundaries.',
       futureTitle: 'Future work',
       future:
-        'Extending liveness shaping to multi-core scheduling and cross-core cache coherence; supporting graphs with dynamic control flow such as branches and loops; and modeling cross-level spill cascades in deeper memory hierarchies.',
+        'Add explicit buffer read/write roles and dynamic backing-state transitions; integrate a guarded exact backend; and test frontier scheduling plus a uniform repair algorithm on new workload distributions.',
     },
     cite: {
       title: 'Cite',
       lead: 'If you build on this work, please cite the paper.',
       bibtex:
-        '@inproceedings{gao2027liveness,\n  title     = {Spill-Cost-Aware Liveness Shaping for NPU Intra-Kernel Scheduling},\n  author    = {Gao, Chengzhi and Huang, Jun and Ye, Qin},\n  booktitle = {Proc. 2027 IEEE/ACM Int. Symp. on Code Generation and Optimization (CGO)},\n  year      = {2027}\n}',
+        '@inproceedings{gao2027frontier,\n  title     = {Dependency-Frontier Scheduling with Asymmetric-Cost Spill Planning for NPU Kernels},\n  author    = {Gao, Chengzhi and Huang, Jun and Ye, Qin},\n  booktitle = {Proc. 2027 IEEE/ACM Int. Symp. on Code Generation and Optimization (CGO)},\n  year      = {2027}\n}',
       copy: 'Copy',
       copied: 'Copied',
     },
     footer: {
-      tagline: 'Spill-Cost-Aware Liveness Shaping · NPU Intra-Kernel Scheduling',
-      note: 'All figures and numbers on this page are drawn from the paper sources and result CSVs in this repository.',
+      tagline: 'Dependency-frontier scheduling · Weighted spill planning',
+      note: 'Public headlines come from canonical production artifacts; repair, fixed-order oracle, and synthetic boundaries are reported at their actual evidence scope.',
     },
   },
 }

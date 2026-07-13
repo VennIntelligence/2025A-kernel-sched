@@ -1,4 +1,4 @@
-import { PhiResidency } from '../components/method/PhiResidency'
+import { FigureBlock } from '../components/FigureBlock'
 import type { Copy } from '../lib/i18n'
 
 export function Method({ copy }: { copy: Copy['method'] }) {
@@ -21,6 +21,13 @@ export function Method({ copy }: { copy: Copy['method'] }) {
         ))}
       </ol>
 
+      <FigureBlock
+        src="figures/frontier_mechanism.png"
+        alt={copy.pipelineLabel}
+        label={copy.pipelineLabel}
+        caption={copy.pipelineCaption}
+      />
+
       <h3 className="subhead">{copy.ordersTitle}</h3>
       <div className="orders-grid">
         {copy.orders.map((o) => (
@@ -37,7 +44,12 @@ export function Method({ copy }: { copy: Copy['method'] }) {
         <p>{copy.victimBody}</p>
       </div>
 
-      <PhiResidency copy={copy.residency} />
+      <FigureBlock
+        src="figures/gap_model.png"
+        alt={copy.exactLabel}
+        label={copy.exactLabel}
+        caption={copy.exactCaption}
+      />
     </section>
   )
 }

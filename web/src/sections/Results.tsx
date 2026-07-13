@@ -1,5 +1,5 @@
 import { FigureBlock } from '../components/FigureBlock'
-import { BenchmarkTable, MainResultsTable, RuntimeTable } from '../components/ResultTables'
+import { BenchmarkTable, P2ResultsTable, P3ResultsTable, ResearchEvidenceTable } from '../components/ResultTables'
 import type { Copy } from '../lib/i18n'
 
 export function Results({ copy }: { copy: Copy['results'] }) {
@@ -11,66 +11,57 @@ export function Results({ copy }: { copy: Copy['results'] }) {
         <p className="section-lead">{copy.lead}</p>
       </div>
 
-      {/* Main result: P2 spill traffic table + baseline figure */}
+      <FigureBlock
+        src="figures/headline_reductions.png"
+        alt={copy.headlineLabel}
+        label={copy.headlineLabel}
+        caption={copy.headlineCaption}
+      />
+
       <figure className="table-figure">
         <figcaption className="table-title">
           {copy.mainTitle}
           <span className="table-hint">{copy.lowerBetter} ↓</span>
         </figcaption>
-        <MainResultsTable copy={copy} />
+        <P2ResultsTable copy={copy} />
         <p className="figure-block-caption">{copy.mainCaption}</p>
       </figure>
 
+      <figure className="table-figure">
+        <figcaption className="table-title">{copy.p3Title}</figcaption>
+        <P3ResultsTable copy={copy} />
+        <p className="figure-block-caption">{copy.p3Caption}</p>
+      </figure>
+
+      <figure className="table-figure">
+        <figcaption className="table-title">{copy.evidenceTitle}</figcaption>
+        <ResearchEvidenceTable copy={copy} />
+        <p className="figure-block-caption">{copy.evidenceCaption}</p>
+      </figure>
+
+      <div className="subblock">
+        <h3 className="subhead">{copy.accountingTitle}</h3>
+        <p className="section-lead">{copy.accountingBody}</p>
+      </div>
+
       <FigureBlock
-        src="figures/baselines.webp"
-        alt={copy.baselinesLabel}
-        label={copy.baselinesLabel}
-        caption={copy.baselinesCaption}
+        src="figures/vd_plane.png"
+        alt={copy.accountingLabel}
+        label={copy.accountingLabel}
+        caption={copy.accountingCaption}
+        maxWidth={680}
       />
 
-      {/* Applicability */}
-      <div className="subblock">
-        <h3 className="subhead">{copy.applicTitle}</h3>
-        <p className="section-lead">{copy.applicBody}</p>
-        <FigureBlock
-          src="figures/applicability.webp"
-          alt={copy.applicLabel}
-          label={copy.applicLabel}
-          caption={copy.applicCaption}
-        />
-      </div>
-
-      {/* Controlled ablation */}
       <div className="callout">
-        <h3>{copy.ablationTitle}</h3>
-        <p>{copy.ablationBody}</p>
-        <div className="metric-pair">
-          <div className="metric metric-clean">
-            <span className="metric-value">1,536</span>
-            <span className="metric-label">clean reserve · extra</span>
-          </div>
-          <div className="metric-eq">= 2×</div>
-          <div className="metric metric-dirty">
-            <span className="metric-value">3,072</span>
-            <span className="metric-label">dirty reserve · extra</span>
-          </div>
-        </div>
+        <h3>{copy.robustnessTitle}</h3>
+        <p>{copy.robustnessBody}</p>
       </div>
 
-      {/* Benchmark + runtime tables */}
-      <div className="table-pair">
-        <figure className="table-figure">
-          <figcaption className="table-title">{copy.benchTitle}</figcaption>
-          <BenchmarkTable copy={copy} />
-          <p className="figure-block-caption">{copy.benchCaption}</p>
-        </figure>
-
-        <figure className="table-figure">
-          <figcaption className="table-title">{copy.runtimeTitle}</figcaption>
-          <RuntimeTable copy={copy} />
-          <p className="figure-block-caption">{copy.runtimeCaption}</p>
-        </figure>
-      </div>
+      <figure className="table-figure">
+        <figcaption className="table-title">{copy.benchTitle}</figcaption>
+        <BenchmarkTable copy={copy} />
+        <p className="figure-block-caption">{copy.benchCaption}</p>
+      </figure>
 
       <p className="cap-note">
         <strong>{copy.capTitle}.</strong> {copy.capBody}

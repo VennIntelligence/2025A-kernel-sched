@@ -1,27 +1,59 @@
-// Exact figures transcribed from the conference paper (paper/src/*_conf).
-// Single source of truth for the results tables — labels live in i18n, numbers here.
-// Do not edit without updating paper/src and results/paper/*.csv in lockstep.
+// Public production numbers and bounded research evidence.
+// Sources:
+//   results/autoresearch_v2/round11_audited_p2.json
+//   results/autoresearch_v2/round6_formal_p3.json
+//   results/autoresearch_v2/agent_cost_order/final_summary.json
+//   results/autoresearch_v2/agent_direct/
 
-/** P2 spill traffic E(S) under a shared spill engine (Table: main-results). */
-export type MainResultRow = {
+export type P2ResultRow = {
   instance: string
-  cpList: number
-  pressure: number
-  gHsu: number
-  cpFree: number
-  ours: number
+  official: number
+  scalable: number
+  outcome: 'win' | 'tie'
 }
 
-export const MAIN_RESULTS: MainResultRow[] = [
-  { instance: 'Conv_0', cpList: 694506, pressure: 207932, gHsu: 210844, cpFree: 212956, ours: 88044 },
-  { instance: 'Conv_1', cpList: 1695264, pressure: 1048524, gHsu: 1053484, cpFree: 73348, ours: 72520 },
-  { instance: 'FA_0', cpList: 211784, pressure: 101356, gHsu: 90092, cpFree: 3904, ours: 3904 },
-  { instance: 'FA_1', cpList: 965944, pressure: 445876, gHsu: 418228, cpFree: 33152, ours: 32920 },
-  { instance: 'Matmul_0', cpList: 823168, pressure: 296064, gHsu: 298240, cpFree: 34944, ours: 34688 },
-  { instance: 'Matmul_1', cpList: 6506240, pressure: 2556928, gHsu: 2560640, cpFree: 460800, ours: 460800 },
+export const P2_RESULTS: P2ResultRow[] = [
+  { instance: 'Conv_0', official: 73500, scalable: 66828, outcome: 'win' },
+  { instance: 'Conv_1', official: 73240, scalable: 72734, outcome: 'win' },
+  { instance: 'FA_0', official: 3692, scalable: 3584, outcome: 'win' },
+  { instance: 'FA_1', official: 32840, scalable: 32512, outcome: 'win' },
+  { instance: 'Matmul_0', official: 34944, scalable: 34688, outcome: 'win' },
+  { instance: 'Matmul_1', official: 460800, scalable: 460800, outcome: 'tie' },
 ]
 
-/** Benchmark instances (Table: benchmark). */
+export type ResearchEvidenceRow = {
+  instance: string
+  repair: number | 'probe' | null
+  exact: number | null
+  status: 'certificate' | 'timeout' | 'feasibleFa1' | 'feasibleMm0' | 'notRun'
+}
+
+export const RESEARCH_EVIDENCE: ResearchEvidenceRow[] = [
+  { instance: 'Conv_0 / frontier', repair: 65532, exact: 57408, status: 'certificate' },
+  { instance: 'Conv_0 / P1', repair: null, exact: 81504, status: 'certificate' },
+  { instance: 'Conv_1', repair: 70940, exact: null, status: 'timeout' },
+  { instance: 'FA_0', repair: 'probe', exact: 3584, status: 'certificate' },
+  { instance: 'FA_1', repair: 'probe', exact: 32512, status: 'feasibleFa1' },
+  { instance: 'Matmul_0', repair: null, exact: 34816, status: 'feasibleMm0' },
+  { instance: 'Matmul_1', repair: null, exact: null, status: 'notRun' },
+]
+
+export type P3ResultRow = {
+  instance: string
+  official: number
+  scalable: number
+  outcome: 'win' | 'loss'
+}
+
+export const P3_RESULTS: P3ResultRow[] = [
+  { instance: 'Conv_0', official: 535312, scalable: 515634, outcome: 'win' },
+  { instance: 'Conv_1', official: 1073322, scalable: 1118687, outcome: 'loss' },
+  { instance: 'FA_0', official: 46761, scalable: 36344, outcome: 'win' },
+  { instance: 'FA_1', official: 193059, scalable: 152364, outcome: 'win' },
+  { instance: 'Matmul_0', official: 194331, scalable: 186820, outcome: 'win' },
+  { instance: 'Matmul_1', official: 1800218, scalable: 1771383, outcome: 'win' },
+]
+
 export type BenchRow = {
   instance: string
   opType: string
@@ -39,19 +71,6 @@ export const BENCHMARK: BenchRow[] = [
   { instance: 'Matmul_1', opType: 'Matmul', nodes: 30976, edges: 55040, buffers: 8960 },
 ]
 
-/** Solver wall-clock runtime, seconds, median of three repetitions (Table: runtime). */
-export type RuntimeRow = { instance: string; p1: number; p2: number; p3: number }
-
-export const RUNTIME: RuntimeRow[] = [
-  { instance: 'Conv_0', p1: 0.009, p2: 0.391, p3: 0.683 },
-  { instance: 'Conv_1', p1: 0.189, p2: 57.971, p3: 73.141 },
-  { instance: 'FA_0', p1: 0.006, p2: 0.22, p3: 0.328 },
-  { instance: 'FA_1', p1: 0.027, p2: 2.723, p3: 3.356 },
-  { instance: 'Matmul_0', p1: 0.014, p2: 0.701, p3: 1.137 },
-  { instance: 'Matmul_1', p1: 0.126, p2: 19.402, p3: 32.328 },
-]
-
-/** On-chip cache capacities (abstract units). */
 export const CAPACITIES: { name: string; value: number }[] = [
   { name: 'L1', value: 4096 },
   { name: 'UB', value: 1024 },

@@ -46,16 +46,15 @@ export function Hero({ copy }: { copy: Copy }) {
         })}
       </nav>
 
-      <div className="hero-figures">
-        <FigureBlock
-          src="figures/concept.png"
-          alt={m.fig1Label}
-          label={m.fig1Label}
-          caption={m.fig1Caption}
-          className="fig-60"
-        />
-        <FigureBlock src="figures/pipeline.png" alt={m.fig2Label} label={m.fig2Label} caption={m.fig2Caption} />
-      </div>
+      <FigureBlock
+        src="figures/bridge_conv0.png"
+        alt={m.fig1Label}
+        label={m.fig1Label}
+        caption={m.fig1Caption}
+        className="hero-bridge"
+      />
+
+      <p className="hero-thesis">{m.fig2Caption}</p>
     </header>
   )
 }

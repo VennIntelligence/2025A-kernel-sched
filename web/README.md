@@ -1,73 +1,72 @@
-# React + TypeScript + Vite
+# Project website
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Bilingual React/TypeScript project page for **Dependency-Frontier Scheduling
+with Asymmetric-Cost Spill Planning for NPU Kernels**.
 
-Currently, two official plugins are available:
+## Public narrative
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The site separates three evidence layers:
 
-## React Compiler
+- **Production portfolio:** four legal structural orders, true best-fit,
+  two victim policies, bounded reload windows, and canonical P2/P3 selection.
+- **Offline cost repair:** nonuniform Conv0/Conv1 case studies, reported as
+  exploratory mechanism evidence rather than one six-case algorithm.
+- **Fixed-order oracle:** weighted residency-gap selection followed by
+  contiguous packing and canonical validation. A valid artifact that reaches
+  the lower bound is a fixed-order traffic certificate, not global order
+  optimality or full P2 lexicographic optimality.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Public production results are five P2 wins and one tie, and five P3 time wins
+with one Conv1 loss. The three machine-checkable traffic certificates are
+Conv0/frontier 57,408, Conv0/P1 81,504, and FA0/id_raw 3,584.
 
-## Expanding the ESLint configuration
+The supported mechanism account is `Tr = Vol + Dt`: every strict public P2 win
+reduces total spill volume, while the generated surcharge changes differently
+across cases. Geometric peak or overflow-area proxies do not reliably rank
+orders; Conv0/frontier has larger logical overflow area but 29.6% lower
+certified fixed-order traffic than the legacy P1 order.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Synthetic evidence is bounded. The canonical 36-case re-evaluation supports
+portfolio non-regression, while eight 17-node oracle cases support small-scale
+same-order agreement. Neither establishes new generalization over the
+predecessor.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The interactive contest explainer under `src/components/problem/` and
+`src/assets/problem.md` is a deliberately preserved teaching section. Research
+narrative updates must not rewrite its five-stage walkthrough.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Development
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
+npm run lint
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Vite writes the production build to `web/dist/`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Content map
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+| Path | Responsibility |
+| --- | --- |
+| `src/lib/i18n.ts` | Complete Chinese and English copy; keep both languages aligned |
+| `src/data/paperTables.ts` | Production P2/P3 numbers and bounded research-evidence rows |
+| `src/sections/` | Page-level narrative components |
+| `src/components/problem/` | Frozen interactive explanation of the contest artifact model |
+| `src/App.css` | Shared academic-page styling |
+| `public/figures/` | Current PNG figures derived from the paper figure pipeline |
+
+## Editing rules
+
+- Trace every public number to a machine-readable artifact.
+- Do not mix official P2 and P3 schedules or objectives.
+- Keep production outcomes separate from repair and fixed-order oracle evidence.
+- Describe COPY_IN membership as a static **backed** label, not a dynamic
+  clean/dirty state; the evaluator lacks explicit read/write roles.
+- State outcome boundaries: P2 is 5 wins + 1 tie, P3 time is 5 wins + 1 loss,
+  repair is nonuniform, and exact certificates cover fixed-order traffic only.
+- Treat the canonical synthetic suite as non-regression evidence, not a new
+  generalization result.
+- Use current paper PNGs instead of rebuilding analytical charts in React.
+- Preserve the affiliation as “Venn Intelligence Foundation.”

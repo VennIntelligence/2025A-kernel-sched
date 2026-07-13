@@ -69,12 +69,6 @@ export function MemoryStage({ step, mode }: { step: number; mode: 'plain' | 'spi
       role="img"
       aria-label="UB physical address space over schedule position"
     >
-      <defs>
-        <pattern id="mem-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="7" stroke="#009E73" strokeOpacity="0.35" strokeWidth="1.4" />
-        </pattern>
-      </defs>
-
       {/* address grid */}
       {ADDR_TICKS.map((tick) => (
         <g key={tick}>
@@ -107,8 +101,8 @@ export function MemoryStage({ step, mode }: { step: number; mode: 'plain' | 'spi
       {/* fragmentation failure overlay (stage 3 punchline) */}
       {failed && (
         <g className="fail-overlay">
-          <rect x={x(MEM_FAIL_STEP - 1)} y={y(384)} width={PX1 - x(MEM_FAIL_STEP - 1)} height={y(0) - y(384)} fill="url(#mem-hatch)" />
-          <rect x={x(MEM_FAIL_STEP - 1)} y={y(1024)} width={PX1 - x(MEM_FAIL_STEP - 1)} height={y(512) - y(1024)} fill="url(#mem-hatch)" />
+          <rect x={x(MEM_FAIL_STEP - 1)} y={y(384)} width={PX1 - x(MEM_FAIL_STEP - 1)} height={y(0) - y(384)} fill="#009E73" fillOpacity="0.14" />
+          <rect x={x(MEM_FAIL_STEP - 1)} y={y(1024)} width={PX1 - x(MEM_FAIL_STEP - 1)} height={y(512) - y(1024)} fill="#009E73" fillOpacity="0.14" />
           <text className="free-label" x={x(MEM_FAIL_STEP - 1) + 10} y={y(192)}>
             free 384
           </text>

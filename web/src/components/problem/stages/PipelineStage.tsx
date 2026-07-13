@@ -61,9 +61,6 @@ export function PipelineStage({ step }: { step: number }) {
         <marker id="gantt-arrow-warn" markerWidth="7" markerHeight="7" refX="5.4" refY="3" orient="auto">
           <path d="M0,0.5 L5.6,3 L0,5.5" fill="none" stroke="#D55E00" strokeWidth="1.2" />
         </marker>
-        <pattern id="spill-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" strokeOpacity="0.4" strokeWidth="1.6" />
-        </pattern>
       </defs>
 
       {/* lane backgrounds + labels */}
@@ -141,8 +138,8 @@ export function PipelineStage({ step }: { step: number }) {
               width={w}
               height={LANE_H}
               rx="5"
-              fill={bar.kind === 'spill' ? 'url(#spill-hatch)' : color}
-              fillOpacity={bar.kind === 'spill' ? 1 : 0.16}
+              fill={color}
+              fillOpacity={bar.kind === 'spill' ? 0.28 : 0.16}
               stroke={color}
               strokeWidth="1.6"
             />
@@ -184,7 +181,7 @@ export function PipelineStage({ step }: { step: number }) {
       </text>
 
       <text className="svg-footnote" x={PX0 - 62} y={VIEW.h - 12}>
-        solid arrow = data dependency · dashed = address-reuse / spill dependency · hatched = spill traffic
+        solid arrow = data dependency · dashed = address-reuse / spill dependency · orange = spill traffic
       </text>
     </svg>
   )

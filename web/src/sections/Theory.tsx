@@ -24,7 +24,7 @@ export function Theory({ copy }: { copy: Copy['theory'] }) {
       </div>
 
       <FigureBlock
-        src="figures/working_set.webp"
+        src="figures/order_headroom.png"
         alt={copy.wsLabel}
         label={copy.wsLabel}
         caption={copy.wsCaption}

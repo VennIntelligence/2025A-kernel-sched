@@ -12,22 +12,22 @@ export function Model({ copy }: { copy: Copy['model'] }) {
 
       <div className="model-grid">
         <FigureBlock
-          src="figures/dag_example.png"
+          src="figures/e1_dag_example.png"
           alt={copy.figLabel}
           label={copy.figLabel}
           caption={copy.figCaption}
         />
 
         <div className="cleandirty">
-          <div className="cd-card cd-clean">
+          <div className="cd-card cd-backed">
             <span className="cd-dot" aria-hidden="true" />
-            <h3>{copy.clean.term}</h3>
-            <p>{copy.clean.body}</p>
+            <h3>{copy.backed.term}</h3>
+            <p>{copy.backed.body}</p>
           </div>
-          <div className="cd-card cd-dirty">
+          <div className="cd-card cd-unbacked">
             <span className="cd-dot" aria-hidden="true" />
-            <h3>{copy.dirty.term}</h3>
-            <p>{copy.dirty.body}</p>
+            <h3>{copy.unbacked.term}</h3>
+            <p>{copy.unbacked.body}</p>
           </div>
           <aside className="cd-aside">
             <h3>{copy.asideTitle}</h3>
