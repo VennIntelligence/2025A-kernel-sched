@@ -1,5 +1,4 @@
 import { CodeIcon, DataIcon, PaperIcon, ResultsIcon } from '../components/icons'
-import { FigureBlock } from '../components/FigureBlock'
 import type { Copy, LinkKind } from '../lib/i18n'
 
 const LINK_ICON: Record<LinkKind, typeof PaperIcon> = {
@@ -46,15 +45,6 @@ export function Hero({ copy }: { copy: Copy }) {
         })}
       </nav>
 
-      <FigureBlock
-        src="figures/bridge_conv0.png"
-        alt={m.fig1Label}
-        label={m.fig1Label}
-        caption={m.fig1Caption}
-        className="hero-bridge"
-      />
-
-      <p className="hero-thesis">{m.fig2Caption}</p>
     </header>
   )
 }

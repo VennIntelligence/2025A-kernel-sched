@@ -3,9 +3,7 @@ import { TopNav } from './components/TopNav'
 import { Hero } from './sections/Hero'
 import { Overview } from './sections/Overview'
 import { Problem } from './sections/Problem'
-import { Model } from './sections/Model'
 import { Method } from './sections/Method'
-import { Theory } from './sections/Theory'
 import { Results } from './sections/Results'
 import { Closing, SiteFooter } from './sections/Closing'
 import { copy, type Language } from './lib/i18n'
@@ -43,10 +41,8 @@ function App() {
         <Hero copy={t} />
         <Overview copy={t} />
         <Problem copy={t.problem} />
-        <Model copy={t.model} />
         <Method copy={t.method} />
-        <Theory copy={t.theory} />
-        <Results copy={t.results} />
+        <Results copy={t} />
         <Closing copy={t} />
       </main>
       <SiteFooter copy={t} />

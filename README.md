@@ -10,6 +10,8 @@ Chengzhi Gao ([contact@vennai.org](mailto:contact@vennai.org)) · Jun Huang ([hj
 
 Southeast University · Venn Intelligence Foundation
 
+[Paper (EN)](paper/dist/en_conf.pdf) · [论文 (ZH)](paper/dist/zh_conf.pdf) · [Supplement](paper/dist/en_supp.pdf) · [Project Website](https://vennintelligence.github.io/2025A-kernel-sched/) · [Results](results/) · [Data](data/)
+
 </div>
 
 <p align="center">

@@ -17,21 +17,6 @@ export function Overview({ copy }: { copy: Copy }) {
         </ul>
       </div>
 
-      <div className="contrib-block">
-        <h2 className="section-title">{copy.contributions.title}</h2>
-        <p className="section-lead">{copy.contributions.lead}</p>
-        <ol className="contrib-list">
-          {copy.contributions.items.map((c) => (
-            <li key={c.tag} className="contrib-item">
-              <span className="contrib-tag">{c.tag}</span>
-              <div>
-                <h3>{c.name}</h3>
-                <p>{c.body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
     </section>
   )
 }

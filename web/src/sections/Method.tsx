@@ -28,28 +28,6 @@ export function Method({ copy }: { copy: Copy['method'] }) {
         caption={copy.pipelineCaption}
       />
 
-      <h3 className="subhead">{copy.ordersTitle}</h3>
-      <div className="orders-grid">
-        {copy.orders.map((o) => (
-          <article key={o.tag} className="order-card">
-            <span className="order-tag">{o.tag}</span>
-            <h4>{o.name}</h4>
-            <p>{o.body}</p>
-          </article>
-        ))}
-      </div>
-
-      <div className="callout">
-        <h3>{copy.victimTitle}</h3>
-        <p>{copy.victimBody}</p>
-      </div>
-
-      <FigureBlock
-        src="figures/gap_model.png"
-        alt={copy.exactLabel}
-        label={copy.exactLabel}
-        caption={copy.exactCaption}
-      />
     </section>
   )
 }

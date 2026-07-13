@@ -212,14 +212,14 @@ export const copy: Record<Language, Copy> = {
     abstract: {
       title: '摘要',
       body:
-        'NPU 核函数调度需联合选择微操作 DAG 的合法拓扑序、片上缓冲区连续地址和容量不足时的 spill 计划。本文构建以 dependency-frontier order 为核心的有界 production portfolio，并直接按 P2 流量或 P3 时间选择完整工件。对固定拓扑序，加权 residency-gap CP-SAT 给出流量下界；若连续打包后的合法工件达到该下界，即得到 fixed-order traffic certificate。六个公开 DAG 上，production solver 的 P2 为五胜一平，P3 时间为五快一慢。证据支持一条可审计的 exact-to-heuristic bridge，而不是普适的 clean/dirty 构成定律。',
+        '本文研究 NPU 核函数的拓扑调度、连续地址分配与 spill 规划。Production solver 以 dependency frontier 为核心，并直接按 P2 流量或 P3 时间选择合法工件；fixed-order planner 用于给出可验证的流量证书。六个公开 DAG 上，P2 为五胜一平，P3 时间为五快一慢。',
     },
     highlights: {
       title: '核心结果',
       items: [
-        { value: '5 胜 + 1 平', label: 'production solver 的 canonical P2 结果，全部 0 violations' },
-        { value: '5 快 + 1 慢', label: 'P3 pipeline time；Conv1 回退 4.23%' },
-        { value: '3 份证书', label: '覆盖两个公开实例的 fixed-order traffic optimum' },
+        { value: '5 胜 + 1 平', label: 'P2 extra traffic' },
+        { value: '5 快 + 1 慢', label: 'P3 pipeline time' },
+        { value: '3 份证书', label: 'fixed-order traffic' },
       ],
     },
     contributions: {
@@ -410,26 +410,26 @@ export const copy: Record<Language, Copy> = {
       eyebrow: '方法',
       title: '结构前沿、真实代价选择与有界精确规划',
       lead:
-        'Production solver 枚举四种合法拓扑序、best-fit 放置、两种 victim policy 与有限 reload window，并直接用 canonical P2/P3 key 选择完整工件。Dependency frontier 是新加入的结构序；repair 与 exact planner 只作为独立研究证据。',
+        '方法由结构调度、物理放置和真实目标选择三步组成。Exact planner 仅用于研究证书，不是默认 solver 的一部分。',
       stagesTitle: '三个阶段',
       stages: [
         {
           n: '1',
           title: 'Dependency frontier',
           body:
-            '当某个 consumer 的剩余 predecessor 全部是 ready ALLOC 时，完成这组分配并尽快执行 consumer，避免多输入节点被连续的单输入 transfer 长期饿死。',
+            '集中完成同一 consumer 的 ready predecessor，尽快解锁多输入节点。',
         },
         {
           n: '2',
           title: 'Scalable placement 与 policy portfolio',
           body:
-            '沿合法序执行 true best-fit；在容量或碎片压力下比较 distance/cost 与 backed-share/fragmentation-adaptive victim policy，并跳过无法生成合法 placement 的组合。',
+            '使用 true best-fit 放置，并在有限 victim policy 中选择合法方案。',
         },
         {
           n: '3',
           title: '真实目标选择与 fallback',
           body:
-            'P2 直接按 (extra, spills, time)，P3 按 (time, extra, spills) 选择。Fixed-order exact planner 目前是独立研究分支，尚未进入默认 solver；未来集成必须在超时或 packing 失败时回退 validated scalable portfolio。',
+            'P2 按流量选择，P3 按时间选择；所有最终工件都通过 canonical validation。',
         },
       ],
       pipelineLabel: '方法总览',
@@ -493,9 +493,9 @@ export const copy: Record<Language, Copy> = {
     },
     results: {
       eyebrow: '实验',
-      title: '生产结果与研究证据分层报告',
+      title: '公开结果',
       lead:
-        '公开 headline 只包含 canonical-valid 的 production artifact。Repair 与 fixed-order exact 另表报告：前者是非统一个案，后者只认证给定拓扑序下的最小 traffic，不能混入默认算法的胜负统计。',
+        '主结果只报告通过 canonical validation 的 production artifact，并将 P2 与 P3 分开比较。',
       headlineLabel: '图 · 六个公开实例的 P2 / P3 主结果',
       headlineCaption:
         'P2 相对 official 为五次严格胜出、一次持平；P3 time 为五快一慢。Repair 与 fixed-order oracle 均未混入本图。',
@@ -548,7 +548,7 @@ export const copy: Record<Language, Copy> = {
     conclusion: {
       title: '结论',
       body:
-        '本文把 NPU kernel memory planning 拆成两个可审计的问题：哪种合法 order 暴露出可规划的 residency frontier，以及固定 order 下哪些 backed/generated gap 应保持驻留。Production portfolio 在公开 P2 上五胜一平、P3 上五快一慢；fixed-order planner 提供三份 traffic certificate。结果不是普适的 clean/dirty 调度原则，而是一条带明确失败边界的 exact-to-heuristic bridge。',
+        'Dependency-frontier production solver 在公开 P2 上五胜一平、P3 上五快一慢；fixed-order planner 提供三份流量证书。结果支持结构调度与加权 spill planning 的组合。',
       futureTitle: '未来工作',
       future:
         '补充明确的 buffer 读写角色与动态 backing-state transition；集成带门槛的 exact backend；并在六个公开 case 之外的新 workload 分布上检验 frontier scheduling 与统一 repair 算法。',
@@ -601,14 +601,14 @@ export const copy: Record<Language, Copy> = {
     abstract: {
       title: 'Abstract',
       body:
-        'NPU kernel scheduling jointly chooses a legal micro-operation order, contiguous on-chip addresses, and a spill plan under capacity. We build a bounded production portfolio around dependency-frontier ordering and select complete artifacts directly by the P2 traffic or P3 time objective. For a fixed topological order, a weighted residency-gap CP-SAT model supplies a traffic lower bound; a valid contiguous artifact that attains it becomes a fixed-order traffic certificate. On six public DAGs, production records five P2 wins and one tie, and five P3 time wins with one loss. The evidence supports an auditable exact-to-heuristic bridge rather than a universal clean/dirty composition law.',
+        'We study topological scheduling, contiguous address assignment, and spill planning for NPU kernels. The production solver centers on dependency-frontier ordering and selects legal artifacts by P2 traffic or P3 time; a separate fixed-order planner supplies verifiable traffic certificates. Across six public DAGs, P2 records five wins and one tie, while P3 time records five wins and one loss.',
     },
     highlights: {
       title: 'Headline results',
       items: [
-        { value: '5 wins + 1 tie', label: 'canonical P2 outcome for the production solver; zero violations' },
-        { value: '5 faster + 1 slower', label: 'P3 pipeline time; Conv1 regresses by 4.23%' },
-        { value: '3 certificates', label: 'fixed-order traffic optima across two public instances' },
+        { value: '5 wins + 1 tie', label: 'P2 extra traffic' },
+        { value: '5 faster + 1 slower', label: 'P3 pipeline time' },
+        { value: '3 certificates', label: 'fixed-order traffic' },
       ],
     },
     contributions: {
@@ -799,26 +799,26 @@ export const copy: Record<Language, Copy> = {
       eyebrow: 'Method',
       title: 'Structural frontiers, true-cost selection, and bounded exact planning',
       lead:
-        'Production enumerates four legal topological orders, best-fit placement, two victim policies, and a bounded reload-window set, then selects complete artifacts by the canonical P2/P3 key. Dependency frontier is the new structural order; repair and exact planning remain separate research evidence.',
+        'The method has three steps: structural scheduling, physical placement, and true-objective selection. Exact planning is used only for research certificates.',
       stagesTitle: 'Three stages',
       stages: [
         {
           n: '1',
           title: 'Dependency frontier',
           body:
-            'When a consumer’s remaining predecessors are all ready allocations, complete the group and run the consumer promptly so a multi-input node is not starved behind one-input transfers.',
+            'Complete one consumer’s ready predecessors together so multi-input nodes are unlocked promptly.',
         },
         {
           n: '2',
           title: 'Scalable placement and policy portfolio',
           body:
-            'Run true best-fit placement and compare distance/cost with backed-share/fragmentation-adaptive victim policies. Portfolio members that cannot produce a legal placement are discarded.',
+            'Use true best-fit placement and select among a small set of legal victim policies.',
         },
         {
           n: '3',
           title: 'True-objective selection and fallback',
           body:
-            'P2 selects (extra, spills, time); P3 selects (time, extra, spills). The fixed-order exact planner is currently a separate research branch, not part of the default solver; any future integration needs a validated scalable fallback.',
+            'Select P2 by traffic and P3 by time, then canonically validate every final artifact.',
         },
       ],
       pipelineLabel: 'Method overview',
@@ -882,9 +882,9 @@ export const copy: Record<Language, Copy> = {
     },
     results: {
       eyebrow: 'Experiments',
-      title: 'Production results and bounded research evidence',
+      title: 'Public results',
       lead:
-        'Public headlines contain canonical-valid production artifacts only. Repair and fixed-order exact results appear separately: repair is nonuniform case-study evidence, while exact values certify traffic only under one given order.',
+        'Headline results contain canonical-valid production artifacts only, with P2 and P3 reported separately.',
       headlineLabel: 'Figure · Public P2 and P3 headline results',
       headlineCaption:
         'P2 records five strict wins and one tie against official artifacts; P3 time records five wins and one loss. Repair and the fixed-order oracle are excluded.',
@@ -937,7 +937,7 @@ export const copy: Record<Language, Copy> = {
     conclusion: {
       title: 'Conclusion',
       body:
-        'This work separates NPU kernel memory planning into two auditable questions: which legal order exposes a tractable residency frontier, and which backed or generated gaps should remain resident under that order. Production records five P2 wins and one tie and five P3 time wins with one loss; the fixed-order planner supplies three traffic certificates. The result is not a universal clean/dirty scheduling principle, but an exact-to-heuristic bridge with explicit failure boundaries.',
+        'The dependency-frontier production solver records five P2 wins and one tie and five P3 time wins with one loss; the fixed-order planner supplies three traffic certificates. The evidence supports combining structural scheduling with weighted spill planning.',
       futureTitle: 'Future work',
       future:
         'Add explicit buffer read/write roles and dynamic backing-state transitions; integrate a guarded exact backend; and test frontier scheduling plus a uniform repair algorithm on new workload distributions.',
