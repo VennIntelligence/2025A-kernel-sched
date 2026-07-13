@@ -109,6 +109,15 @@ single class-composition story explains all six cases.
 | Conv1 | — | packing timeout |
 | Matmul1 | — | not run |
 
+<p align="center">
+  <img src="web/public/figures/order_headroom.png" alt="Figure 6. Logical L1 residency under two certified Conv0 topological orders" width="920">
+</p>
+
+**Figure 6. Logical L1 residency on Conv_Case0 under two certified
+topological orders.** The dependency-frontier order has a larger geometric
+overflow area but a 29.6% lower certified fixed-order traffic optimum (57,408
+versus 81,504 bytes).
+
 Changing only the fixed order on Conv0 changes certified optimal traffic from
 81,504 to 57,408 bytes (29.6%). The dependency-frontier order nevertheless has
 a larger logical L1 overflow area, showing that peak or overflow-area proxies

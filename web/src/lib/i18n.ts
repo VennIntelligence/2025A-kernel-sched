@@ -464,7 +464,7 @@ export const copy: Record<Language, Copy> = {
       eyebrow: '可证明与可验证的边界',
       title: '从目标恒等式到 fixed-order certificate',
       lead: '只保留与实现和 artifact 一一对应的论断：一个会计恒等式、一个容量松弛下界、达到下界后的固定序证书，以及明确的全局最优边界。',
-      wsLabel: '图 · 几何压力不是可靠排序代理',
+      wsLabel: '图 6 · Conv0 的逻辑 L1 驻留',
       wsCaption:
         'Conv0 的 dependency-frontier order 具有更大的逻辑 L1 overflow area，却把 certified fixed-order traffic 从 81,504 降至 57,408 字节；仅靠峰值或面积不能可靠排序。',
       items: [
@@ -853,7 +853,7 @@ export const copy: Record<Language, Copy> = {
       eyebrow: 'Provable and verifiable boundaries',
       title: 'From an objective identity to a fixed-order certificate',
       lead: 'The account keeps only statements that map directly to implementation and artifacts: an accounting identity, a capacity-relaxation lower bound, a fixed-order certificate, and a clear global-optimality boundary.',
-      wsLabel: 'Figure · Geometric pressure is not a reliable ranking proxy',
+      wsLabel: 'Figure 6 · Logical L1 residency on Conv0',
       wsCaption:
         'Conv0 dependency frontier has a larger logical L1 overflow area yet lowers certified fixed-order traffic from 81,504 to 57,408 bytes; peak or area alone cannot rank orders reliably.',
       items: [
