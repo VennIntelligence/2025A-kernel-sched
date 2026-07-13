@@ -82,7 +82,6 @@ export type Copy = {
     fig2Caption: string
   }
   abstract: { title: string; body: string }
-  highlights: { title: string; items: Array<{ value: string; label: string }> }
   contributions: {
     title: string
     lead: string
@@ -202,7 +201,7 @@ export const copy: Record<Language, Copy> = {
         { label: '数据', kind: 'data', href: `${REPO}/tree/master/data` },
         { label: '结果', kind: 'results', href: `${REPO}/tree/master/results` },
       ],
-      fig1Label: '研究主线',
+      fig1Label: '图 1 · Exact-to-heuristic evidence ladder',
       fig1Caption:
         'Conv0 的完整证据阶梯：production solver 相对官方工件降低 9.1%，探索性 order repair 再降低 1.9%，fixed-order planner 达到 57,408 字节下界并形成证书。',
       fig2Label: '方法层级',
@@ -212,15 +211,7 @@ export const copy: Record<Language, Copy> = {
     abstract: {
       title: '摘要',
       body:
-        '本文研究 NPU 核函数的拓扑调度、连续地址分配与 spill 规划。Production solver 以 dependency frontier 为核心，并直接按 P2 流量或 P3 时间选择合法工件；fixed-order planner 用于给出可验证的流量证书。六个公开 DAG 上，P2 为五胜一平，P3 时间为五快一慢。',
-    },
-    highlights: {
-      title: '核心结果',
-      items: [
-        { value: '5 胜 + 1 平', label: 'P2 extra traffic' },
-        { value: '5 快 + 1 慢', label: 'P3 pipeline time' },
-        { value: '3 份证书', label: 'fixed-order traffic' },
-      ],
+        'NPU 核函数调度需联合选择微操作 DAG 的合法拓扑序、片上缓冲区的连续地址和容量不足时的溢出计划。本文研究评测器定义的静态非对称代价：有输入备份的缓冲区每次驻留中断计一次传输，生成且无备份的缓冲区计两次，因而 P2 流量可审计地分解为 Tr = Vol + Dt。我们提出可扩展的有界组合求解器，将新的依赖前沿序与三个既有候选序结合，采用 best-fit 放置和两种驱逐启发式，并直接按 P2 流量或 P3 时间目标选择完整工件。为量化固定拓扑序下的余量，我们建立加权驻留间隙 CP-SAT 松弛；其最优值给出流量下界，若连续地址打包后的工件通过标准评测并达到该下界，即得到固定序流量最优性证书。六个公开 DAG 上，求解器相对官方工件在 P2 中五胜一平（中位降幅 0.866%，最大 9.08%），在 P3 中五快一慢（中位改善 3.77%，唯一回退 4.23%）。我们在两个公开实例的三个固定序上获得证书；其中 Conv_Case0 的依赖前沿序与旧 P1 序的固定序最优流量分别为 57,408 和 81,504 字节，表明该实例中拓扑序可造成 29.6% 的最优流量差距。两个非统一修复个案和内部合成实验仅提供机制、非回归与小规模同序最优性证据，不构成统一生产算法或新的泛化结论。',
     },
     contributions: {
       title: '三项贡献',
@@ -591,7 +582,7 @@ export const copy: Record<Language, Copy> = {
         { label: 'Data', kind: 'data', href: `${REPO}/tree/master/data` },
         { label: 'Results', kind: 'results', href: `${REPO}/tree/master/results` },
       ],
-      fig1Label: 'Research thesis',
+      fig1Label: 'Figure 1 · Exact-to-heuristic evidence ladder',
       fig1Caption:
         'The full Conv0 evidence ladder: production improves the official artifact by 9.1%, exploratory order repair adds 1.9%, and the fixed-order planner reaches its 57,408-byte lower bound.',
       fig2Label: 'Method layers',
@@ -601,15 +592,7 @@ export const copy: Record<Language, Copy> = {
     abstract: {
       title: 'Abstract',
       body:
-        'We study topological scheduling, contiguous address assignment, and spill planning for NPU kernels. The production solver centers on dependency-frontier ordering and selects legal artifacts by P2 traffic or P3 time; a separate fixed-order planner supplies verifiable traffic certificates. Across six public DAGs, P2 records five wins and one tie, while P3 time records five wins and one loss.',
-    },
-    highlights: {
-      title: 'Headline results',
-      items: [
-        { value: '5 wins + 1 tie', label: 'P2 extra traffic' },
-        { value: '5 faster + 1 slower', label: 'P3 pipeline time' },
-        { value: '3 certificates', label: 'fixed-order traffic' },
-      ],
+        'NPU kernel scheduling must jointly choose a legal topological order of a micro-operation DAG, contiguous on-chip buffer addresses, and a spill plan when capacity is insufficient. We study the evaluator\'s static asymmetric cost: interrupting an input-backed buffer costs one transfer, whereas interrupting a generated, unbacked buffer costs two, so P2 traffic admits the auditable decomposition Tr = Vol + Dt. We present a scalable bounded portfolio that combines a dependency-frontier order with three existing orders, best-fit placement, and two eviction heuristics, selecting complete artifacts by the P2 traffic or P3 time objective. For a fixed topological order, we formulate a weighted residency-gap CP-SAT relaxation whose optimum is a traffic lower bound; a validated contiguous packing that attains it gives a fixed-order traffic certificate. On six public DAGs, the solver has five P2 wins and one tie (median reduction 0.866%, maximum 9.08%), and five P3 wins with one slowdown (median improvement 3.77%, sole regression 4.23%). Three fixed-order certificates cover two public instances. Conv_Case0 has certified optima of 57,408 bytes under dependency-frontier and 81,504 under the legacy P1 order, a 29.6% order-induced difference. Two nonuniform repair case studies and internal synthetic experiments provide bounded mechanism, non-regression, and small-scale same-order evidence only; they are neither a uniform production algorithm nor a new generalization result.',
     },
     contributions: {
       title: 'Three contributions',

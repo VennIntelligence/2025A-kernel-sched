@@ -1,4 +1,5 @@
 import type { Copy } from '../lib/i18n'
+import { FigureBlock } from '../components/FigureBlock'
 
 export function Overview({ copy }: { copy: Copy }) {
   return (
@@ -6,17 +7,14 @@ export function Overview({ copy }: { copy: Copy }) {
       <div className="abstract-block">
         <h2 id="abstract-h" className="section-title">{copy.abstract.title}</h2>
         <p className="abstract-body">{copy.abstract.body}</p>
-
-        <ul className="highlight-row" aria-label={copy.highlights.title}>
-          {copy.highlights.items.map((it) => (
-            <li key={it.value}>
-              <span className="highlight-value">{it.value}</span>
-              <span className="highlight-label">{it.label}</span>
-            </li>
-          ))}
-        </ul>
       </div>
 
+      <FigureBlock
+        src="figures/bridge_conv0.png"
+        alt={copy.meta.fig1Label}
+        label={copy.meta.fig1Label}
+        caption={copy.meta.fig1Caption}
+      />
     </section>
   )
 }

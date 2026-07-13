@@ -3449,7 +3449,7 @@ p {
 }
 
 /* ================================================================
-   Overview: abstract · highlights · contributions
+   Overview: abstract · contributions
    ================================================================ */
 
 .abstract-block {
@@ -3462,36 +3462,6 @@ p {
   color: var(--body);
   font-size: 16.5px;
   line-height: 1.78;
-}
-
-.highlight-row {
-  list-style: none;
-  margin: 30px 0 0;
-  padding: 22px 0 0;
-  border-top: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 22px;
-}
-
-.highlight-row li {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.highlight-value {
-  color: var(--accent);
-  font-family: var(--serif);
-  font-weight: 600;
-  font-size: 28px;
-  letter-spacing: -0.01em;
-}
-
-.highlight-label {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .contrib-block {
@@ -4279,11 +4249,6 @@ p {
   .stage-flow,
   .orders-grid {
     grid-template-columns: 1fr;
-  }
-
-  .highlight-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
   }
 
   .contrib-item {
