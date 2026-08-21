@@ -1,0 +1,6 @@
+stage,label,extra,spills,scope
+legacy,Legacy iter038,88044,339,P2 scalable predecessor
+scalable,Scalable v2,66828,140,P2 production
+repair,Cost-aware repair,65532,137,Conv0-only 10k stochastic hill search
+exact,Fixed-order exact,57408,112,fixed-order traffic oracle (E only)
+official,Official,73500,141,P2 official artifact

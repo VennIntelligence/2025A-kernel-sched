@@ -1,7 +1,8 @@
-\documentclass[sigplan,screen,review,anonymous]{acmart}
+\documentclass[sigplan,screen,review]{acmart}
 \input{../../common/preamble_acm}
 \input{../../common/macros}
 \input{../../common/metadata}
+\usepackage{flafter}
 
 \settopmatter{printacmref=false,printccs=false,printfolios=true}
 \acmConference[CGO '27]{2027 IEEE/ACM International Symposium on Code Generation and Optimization}{2027}{}
@@ -11,34 +12,78 @@
 \begin{document}
 
 \title{\paperTitleEn}
-\author{\paperAuthorLineEn}
+
+\author{Chengzhi Gao}
+\authornote{Corresponding author. Co-Founder, Vennai.org.}
+\affiliation{%
+  \institution{\paperInstitutionEnConf}
+  \city{\paperCityEnConf}
+  \country{\paperCountryEnConf}
+}
+\email{contact@vennai.org}
+
+\author{Jun Huang}
+\affiliation{%
+  \institution{\paperInstitutionEnConf}
+  \city{\paperCityEnConf}
+  \country{\paperCountryEnConf}
+}
+\email{hj992881627@outlook.com}
+
+\author{Qin Ye}
+\affiliation{%
+  \institution{\paperInstitutionEnConf}
+  \city{\paperCityEnConf}
+  \country{\paperCountryEnConf}
+}
+\email{yq020319@163.com}
 
 \begin{abstract}
-Deep-learning compilers lower neural operators into kernel-level DAGs whose
-nodes mix micro-operations, short-lived tensors, and heterogeneous execution
-pipes. Under tight on-chip cache capacity, two legal topological orders can have
-similar peak pressure yet induce very different off-chip spill traffic. This
-paper identifies a structural asymmetry that standard schedulers often miss:
-clean buffers loaded from off-chip memory already have a backing copy and need not be
-written back when evicted, whereas dirty buffers produced by computation must be
-written before they are later reloaded. The two classes consume identical
-on-chip capacity but differ by a factor of two in spill cost. We introduce
-spill-cost-aware liveness shaping, which changes the legal schedule order to
-control the clean/dirty composition exposed inside capacity-pressure windows.
-The method keeps low-cost clean bytes available as eviction reserve and thereby
-reduces the cost of unavoidable spills. We prove a one-sided certificate for
-spill inevitability, give a linear-time overflow-area surrogate with a
-conditional constant-factor connection to optimal spill traffic, and explain why
-schedule order dominates victim-rule tuning under a Belady-margin condition.
-Experiments on public NPU-style scheduling instances, synthetic DAG
-distributions, small-graph oracles, and controlled clean/dirty ablations show
-that clean/dirty-blind pressure schedulers can pay
-$2.4\text{--}26\times$ more spill traffic in capacity-bound regimes.
+NPU kernel scheduling must jointly choose a legal topological order of a
+micro-operation DAG, contiguous on-chip buffer addresses, and a spill plan when
+capacity is insufficient. We study the evaluator's static asymmetric cost:
+interrupting an input-backed buffer costs one transfer, whereas interrupting a
+generated, unbacked buffer costs two, so P2 traffic admits the auditable
+decomposition $\mathrm{Tr}=\mathrm{Vol}+\mathrm{Dt}$. We present a scalable
+bounded portfolio that combines a dependency-frontier order with three existing
+orders, best-fit placement, and two eviction heuristics, selecting complete
+artifacts by the P2 traffic or P3 time objective. For a fixed topological order,
+we formulate a weighted residency-gap CP-SAT relaxation whose optimum is a
+traffic lower bound; a validated contiguous packing that attains it gives a
+fixed-order traffic certificate. On six public DAGs, the solver has five P2 wins
+and one tie (median reduction $0.866\%$, maximum $9.08\%$), and five P3 wins
+with one slowdown (median improvement $3.77\%$, sole regression $4.23\%$).
+Three fixed-order certificates cover two public instances. Conv\_Case0 has
+certified optima of 57,408 bytes under dependency-frontier and 81,504 under the
+legacy P1 order, a $29.6\%$ order-induced difference. Two nonuniform repair
+case studies and internal synthetic experiments provide bounded mechanism,
+non-regression, and small-scale same-order evidence only; they are neither a
+uniform production algorithm nor a new generalization result.
+\\[0.25em]
+\noindent\textbf{Keywords:} \paperKeywordsEn
 \end{abstract}
 
 \keywords{\paperKeywordsEn}
 
+% Keep the ACM keyword metadata while placing the visible keyword line with
+% the abstract in the first column, which is the usual conference layout.
+\makeatletter
+\let\ksSavedKeywords\@keywords
+\def\@keywords{}
+\makeatother
 \maketitle
+\makeatletter
+\let\@keywords\ksSavedKeywords
+\makeatother
+\hypersetup{pdfkeywords={\paperKeywordsEn}}
+
+% The first explanatory figure is a standard single-column top float.  ACM
+% disables page-one top floats by default; re-enable this one so it can occupy
+% the upper-right column on the title page.
+\makeatletter
+\global\@topnum\@M
+\global\@botnum\@M
+\makeatother
 
 \input{sections/introduction}
 \input{sections/model}

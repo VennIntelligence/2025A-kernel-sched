@@ -1,47 +1,45 @@
 \section{Problem Model}\label{sec:formulation}
 
-We study DAGs and cache parameters from a public NPU intra-kernel scheduling
-benchmark that models compiler-generated kernel schedules. The input is a
-micro-operation graph $\daggraph$ for a neural operator. Its nodes have two
-types, illustrated in
-Figure~\ref{fig:dag-example}: \emph{operation nodes}, which execute computation
-or data movement and carry execution units, latencies, and read/write buffer
-sets; and \emph{cache-management nodes}, which mark the beginning and end of
-buffer lifetimes. Each logical buffer $b$ has a unique allocation node $a_b$ and
-free node $f_b$, a size $s_b$, and a cache type
-$\tau(b)\in\mathcal{C}$. Each cache $c\in\mathcal{C}$ has an abstract capacity
-$\Capc_c$; the concrete values are given in Section~\ref{sec:experiments}. A
-\emph{schedule} $S=(v_1,\ldots,v_N)$ is a topological order of all required
-nodes.
+The input is a micro-operation DAG $G=(\mathcal V,\mathcal E)$. Operation nodes
+carry a pipeline, cycle count, and buffer set; cache-management nodes give each
+buffer $b$ a unique allocation $a_b$, free $f_b$, size $s_b$, and cache type
+$\tau(b)$. A base schedule is a topological order of all original nodes.
+Evaluation uses L1${}=4096$, UB${}=1024$, L0A${}=256$, L0B${}=256$, and
+L0C${}=512$.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{\ksFigure{e1_dag_example.pdf}}
-\caption{A micro-operation DAG. Pink nodes are cache-management events
-(allocation/free); blue nodes are operations. Buffer $b_0$ is loaded from
-off-chip memory and already has a backing copy, so it is \emph{clean}
-($\kappa=1$). Buffer $b_1$ is produced by computation, so it is \emph{dirty}
-($\kappa=2$).}
-\Description{Example kernel DAG with operation nodes, allocation/free nodes,
-and two buffers labeled clean and dirty.}
-\label{fig:dag-example}
-\end{figure}
+\begin{figure*}[t]
+  \centering
+  \input{../../common/tikz_dag_example}
+  \caption{Micro-operation DAG and benchmark spill classes. Cache-management
+  nodes delimit logical lifetimes. Input-backed buffers incur one transfer per
+  interruption; generated, unbacked buffers incur two.}
+  \Description{A small allocation-operation-free DAG with one backed and one
+  generated buffer, their lifetimes, and spill costs.}
+  \label{fig:dag-example}
+\end{figure*}
 
-A buffer $b$ is \emph{clean} if it is written by an operation that reads data
-from off-chip memory; in this case, off-chip storage already contains a backing
-copy, so eviction needs no write-back and contributes only a reload cost
-$e_b=s_b$. Otherwise $b$ is \emph{dirty}: evicting it requires a write-back and a
-later reload, for extra traffic $e_b=2s_b$. The two classes occupy identical
-on-chip space yet differ by $2\times$ in spill cost---the core asymmetry our
-method exploits.
+The evaluator assigns a \emph{static} class: if $b$ appears in any
+\textsc{copy-in}, then $\kappa_b=1$ (backed); otherwise $\kappa_b=2$
+(generated and unbacked). One spill episode costs
+$\mathrm{tr}_b=\kappa_b s_b$. Since the input does not expose per-operation
+read/write roles, this is an evaluator definition, not dynamic dirty-state
+inference. Let backed and generated spill volumes be $\mathrm{Cl},\mathrm{Dt}$:
+\begin{equation}\label{eq:extra-decomp}
+ \mathrm{Tr}=\mathrm{Cl}+2\,\mathrm{Dt}=\mathrm{Vol}+\mathrm{Dt},
+ \qquad \mathrm{Vol}=\mathrm{Cl}+\mathrm{Dt}.
+\end{equation}
+Thus $\mathrm{Vol}\le\mathrm{Tr}\le2\mathrm{Vol}$. At fixed volume, class mix
+changes traffic by at most two, while ordering and placement can also change
+$\mathrm{Vol}$; tightness and scope appear in Supplementary Sec.~2.1.
 
-We evaluate schedule quality through three nested views. \textbf{P1} considers
-only node order and minimizes per-cache peak live residency. \textbf{P2} adds
-physical address assignment and spill insertion, minimizing total extra traffic
-\[
-  E(S)=\sum_{b\in\mathrm{Spills}} e_b.
-\]
-\textbf{P3} simulates the earliest completion time under dependencies and pipe
-constraints for a fixed order. All three views share the same asymmetric
-clean/dirty traffic model. Therefore, an order that keeps more clean reserve in
-overflow windows can improve residency, traffic, and timing behavior at once.
+A physical residency segment occupies a contiguous interval in its cache, and
+simultaneous segments may not overlap. A \textsc{spill-out}/\textsc{spill-in}
+pair interrupts residency, possibly reloading at another address. Original
+users and \textsc{free} are mandatory-residency events. P1 scores logical
+\textsc{alloc}--\textsc{free} peaks only. P2 emits the augmented schedule,
+addresses, and spill table and uses $(\mathrm{Tr},n,T)$; P3 uses
+$(T,\mathrm{Tr},n)$, where $T$ is pipelined earliest completion. P1 logical
+peaks are not P2 physical peaks, and P3 may accept traffic to reduce time, so
+the views are never mixed. Every physical result is checked for coverage,
+topology, contiguous packing, and spill dependencies. The complete evaluator
+contract and paired P2--P3 tradeoff are in Supplementary Secs.~1 and~4.4.

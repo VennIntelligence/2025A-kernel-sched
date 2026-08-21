@@ -1,263 +1,93 @@
-\section{Formal Reasoning and Applicability Boundaries}\label{sec:supp-formal}
+\section{Formal Results and Their Boundaries}\label{sec:supp-formal}
 
-The method section of the main paper grounds spill-cost-aware liveness shaping in
-three formal results: Theorem~\ref{thm:spill-inev} (the spill-inevitability
-certificate), Proposition~\ref{prop:belady-margin} (Belady-margin stability), and
-Theorem~\ref{thm:area-extra} (the overflow-area approximation). This section
-gives their complete proofs and states precisely the conditions under which each
-result applies, so that none of them is overclaimed.
+This section gives the complete claims supported by the current evidence. The proofs deliberately distinguish an accounting identity, a capacity-relaxation lower bound, a fixed-order certificate, and global optimality over topological orders; none may be substituted for another.
 
-The three results delimit the method's scope from complementary angles. The
-spill-inevitability certificate diagnoses capacity limitation through a
-working-set lower bound taken over the near-optimal set of schedules: when the
-certificate holds, the objective shifts from eliminating spills to lowering their
-cost. Belady-margin stability explains why the primary optimization degree of
-freedom is schedule order rather than eviction policy: under a distance-dominant
-condition, different Belady-style eviction rules select the same victim set, so
-any difference between them can stem only from order. The overflow-area
-approximation theorem then provides a conditional guarantee that the surrogate
-objective $\Phi$ tracks spill traffic in the capacity-bound regime. The following
-subsections present the complete proofs in turn, keeping ``strictly valid
-theorems,'' ``conditional propositions,'' and ``empirical observations'' clearly
-separated.
+\subsection{Canonical traffic decomposition and the factor-two bound}
 
-\subsection{Clean/Dirty Cost Asymmetry}\label{sec:supp-clean-proof}
+For residency interruption $i$, let $v_i$ be the buffer size, and let $d_i=v_i$ if the buffer is unbacked and $d_i=0$ otherwise. Define $V=\sum_i v_i$ and $D=\sum_i d_i$.
 
-Section~\ref{sec:formulation} of the main paper partitions buffers into clean and
-dirty classes and notes that, although the two occupy identical on-chip space,
-their spill costs differ by $2\times$. The following observation gives a
-quantitative basis for this asymmetric structure; it is the starting point for
-every cost-aware decision that follows.
-
-\paragraph{Observation (clean/dirty cost asymmetry).}
-Let $x$ and $y$ be two buffers of equal size $s$, with $x$ clean and $y$ dirty.
-If a spill replaces $y$ by $x$, the P2 extra traffic of that spill drops from $2s$
-to $s$, that is, by exactly one half.
-
-\paragraph{Deriving the cost ratio.}
-The asymmetry follows directly from the definition of the evaluation metric: by
-\eqref{eq:supp-extra}, the extra traffic of a clean buffer is $s$ and that of a
-dirty buffer is $2s$, so their ratio is $1/2$. This is an immediate corollary of
-the metric itself and does not depend on any particular scheduler or dataset. In
-the synthetic ablation, holding the DAG, the spill count, and the peak fixed, a
-clean reserve and a dirty reserve yield extras of $1536$ and $3072$,
-respectively, which we use to check that the implementation faithfully reflects
-this definition.
-
-\subsection{A Working-Set Certificate over the Near-Optimal Set}\label{sec:supp-working-set-proof}
-
-Fix a topological order $S$ and write $\pos_S(v)$ for the position of node $v$ in
-that order. The logical lifetime of a buffer $b$ is
-\begin{equation}
-  I_S(b)=[\pos_S(a_b),\pos_S(f_b)).
+\paragraph{Proposition 1 (accounting identity and tight bounds).}
+Every legal P2/P3 artifact satisfies
+\begin{equation}\label{eq:supp-identity-proof}
+ E=V+D,\qquad V\le E\le 2V.
 \end{equation}
-The logical live working set of cache $c$ at position $t$ is
+At fixed $V>0$, changing only the class composition of spilled bytes can change the traffic ratio between two artifacts by at most two, and this bound is attainable.
+
+\paragraph{Proof.}
+A backed interruption costs $v_i$, while an unbacked interruption costs $2v_i=v_i+d_i$. Summing term by term gives $E=\sum_i(v_i+d_i)=V+D$. Since $d_i\in\{0,v_i\}$, $0\le D\le V$, hence $V\le E\le2V$. If all spilled bytes are backed, $D=0,E=V$; if all are unbacked, $D=V,E=2V$. Both endpoints are attainable.\hfill$\square$
+
+Proposition 1 is an evaluator accounting property, not a causal mechanism claim. It neither proves that production candidate-order generation reads class labels (it does not) nor that $D$ is more important than $V$. A mechanism comparison must report both $\Delta V$ and $\Delta D$; at fixed $V$, class composition alone cannot produce a gain greater than two.
+
+\subsection{Fixed-order residency-gap model}
+
+Fix a legal original topological order $\pi$. For each buffer $b$, sort its mandatory-event positions as $p_{b,0}<p_{b,1}<\cdots<p_{b,r_b}$. The open interval between consecutive events defines a residency gap $g=(b,j)$. Binary variable $x_g=1$ keeps $b$ continuously resident from event $j$ to event $j+1$; $x_g=0$ permits an interruption. Let
 \begin{equation}
-  W_c^S(t)=\sum_{b:\tau(b)=c,\ t\in I_S(b)}s_b,\qquad
-  W_c^S=\max_t W_c^S(t).
-\end{equation}
-For a candidate set of orders $\mathcal S$, let $E^\star(S)$ denote the minimum
-P2 extra traffic over all legal address assignments, spill choices, and spill
-placements once the underlying node order $S$ is fixed. Given $\epsilon\ge0$,
-define the near-optimal set
-\begin{equation}
-  \mathcal O_\epsilon=\{S\in\mathcal S:\ E^\star(S)\le (1+\epsilon)\min_{S'\in\mathcal S}E^\star(S')\},
-\end{equation}
-together with the working-set lower bound over that set,
-\begin{equation}
-  \underline W_c^\epsilon=\min_{S\in\mathcal O_\epsilon} W_c^S.
+ w_g=\begin{cases}
+ s_b,&b\text{ is input-backed},\\
+ 2s_b,&b\text{ is unbacked}.
+ \end{cases}
 \end{equation}
 
-Theorem~\ref{thm:spill-inev} of the main paper asserts that if the working-set
-lower bound over the near-optimal extra-traffic subset exceeds the cache
-capacity, then spilling is unavoidable. We now give the complete proof and
-discuss the sense in which this is a one-sided condition: it can confirm that
-spilling is unavoidable, but the converse does not hold.
+For memory type $k$ and schedule cut $t$, let $P_{k,t}$ be the bytes mandatorily pinned at that cut, let $\mathcal G_{k,t}$ be the optional same-type gaps crossing it, and let capacity be $B_k$. The fixed-order weighted-gap model is
+\begin{align}
+ L^\star=\min_x\quad &\sum_g w_g(1-x_g),\label{eq:supp-gap-obj}\\
+ \text{s.t.}\quad &P_{k,t}+\sum_{g\in\mathcal G_{k,t}}s_gx_g\le B_k,
+ &&\forall k,t,\label{eq:supp-gap-cap}\\
+ &x_g\in\{0,1\}.\nonumber
+\end{align}
+If $P_{k,t}>B_k$ at any cut, spilling cannot repair the fixed order because the mandatory pinned set of one event already exceeds capacity.
 
-\paragraph{Theorem~\ref{thm:spill-inev} (spill inevitability).}
-If $\underline W_c^\epsilon>\Capc_c$, then every $S\in\mathcal O_\epsilon$ must
-incur a capacity spill on cache $c$. Equivalently, within the candidate range
-that preserves near-optimal P2 extra traffic, address placement alone cannot make
-cache $c$ entirely spill-free. More quantitatively, for any $S\in\mathcal
-O_\epsilon$ and any legal P2 implementation $P$ respecting $S$,
+\paragraph{Proposition 2 (fixed-order traffic lower bound).}
+The optimum $L^\star$ of Eqs.~\eqref{eq:supp-gap-obj}--\eqref{eq:supp-gap-cap} is no greater than the traffic of any legal fixed-order plan with contiguous physical addresses.
+
+\paragraph{Proof.}
+Take any legal physical plan $A$. Set $x_g=1$ exactly when the buffer remains continuously resident throughout gap $g$, and set it to zero otherwise. At every cut, the mandatory residency segments and every selected continuous gap really do occupy the same memory type simultaneously. Because $A$ is legal, their total size is at most $B_k$, so the constructed $x$ satisfies every capacity constraint.
+
+Every gap with $x_g=0$ contains at least one complete residency interruption, so $A$ pays at least $w_g$ there; an artificial plan could interrupt the same gap more than once and pay more. Thus $E(A)\ge\sum_gw_g(1-x_g)\ge L^\star$. The argument never uses the concrete addresses of $A$, so it holds for every legal contiguous-address plan.\hfill$\square$
+
+\subsection{From a lower bound to a machine-checkable certificate}
+
+The capacity relaxation discards address-shape information, so its solution need not be packable even when all addresses may be globally reassigned from scratch. Consider a discrete storage-allocation counterexample with capacity four. Seven segments have ``active cuts/size''
+\[
+ A:\{0\}/2,\ B:\{0,1\}/2,\ C:\{1,2\}/1,\
+ D:\{1,2,3\}/1,\ E:\{2,3\}/1,\
+ F:\{3,4\}/2,\ G:\{4\}/2.
+\]
+The active volumes at the five cuts are $4,4,3,4,4$, so every cumulative-capacity constraint holds, yet no set of fixed contiguous offsets exists. At cut 0, $A$ and $B$ must occupy the two length-two halves; without loss of generality take $B=[0,2)$. At cut 1, $C$ and $D$ must occupy $[2,3)$ and $[3,4)$. If $D=[2,3)$, then $E$ at cut 2 must occupy a unit position in $[0,2)$; at cut 3, $D$ and $E$ fragment the remaining space so the length-two $F$ cannot fit. If $D=[3,4)$, only $E=[0,1)$ permits $F=[1,3)$ at cut 3; then at cut 4 only one unit remains on each side of $F$, so length-two $G$ cannot fit. Other $E$ positions already fail at cut 3, and the left--right mirror is symmetric. The gap model accepts these intervals because it sees only volume; ``gap optimal'' alone therefore proves neither physical feasibility nor canonical validity.
+
+\paragraph{Theorem 3 (fixed-order traffic certificate).}
+For a given fixed order, suppose that
+\begin{enumerate}
+  \item the gap model proves optimum $L^\star$;
+  \item the selected gaps are realized as contiguous-address residency segments and every spill-out/spill-in dependency is legal; and
+  \item the canonical evaluator returns zero violations and computes $E(A)=L^\star$.
+\end{enumerate}
+Then artifact $A$ has minimum extra traffic for that fixed order.
+
+\paragraph{Proof.}
+By Proposition 2, every legal fixed-order physical plan $A'$ satisfies $E(A')\ge L^\star$. Conditions 2--3 make $A$ a legal plan with $E(A)=L^\star$, so no legal plan under the same order has lower traffic.\hfill$\square$
+
+The qualifiers in Theorem 3 are essential. ``OPTIMAL'' from greedy packing or \texttt{NoOverlap2D} means that its satisfaction model found or proved a layout; it is not a second layout-quality optimization. Packing failure or timeout does not invalidate $L^\star$ as a lower bound. The certificate also does not minimize spill count or time among traffic ties, so it is not complete P2 optimality; fixed-order traffic optimality is not global optimality over topological orders.
+
+\subsection{Candidate-portfolio monotonicity}
+
+Let $\mathcal A$ be the artifacts successfully generated inside the candidate loop, and let $K$ be the implementation's P2- or P3-semantic lexicographic key. The production solver returns $A^\star=\arg\min_{A\in\mathcal A}K(A)$.
+
+\paragraph{Proposition 4 (internal-key monotonicity under candidate expansion).}
+For any additional successfully generated candidate set $\mathcal B$,
 \begin{equation}
-  \extra(P)\ge \max_t (W_c^S(t)-\Capc_c)_+ .
+ \min_{A\in\mathcal A\cup\mathcal B}K(A)
+ \ \le_{\mathrm{lex}}\
+ \min_{A\in\mathcal A}K(A).
 \end{equation}
 
 \paragraph{Proof.}
-At any position $t$, decompose the logical live volume into the resident volume
-$R_c^P(t)$ and the volume that has been spilled and is momentarily absent,
-$A_c^P(t)$:
-\begin{equation}
-  W_c^S(t)=R_c^P(t)+A_c^P(t).
-\end{equation}
-The capacity constraint gives $R_c^P(t)\le \Capc_c$, hence
-\begin{equation}
-  A_c^P(t)\ge (W_c^S(t)-\Capc_c)_+ .
-\end{equation}
-Any buffer that is momentarily absent yet still live must have been spilled at
-least once before this position, and a single spill contributes extra traffic at
-least equal to that buffer's size. Therefore the total extra traffic is no
-smaller than the absent live volume at any instant. Taking the maximum over $t$
-yields the displayed bound. Finally, if $\underline W_c^\epsilon>\Capc_c$, then
-every order in $\mathcal O_\epsilon$ has some position at which
-$W_c^S(t)>\Capc_c$, so spilling cannot be entirely avoided on that cache.
+$\mathcal A\subseteq\mathcal A\cup\mathcal B$, so the previous best candidate remains in the expanded set; minimizing over the larger set cannot be worse.\hfill$\square$
 
-\paragraph{One-sidedness and scope of the certificate.}
-The theorem provides a one-sided certificate: it can confirm only that spilling is
-unavoidable, and the converse does not hold. When $\underline W_c^\epsilon\le
-\Capc_c$, one cannot conclude spill-freedom; fragmentation, address-reuse
-dependencies, pinned resident segments, and reload positions may still force
-spills. The restriction to the near-optimal set is also indispensable: if one
-minimizes the peak over all legal orders without constraint, certain orders with
-very poor P2 extra traffic but low peaks can make an instance appear ``not
-capacity-bound.'' For example, the full-order minimum working-set ratio for
-Matmul\_Case1/L1 is $0.03125$, whereas within the $10\%$ near-optimal
-extra-traffic set the ratio is $8.5$; it is the latter that reflects the capacity
-pressure in the P2-relevant region. The CP-SAT oracle validation in
-\S\ref{sec:exp-mechanism} of the main paper confirms that this lower bound holds
-across all small graphs.
+This is monotonicity of the portfolio's \emph{internal selection key}, not a causal claim about a new candidate or a legality theorem. Calling the return value a legal artifact additionally requires a correct generator or canonical evaluation of the returned artifact. The production loop does not invoke that evaluator on every candidate; our experiments report only final artifacts with zero violations. If the portfolio contains a strong baseline order, non-regression against it follows from set inclusion and does not attribute an improvement to ordering, placement, or a victim component. Production selection computes the actual $K_2/K_3$; it needs no overflow-area surrogate theorem.
 
-\subsection{A Stability Condition for Belady-Style Eviction}\label{sec:supp-belady-proof}
+\subsection{Complexity and exact-backend boundary}
 
-Proposition~\ref{prop:belady-margin} of the main paper states that, under a
-distance-dominant condition, different Belady-style eviction rules select the
-same victim set. We now give the formal condition and its proof.
+For fixed numbers of candidate orders, victim policies, and early-reload windows, the scalable path performs topological ordering, residency scans, address placement, and timing simulation. A placement request may scan the resident set or free intervals, giving a conservative quadratic term in the number of buffers; the portfolio contributes only a fixed multiplier. This is an implementation upper bound, not a linear-time guarantee.
 
-Fix a schedule order. At a cache-overflow decision $k$, let $R_k$ be the set of
-evictable resident buffers, $\Delta_k$ the volume that must be freed, and $d_k(b)$
-the next-use distance of buffer $b$. Consider a family of distance-dominant
-Belady-style rules
-\begin{equation}
-  \mathrm{score}_r(b)=d_k(b)g_r(b),
-\end{equation}
-where $g_r(b)>0$ is a bounded, rule-dependent perturbation, such as a clean/dirty
-cost weight. Assume that all rules and candidates satisfy
-$g_r(b)\in[g_{\min},g_{\max}]$, and write $\rho=g_{\max}/g_{\min}$.
-
-\paragraph{Proposition~\ref{prop:belady-margin} (Belady-margin stability).}
-Suppose there is a set $F_k\subseteq R_k$ satisfying: (i) $\sum_{b\in
-F_k}s_b\ge\Delta_k$; (ii) no proper subset of $F_k$ suffices to free $\Delta_k$;
-and (iii) every $x\in F_k$ and $y\in R_k\setminus F_k$ satisfy
-\begin{equation}
-  d_k(x)>\rho\,d_k(y).
-\end{equation}
-Then all the rules above prefer the same victim set $F_k$, possibly differing only
-in the tie order within $F_k$. If this condition holds at every overflow
-decision, then these rules produce the same residency evolution and the same P2
-extra traffic.
-
-\paragraph{Proof.}
-For any rule $r$, $x\in F_k$, and $y\notin F_k$,
-\begin{equation}
-  \frac{\mathrm{score}_r(x)}{\mathrm{score}_r(y)}
-  =
-  \frac{d_k(x)g_r(x)}{d_k(y)g_r(y)}
-  \ge
-  \frac{d_k(x)g_{\min}}{d_k(y)g_{\max}}>1.
-\end{equation}
-Hence every element of $F_k$ ranks ahead of every element outside $F_k$. A greedy
-selection that picks the highest-scoring elements until enough volume is freed
-therefore selects exactly $F_k$, by sufficiency and minimality.
-
-\paragraph{Intuition and applicability.}
-The cost-weighted distance score used in this work is $d_k(b)s_b/e_b$. Since
-$e_b=s_b$ or $2s_b$, the clean/dirty weight induces a perturbation of at most
-$2\times$. Consequently, when the next-use distance of a far-future candidate
-exceeds twice that of a near-term candidate, the cost weight cannot change the
-victim set. If the candidates are approximately homogeneous in size and
-clean/dirty class, different Belady-style rules likewise degenerate to the same
-ordering. This proposition explains why the victim rule is often insensitive on a
-fixed order, but it is not an unconditional theorem: if short-lived clean buffers
-and long-lived dirty buffers alternate repeatedly, the rule differences can
-accumulate. The controlled experiments in \S\ref{sec:exp-mechanism} of the main
-paper confirm this prediction: on a fixed order, the extra traffic of four victim
-rules differs by $\mathrm{CV}<4\%$, whereas the swing in extra traffic across
-different orders can reach $10\times$ or more.
-
-\subsection{Conditionality of the Overflow-Area Surrogate}\label{sec:supp-area-proof}
-
-Let the unnormalized overflow area be
-\begin{equation}
-  A(S)=\sum_t\sum_c (W_c^S(t)-\Capc_c)_+,
-\end{equation}
-and the normalized surrogate be
-\begin{equation}
-  \Phi(S)=\sum_t\sum_c \frac{(W_c^S(t)-\Capc_c)_+}{\Capc_c}.
-\end{equation}
-Both measure the ``over-capacity memory-time area.'' P2 extra traffic, by
-contrast, is an event cost: a single spill can keep a buffer absent across many
-schedule positions. Consequently, there is no unconditional constant-factor
-approximation between $A(S)$ (or $\Phi(S)$) and the optimal extra traffic. A
-long-lived small overflow makes the area grow with time while the extra traffic is
-paid only once; conversely, a large buffer that exceeds capacity by only one unit
-may nonetheless force the eviction of an entire large block.
-
-Theorem~\ref{thm:area-extra} of the main paper establishes a two-sided constant
-relation between the overflow area $A(S)$ and the optimal extra traffic under a
-bounded-absence-duration assumption. We now give the complete proof together with
-a counterexample construction.
-
-\paragraph{Theorem~\ref{thm:area-extra} (conditional overflow-area approximation).}
-Fix an order $S$. Suppose there exists a legal spill plan $P$ whose every spill
-episode has absence duration $\ell_j$ satisfying $\ell\le \ell_j\le L$, whose
-removed memory-time area
-\begin{equation}
-  R(P)=\sum_j s_j\ell_j
-\end{equation}
-satisfies $R(P)\le \lambda A(S)$, and whose every unit spill cost $\kappa_j$
-satisfies $\kappa_{\min}\le\kappa_j\le\kappa_{\max}$. Then the fixed-order optimal
-extra traffic satisfies
-\begin{equation}
-  \frac{\kappa_{\min}}{L}A(S)
-  \le
-  E^\star(S)
-  \le
-  \frac{\kappa_{\max}\lambda}{\ell}A(S).
-\end{equation}
-In the evaluation model of this work, $\kappa_{\min}=1$ and $\kappa_{\max}=2$.
-
-\paragraph{Proof sketch.}
-Any legal implementation must remove at least $(W_c^S(t)-\Capc_c)_+$ of volume at
-each position, so $A(S)\le R(P)$. Since $\ell_j\le L$, we have $R(P)\le L\sum_j
-s_j$; as each unit of extra traffic costs at least $\kappa_{\min}$, this yields the
-lower bound. For the upper bound we use the feasible plan assumed in the
-hypothesis: from $\ell_j\ge\ell$ we obtain $\sum_j s_j\le R(P)/\ell\le \lambda
-A(S)/\ell$, which, multiplied by the maximum per-unit cost $\kappa_{\max}$, gives
-the upper bound.
-
-\paragraph{From $A$ to $\Phi$.}
-Because each cache capacity is fixed, with minimum capacity $256$ and maximum
-capacity $4096$,
-\begin{equation}
-  256\,\Phi(S)\le A(S)\le 4096\,\Phi(S).
-\end{equation}
-Stating a direct theoretical guarantee in terms of $\Phi$ therefore incurs an
-additional $16\times$ capacity-span factor. The main reason this work uses $\Phi$
-is not that it is empirically much stronger than per-cache peak pressure, but that
-it provides a lifetime-aware, cross-cache-comparable candidate-selection signal at
-$O(N)$ cost. The empirical data reported in \S\ref{sec:exp-mechanism} of the main
-paper corroborate this positioning: over the evaluation set, the global Spearman
-correlation between $\Phi$ and P2 extra traffic is $0.958$, against $0.955$ for
-per-cache peak pressure, so the two are essentially on par; and the empirical
-ratio of Theorem~\ref{thm:area-extra}, $E^\star/A\in[0.56,1.13]$, falls within the
-constant-factor band. This fact also requires restraint in the main paper: the
-value of $\Phi$ lies in computational efficiency and cross-stage consistency,
-not in predictive accuracy significantly better than per-cache peak.
-
-\subsection{Monotonicity of Portfolio Selection}\label{sec:supp-portfolio-proof}
-
-The method section of the main paper (\S\ref{sec:liveness-shaping}) notes that
-adding candidate orders cannot degrade the result. We give the formal argument
-here. The safety of the candidate portfolio follows from a simple fact. Let
-$\mathcal P$ be a finite set of candidate orders, victim rules, or prefetch
-windows, and let $J(x)$ be the true evaluation key (which may be a lexicographic
-key). If the output is chosen by $\arg\min_{x\in\mathcal P}J(x)$, then adding a new
-candidate $z$ gives
-\begin{equation}
-  \min_{x\in\mathcal P\cup\{z\}}J(x)\le \min_{x\in\mathcal P}J(x).
-\end{equation}
-Hence, as long as the final selection uses the true P2/P3 evaluation key rather
-than a surrogate score, enlarging the candidate set cannot degrade the selected
-result; the surrogate $\Phi$ is used only to generate and screen candidates and
-does not replace the final objective.
+Weighted-gap selection and fallback \texttt{NoOverlap2D} are exponential in the worst case. The CP-SAT backend is therefore an offline research oracle, not part of canonical \texttt{solve}. A future integration would need a size threshold or timeout and a validated fallback when optimization is unfinished, packing fails, or validation fails. Nonzero gaps, timeouts, and not-run cases in the current experiments must be reported as such and cannot be extrapolated into universal exactness.

@@ -1,176 +1,220 @@
-\section{方法细节与端到端对照}\label{sec:supp-solution}
+\section{求解器实现与完整求解过程}\label{sec:supp-solution-zh}
 
-正文 \S\ref{sec:method} 以算法伪代码给出了候选序生成与地址分配的整体结构。本节展开三个方面的设计细节：候选序的互补设计理由（\S\ref{sec:supp-framework}）、端到端结果与外部参考解的对照（\S\ref{sec:supp-p1}--\S\ref{sec:supp-headline}）、以及差距来源的诊断分析（\S\ref{sec:supp-failure}）。
+本节先区分三种角色，再把“DAG 如何变成可验证工件”逐步展开。三种角色是：
+默认使用的可扩展组合、只用于机制研究的离线代价修复，以及固定拓扑序的
+CP-SAT oracle。后两者都不是生产 \texttt{solve} 的隐藏阶段。
 
-\subsection{候选序设计与溢出分离原则}\label{sec:supp-framework}
+\subsection{Canonical 可扩展求解器}
 
-正文将调度序作为优化溢出代价的主要自由度。这一策略要求候选序集合能够覆盖峰值窗口内 clean/dirty 构成的不同形态，而非仅追求单一指标的局部最优。以下先说明三个候选序为何互补，再讨论预取窗口与溢出选择的分离设计。
+生产实现为 P2/P3 生成四个结构拓扑序：\texttt{unlock-frontier}、
+\texttt{capfit-id}、P1 memory order 和 \texttt{id-raw}。只有第一个是 v2
+新增排序；其余三个提供历史与结构多样性，不能重新命名为代价感知排序。
+四个排序均不读取 backed/generated 标签。类别信息只进入两类 victim 评分
+以及完整候选的真实流量计算与最终选择。这里的“纯结构”限定于新增的
+\texttt{unlock-frontier}：portfolio 保留的旧 P1 fallback 对特定输入形态
+含 \texttt{D2S}、\texttt{COPY-IN} 和 \texttt{MOVE} 相关 tie-break。因此
+本文不把整个 canonical solver 称为 motif-agnostic；能成立的窄结论只是
+frontier 不读取实例名、操作模式或缓冲区类别。
 
-\paragraph{候选序。}
-三个候选序均为结构无关的拓扑序，共享同一内存感知表调度框架（释放优先、分配延后），仅在就绪集排序策略上形成差异。
+\texttt{unlock-frontier} 先调度就绪 FREE，再调度最小编号的就绪操作；仅
+剩 ALLOC 时，寻找编号最小且“全部尚未完成前驱都已经就绪”的消费者，并
+完成其前驱组。这样可避免连续的一输入搬运长期饿死一个多输入操作。
 
-\begin{enumerate}
-  \item 压力感知序（\ksName{p1}）是正文算法~\ref{alg:assign-spill} 使用的内存感知表调度序，各级就绪集内采用内存感知优先级。\ksOp{alloc} 节点按后继入度/后继就绪度排序：入度越低说明消费者越快就绪，分配被推迟到接近使用时放行，从而将分配时机压到峰值最不敏感处。该序是 P1 的直接输出，也是 P2/P3 的一个候选。
-  \item 容量节流序（\ksName{capfit-id}）各级就绪集内沿用内存感知的释放/操作优先级，但 \ksOp{alloc} 改按最小节点标识排序，并在此基序上叠加容量门控：若某个 \ksOp{alloc} 会使对应 cache 超过容量，则暂缓该分配；当所有就绪分配均被阻塞、无法再推迟时，强制放行最快解锁后续工作的那个（权重按 $1/\Capc_c$ 归一化）。该序的角色是直接约束峰值高度，代价是牺牲部分缓冲的连续驻留机会。
-  \item 标识保留序（\ksName{id-raw}）在释放、操作、分配三级就绪集内一律取最小标识，既无内存感知优先级也无容量门控。其作用是保留 \ksOp{copy-in} clean 缓冲的原始驻留顺序，使这些 clean 缓冲更容易在计算窗口内常驻，从而在高压窗口留下可半价换出的 clean 储备。这一效果无法由前两个序可靠地产生，因为它们的排序策略都会打乱输入缓冲的原始顺序。
-\end{enumerate}
-
-三个序的互补性体现在对 clean/dirty 构成的不同塑形路径：容量节流序（\ksName{capfit-id}）通过容量门控降低峰值总量，压力感知序（\ksName{p1}）通过延迟分配缩短活跃区间，标识保留序（\ksName{id-raw}）通过顺序保持维持 clean 储备。正文 \S\ref{sec:liveness-shaping} 已指出，候选集扩展具有单调性，加入新候选只改善或持平。
-
-\paragraph{地址分配与代价感知驱逐。}
-给定拓扑序后，沿序执行 best-fit 地址分配。容量不足时按代价加权的 Belady 分数选择驱逐对象：
-\begin{equation}\label{eq:supp-victim}
-\mathrm{victim}=\arg\max_b d(b)\frac{s_b}{e_b}
-=\arg\max_b
-\begin{cases}
-d(b), & b\ \text{clean},\\
-d(b)/2, & b\ \text{dirty},
-\end{cases}
-\end{equation}
-其中 $d(b)$ 是缓冲 $b$ 到下一次使用的距离。dirty 缓冲的有效距离折半，使引擎优先驱逐廉价的 clean 缓冲：只有当某个 dirty 缓冲的未来使用足够远时，才会优先于同等大小的 clean 缓冲被换出。正文命题~\ref{prop:belady-margin} 表明，在距离主导条件下该评分规则与其他代价加权变体选出相同的驱逐集合，因此驱逐策略的边际收益远小于调度序。
-
-\paragraph{预取窗口与溢出选择的分离。}
-溢出集合的选择与重载放置是两个可分离的自由度。前者决定 $\extra$ 的总量，后者影响重载能否与计算重叠，进而影响 P3 时间。将二者耦合会使时间优化无约束地污染流量目标。方法的设计选择是将二者拆开。预取窗口 $H$ 仅控制 \ksOp{spill-in} 的前移：若某个已换出缓冲将在 $\le H$ 步内被使用，且 cache 有空闲，则提前重载，但不为预取触发额外驱逐。P2 使用紧网格 $H\in\{0,5,40\}$ 以最小化流量；P3 使用宽网格 $H\in\{0,5,40,80,120\}$ 以最小化时间。
-
-\paragraph{选优机制。}
-对 3 个候选序与预取窗口的笛卡尔积逐一执行完整模拟：P2 按 $(\extra,\#\mathrm{spills},T)$ 词典键选优，P3 按 $(T,\extra,\#\mathrm{spills})$。最终输出为候选集上的最小项。
-
-\begin{algorithm}[htbp]
-\caption{P1/P2/P3 的统一求解框架}\label{alg:supp-portfolio}
+\begin{algorithm}[H]
+\caption{依赖前沿拓扑序}\label{alg:supp-frontier-zh}
 \begin{algorithmic}[1]
-\Require DAG $G=(V,E)$，问题类型 $p\in\{1,2,3\}$
-\Ensure 调度；P2/P3 同时输出地址分配 $\mathit{mem}$ 与 spill 列表 $\mathit{spill}$
-\If{$p=1$}
-  \State \Return $\mathrm{MemoryAwareOrder}(G)$
-\EndIf
-\State $\mathcal{H}\gets\{0,5,40\}$ \textbf{if} $p=2$ \textbf{else} $\{0,5,40,80,120\}$
-\State $\mathit{best}\gets\bot$
-\For{$\sigma\in\{\ksName{capfit-id},\ksName{p1},\ksName{id-raw}\}$}
-  \For{$H\in\mathcal{H}$}
-    \State $(\pi,\mathit{mem},\mathit{spill})\gets \mathrm{AssignAndSpill}(G,\sigma,H)$
-    \State $E\gets\sum_{(b,\cdot)\in\mathit{spill}} e_b$;\quad $T\gets \mathrm{SimTime}(\pi,\mathit{mem},\mathit{spill})$
-    \State $k\gets(E,|\mathit{spill}|,T)$ \textbf{if} $p=2$ \textbf{else} $(T,E,|\mathit{spill}|)$
-    \State $\mathit{best}\gets\min\bigl(\mathit{best},(k,\pi,\mathit{mem},\mathit{spill})\bigr)$
-  \EndFor
-\EndFor
-\State \Return $\mathit{best}$
+\Require DAG 实例 $I$
+\State 将零入度节点划分为 $Q_f,Q_o,Q_a$；$S\gets[\ ]$
+\While{$Q_f\cup Q_o\cup Q_a\ne\emptyset$}
+  \If{$Q_f\ne\emptyset$} \State $v\gets Q_f$ 中最大编号节点
+  \ElsIf{$Q_o\ne\emptyset$} \State $v\gets Q_o$ 中最小编号节点
+  \Else
+    \State $u\gets$ 尚未完成前驱全在 $Q_a$ 中的最小编号消费者
+    \State $v\gets u$ 的最小编号就绪前驱
+    \If{不存在这样的 $u$} \State $v\gets Q_a$ 中最小编号节点 \EndIf
+  \EndIf
+  \State 将 $v$ 追加至 $S$；更新入度及 $Q_f,Q_o,Q_a$
+\EndWhile
+\State \Return $S$
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{P1：峰值驻留与目标错配}\label{sec:supp-p1}
+每个拓扑序分别运行真正的 best-fit 地址放置：从所有足够大的空闲区间中
+选择长度最小者，长度相同时选择地址最小者；释放后合并相邻空闲区间。若
+没有连续空洞，放置器从当前不被下一操作 pinned 的缓冲区中选择 victim，
+插入 spill-out，释放其整段地址，直至请求可放置。需要再次访问或 FREE 时
+插入 spill-in，并允许换入到新地址。
 
-P1 评判逐 cache 峰值驻留，其结果直接回答"给定 DAG 能否在某个合法序下降低峰值"。然而 P1 最优序并不自动转化为 P2/P3 最优，这正是正文强调的目标错配现象。
+生产组合比较 \texttt{dist-size-cost} 与 \texttt{share-adaptive-25} 两种
+victim 策略。前者联合下次使用距离、大小和静态流量代价；后者在有备份
+字节稀少或纯生成缓冲区尺寸高度异质时切换优先级。P2 枚举提前重载窗口
+$H\in\{0,5,40\}$，P3 枚举 $H\in\{0,5,40,80,120\}$。提前重载只有在
+已有足够连续空洞时才发生，它本身不驱逐其他驻留缓冲区；但它会改变之后的
+驻留状态，因而仍须把每个窗口作为完整候选重新评价。
 
-端到端结果显示，本文序在全部六个实例上的 L1 峰值均低于外部参考解：Conv\_Case0 从 $7488$ 降至 $6912$，Conv\_Case1 从 $14040$ 降至 $13786$；FlashAttention 与 Matmul 实例的降幅更大，P1 峰值分别降至 $256/256/128/128$。但 P1 低峰值不等价于低 spill 代价。以 FlashAttention\_Case1 为例，P1 序使 UB 峰值达到 $33010$，远超 $\Capc_{\mathrm{UB}}=1024$：降低 L1 峰值的序反而在 UB 上造成了更严重的容量超限。这一 case 直接解释了为什么方法需要从 P1 单峰值指标过渡到 P2 的溢出流量指标：在多 cache 体系下，跨 cache 的峰值分布才是决定真实溢出代价的关键。
+\begin{algorithm}[H]
+\caption{P2/P3 有界工件组合}\label{alg:supp-portfolio-zh}
+\begin{algorithmic}[1]
+\Require 实例 $I$，问题编号 $q\in\{2,3\}$
+\State $\mathcal O\gets\{$frontier, capfit-id, P1, id-raw$\}$
+\State $\mathcal P\gets\{$dist-size-cost, share-adaptive-25$\}$
+\State $\mathcal H\gets\{0,5,40\}$；若 $q=3$，加入 $80,120$
+\State $A^\star\gets\varnothing$
+\For{$(O,P,H)\in\mathcal O\times\mathcal P\times\mathcal H$}
+  \State 生成拓扑序 $\pi_O$
+  \State 用 best-fit、策略 $P$ 和窗口 $H$ 生成地址与溢出工件 $A$
+  \If{放置失败} \State 跳过该不可行组合成员 \EndIf
+  \State 计算 $E,n_{\mathrm{spill}},T$（候选循环内部不调用 canonical evaluator）
+  \State 按 $K_2=(E,n_{\mathrm{spill}},T)$ 或 $K_3=(T,E,n_{\mathrm{spill}})$ 更新 $A^\star$
+\EndFor
+\State 返回 $A^\star$；实验 harness 对最终工件运行 canonical evaluator
+\end{algorithmic}
+\end{algorithm}
 
-\subsection{P2：调度序塑形 clean/dirty 构成}\label{sec:supp-p2}
-
-P2 的核心目标是最小化总溢出流量 $\extra$。与仅在固定序上替换驱逐策略不同，本文通过调度序改变高压窗口中 clean 与 dirty 缓冲的构成，使驱逐器在容量超限时能以 $s_b$（clean）而非 $2s_b$（dirty）的代价释放空间。
-
-相对外部参考解，P2 在六个实例中三胜三负。胜出实例揭示了塑形机制的有效性：Conv\_Case1（$73240\to72520$）中，本文序将更多 clean 缓冲保留到高压窗口；Matmul\_Case0（$34944\to34688$）同理；Matmul\_Case1 的 $\extra$ 与 spill 数均与参考解持平（$460800$、$3600$），但时间第三键更优。三个失利实例则指向同一机制的反面：参考序在关键高压窗口中恰好保留了更合适的 clean 缓冲。例如 Conv\_Case0 中参考解的 $\extra$ 为 $73500$，低于本文的 $88044$，差距并非来自驱逐规则的差异（命题~\ref{prop:belady-margin} 表明固定序上不同驱逐变体的 extra 差异很小），而是参考序使更多 clean 缓冲在溢出发生时仍然驻留，正体现了调度序对驻留构成的塑形效果。
-
-胜与负共同印证了正文的核心论点：溢出代价的主要决定因素是序对 clean/dirty 构成的塑形，而非驱逐规则本身。
-
-\subsection{P3：预取窗口与计算重叠}\label{sec:supp-p3}
-
-P3 以流水化执行时间为首要目标。非零预取窗口将部分 \ksOp{spill-in} 从直接使用点前移，使重载与计算或其他管线搬运重叠，降低用户节点的等待阻塞。由于预取仅在存在空闲区间时发生且不触发额外驱逐，它主要调整重载放置时机，而非重新定义 spill 集合。
-
-端到端结果为四胜二负。本文在两个 FlashAttention 与两个 Matmul 实例上取得更短时间：FlashAttention\_Case1 从 $193059$ 降至 $180364$，Matmul\_Case0 从 $194331$ 降至 $186820$。两个 Conv 实例时间落后，其中 Conv\_Case1 尤其具有诊断价值：本文 $\extra$ 更低（$73578<86690$），但参考解时间更短（$1073322<1111778$）。这一反例说明更低的流量不自动转化为更短的时间：重载与计算的重叠程度是另一个独立的维度。当参考序的重载恰好被安排在计算管线的空闲间隙中时，即使总流量更高，阻塞时间仍可更短。这一观察进一步支持了方法将溢出选择与重载放置分离的设计决策。
-
-\subsection{端到端参考对照}\label{sec:supp-headline}
-
-表~\ref{tab:supp-headline} 汇总六个公开实例在 P1/P2/P3 上的端到端结果，合计 13/18 胜。这里的比较口径与正文主实验不同：正文 \S\ref{sec:exp-baselines} 使用"同引擎换序"口径，所有方法共享同一地址分配/溢出引擎、仅替换调度序，以隔离序对 clean/dirty 构成的塑形效果。端到端对照则使用各自完整的调度、地址分配和 spill 列表，反映两个完整系统的最终输出质量。两类口径回答不同的问题，端到端数据作为系统性能的综合参照。
+算法~\ref{alg:supp-portfolio-zh} 最多考察
+$4\times2\times|\mathcal H|$ 个组合成员；放置失败者被跳过。它对成功候选
+生成地址/溢出工件并计算真实目标，不用 live-area 或 overflow-area 代理量
+作最终选优。生产 \texttt{solve} 的候选循环本身不逐个调用 canonical
+evaluator；实验 harness 对最终选中工件作标准验证，本文只报告零违规结果。表
+~\ref{tab:supp-implementation-constants-zh} 给出正文伪代码省略但会影响
+复现的确定性规则。
 
 \begin{table}[H]
 \centering
-\caption{本文方法与外部参考解 baseline01 的端到端对照（每格为"本文/参考"）。}
-\label{tab:supp-headline}
-\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llrrrrc@{}}
+\caption{Canonical 求解器的固定常数与边界规则。}
+\label{tab:supp-implementation-constants-zh}
+\begin{tabular}{@{}p{.22\linewidth}p{.15\linewidth}p{.55\linewidth}@{}}
 \toprule
-Case & P & \(\max_{\mathrm{L1}}\) & spills & \(\extra\) & \(T\) & 结果 \\
+机制 & 数值 & 精确作用\\
 \midrule
-Conv\_Case0   & P1 & 6912/7488   & 0/0       & 0/0           & 394430/359570   & 胜 \\
-              & P2 & 6912/7488   & 339/141   & 88044/73500   & 615694/535312   & 负 \\
-              & P3 & 6912/7488   & 342/141   & 92652/73500   & 553280/535312   & 负 \\
-\addlinespace
-Conv\_Case1   & P1 & 13786/14040 & 0/0       & 0/0           & 650044/573395   & 胜 \\
-              & P2 & 14040/14040 & 1963/1828 & 72520/73240   & 1159169/1150333 & 胜 \\
-              & P3 & 14040/14040 & 1951/1290 & 73578/86690   & 1111778/1073322 & 负 \\
-\addlinespace
-FA\_Case0     & P1 & 256/3328    & 0/0       & 0/0           & 31063/31429     & 胜 \\
-              & P2 & 3328/3328   & 31/41     & 3904/3692     & 51700/53374     & 负 \\
-              & P3 & 4096/3328   & 58/24     & 5832/4128     & 46167/46761     & 胜 \\
-\addlinespace
-FA\_Case1     & P1 & 256/5376    & 0/0       & 0/0           & 112458/113445   & 胜 \\
-              & P2 & 5376/5376   & 229/146   & 32920/32840   & 214361/193059   & 负 \\
-              & P3 & 5376/5376   & 229/146   & 34432/32840   & 180364/193059   & 胜 \\
-\addlinespace
-Matmul\_Case0 & P1 & 128/9216    & 0/0       & 0/0           & 82308/82773     & 胜 \\
-              & P2 & 9216/9216   & 271/273   & 34688/34944   & 192380/194331   & 胜 \\
-              & P3 & 9216/9216   & 273/273   & 34944/34944   & 186820/194331   & 胜 \\
-\addlinespace
-Matmul\_Case1 & P1 & 128/34816   & 0/0       & 0/0           & 629076/583525   & 胜 \\
-              & P2 & 34816/34816 & 3600/3600 & 460800/460800 & 1783145/1800218 & 胜 \\
-              & P3 & 34816/34816 & 3601/3600 & 460928/460800 & 1771132/1800218 & 胜 \\
+前沿平局裁决 & FREE 最大 ID；操作最小 ID & ALLOC 键为（最小可解锁消费者 ID，ALLOC ID）；无可解锁消费者时第一项取无穷。\\
+下次使用截断 & $2^{20}$ & 形成任一 victim 评分前，截断按基础序位置计算的距离。\\
+尺寸异质性 & 最大/最小 $\ge8$ & 若该存储类型完全没有 backed 缓冲，自适应策略优先释放大连续段；否则保持距离优先。\\
+backed 占比 & $\le25\%$ & 有可驱逐 backed victim 且其字节占可驱逐驻留字节不超过阈值时，优先使用这一低价储备。\\
+提前重载 & 距离 $\le H$ & 仅使用已经存在的合适空洞；预取不主动制造 victim。\\
+pinned 搬移 & 每请求至多 100 次 & 只有碎片化且无非 pinned victim 时，溢出并立即换入最小 pinned 缓冲；超过上限则该候选失败。\\
 \bottomrule
-\end{tabular*}
+\end{tabular}
 \end{table}
 
-\subsection{差距来源分析}\label{sec:supp-failure}
+\subsection{一个可逐步复算的小图}
 
-五个失利项的核心发现一致：参考解在这些实例中的优势不削弱正文论点，反而从反面印证了同一机制，即差距主要来自调度序对 clean/dirty 驻留构成的塑形，而非固定序上的驱逐策略差异。
+表~\ref{tab:supp-toy-trace-zh} 给出一个按当前 best-fit/spill 实现与
+canonical evaluator 规则手工展开的教学例子，用来明确溢出节点、地址与
+计费如何共同形成 P2 工件；它不是运行日志、公开基准或 oracle 数据，也不
+用于论文数值主张。把七个原始节点按下列顺序编号，并以相邻节点之间的六条
+边 $0\to1\to2\to3\to4\to5\to6$ 构成一条 DAG 链；因此原始拓扑序可直接
+复核且唯一。设某
+存储容量为 4，缓冲区 $a$ 为 2 字节 backed 输入，$b$ 为 3 字节 generated
+中间量。原始合法序为
+\[
+ \operatorname{ALLOC}(a),\ \operatorname{COPYIN}(a),\
+ \operatorname{ALLOC}(b),\ \operatorname{PRODUCE}(b),\
+ \operatorname{FREE}(b),\ \operatorname{USE}(a),\ \operatorname{FREE}(a).
+\]
+$a$ 在 COPY-IN 后到 USE 前没有强制访问。分配 $b$ 时总逻辑活跃量为 5，
+best-fit 无法找到 3 字节空洞；选择换出 $a$ 后，$b$ 可占 $[0,3)$。由于
+FREE 是强制事件，$b$ 必须保持驻留到其 FREE；随后再把 $a$ 换入并执行
+USE。这里选择 backed 的 $a$，一次中断只收费 2 字节。
 
-两类诊断交叉验证了这一判断。第一，将参考解的序输入本文地址分配/溢出引擎后，若干失利项的流量可被接近复现，说明差距来自高压窗口中可供驱逐的缓冲构成，而非引擎实现的差异。第二，在固定序上替换四类 Belady 风格 victim policy，P2 $\extra$ 的差异通常很小（正文 \S\ref{sec:exp-mechanism} 报告 CV $\le 4\%$）；相反，不同合法序之间的 $\extra$ 可相差一个数量级。
-
-本文保留这些失利项而不通过算子族特化规则去拟合，是因为此类拟合会破坏方法的结构无关性：算法只使用 DAG 依赖、缓冲大小、cache 类型、clean/dirty 属性和容量信息，不包含按算子类别定制的排序规则。一旦引入特化，结论将从"调度序塑形 clean/dirty 构成降低溢出代价"退化为"针对特定算子结构做专门排序"，削弱方法的一般性。
-
-\subsection{运行效率}\label{sec:supp-runtime}
-
-表~\ref{tab:supp-runtime} 给出完整的 3 次重复统计（中位数、最小值、最大值），补充正文表~\ref{tab:runtime} 的中位数数据。
-
-\begin{table}[htbp]
-\centering\small
-\caption{Wall-clock 运行时间（秒，3 次重复）。}\label{tab:supp-runtime}
-\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llrrrr@{}}
+\begin{table}[H]
+\centering
+\caption{容量为 4 的教学小图：从原始序到增广物理工件。$o_a,i_a$ 为合成换出/换入节点。}
+\label{tab:supp-toy-trace-zh}
+\begin{tabular}{@{}clllr@{}}
 \toprule
-实例 & P & 中位数 & 最小值 & 最大值 & 节点数 \\
+步 & 执行事件 & 事件后驻留段 & 空闲区间 & 累计 $E$\\
 \midrule
-Conv\_Case0 & P1 & 0.009 & 0.009 & 0.010 & 2\,580 \\
-            & P2 & 0.391 & 0.390 & 0.392 & \\
-            & P3 & 0.683 & 0.677 & 0.706 & \\
-\addlinespace
-Conv\_Case1 & P1 & 0.189 & 0.186 & 0.190 & 36\,086 \\
-            & P2 & 57.97 & 57.46 & 58.62 & \\
-            & P3 & 73.14 & 73.10 & 73.28 & \\
-\addlinespace
-FA\_Case0   & P1 & 0.006 & 0.006 & 0.007 & 1\,716 \\
-            & P2 & 0.220 & 0.218 & 0.222 & \\
-            & P3 & 0.328 & 0.326 & 0.328 & \\
-\addlinespace
-FA\_Case1   & P1 & 0.027 & 0.026 & 0.030 & 6\,952 \\
-            & P2 & 2.723 & 2.723 & 2.757 & \\
-            & P3 & 3.356 & 3.316 & 3.367 & \\
-\addlinespace
-Matmul\_Case0 & P1 & 0.014 & 0.014 & 0.016 & 4\,160 \\
-              & P2 & 0.701 & 0.695 & 0.703 & \\
-              & P3 & 1.137 & 1.136 & 1.170 & \\
-\addlinespace
-Matmul\_Case1 & P1 & 0.126 & 0.111 & 0.126 & 30\,976 \\
-              & P2 & 19.40 & 19.33 & 19.46 & \\
-              & P3 & 32.33 & 32.19 & 32.34 & \\
+1 & $\operatorname{ALLOC}(a)$ & $a:[0,2)$ & $[2,4)$ & 0\\
+2 & $\operatorname{COPYIN}(a)$ & $a:[0,2)$ & $[2,4)$ & 0\\
+3 & $o_a$ & 无 & $[0,4)$ & 2\\
+4 & $\operatorname{ALLOC}(b)$ & $b:[0,3)$ & $[3,4)$ & 2\\
+5 & $\operatorname{PRODUCE}(b)$ & $b:[0,3)$ & $[3,4)$ & 2\\
+6 & $\operatorname{FREE}(b)$ & 无 & $[0,4)$ & 2\\
+7 & $i_a$ & $a:[0,2)$ & $[2,4)$ & 2\\
+8 & $\operatorname{USE}(a)$ & $a:[0,2)$ & $[2,4)$ & 2\\
+9 & $\operatorname{FREE}(a)$ & 无 & $[0,4)$ & 2\\
 \bottomrule
-\end{tabular*}
+\end{tabular}
 \end{table}
 
-\paragraph{运行时间的主导因素。}
-P1 仅生成单个调度序，所有实例均低于 $0.2$ 秒。P2/P3 的运行时间主要受两个因素支配：(1) 候选序 $\times$ 预取窗口的网格大小（P2 评估 $3\times3=9$ 个组合，P3 评估 $3\times5=15$ 个组合）；(2) 地址分配中 Belady 驱逐选择的二次最坏开销。Conv\_Case1 和 Matmul\_Case1 的缓冲数分别为 12\,013 和 8\,960，驱逐扫描构成运行时间的主要部分。三次重复的最小/最大值紧密包围中位数（变异系数 $<2\%$），说明计时结果稳定。
+该工件的溢出表只有 $(a,0)$ 一项，所以
+$n_{\mathrm{spill}}=1$、$C=2,D=0,V=2,E=2$。验证器还会检查原始依赖、
+$\operatorname{ALLOC}(a)\prec o_a\prec i_a\prec\operatorname{FREE}(a)$、
+$o_a$ 与 $i_a$ 之间无 $a$ 的使用，以及所有半开地址区间均不越界或时空
+重叠。若换出的是同尺寸 generated 缓冲，流量会是 4；这正是命题 1 的
+单位代价差异，而非“排序自动使用类别”的证据。
 
-\paragraph{时间复杂度。}
-设 $N=|V|$ 为节点数，$E=|E|$ 为边数，$B$ 为缓冲数，$K=3$ 为候选序数，$W$ 为预取窗口网格大小。各阶段复杂度如下：
+\subsection{真实实例 Conv\_Case0 的端到端路径}
+
+真实实例不能逐节点印出 2,580 行，表~\ref{tab:supp-conv0-path-zh} 因而按
+求解角色展示从候选序到验证工件的完整方法路径。可扩展 v2 最多考察 24 个
+P2 组合成员，逐一执行“排序--best-fit--victim--溢出插入--内部计价/计时”，
+再由实验 harness 对最终选中工件作 canonical 验证。该工件零违规，
+$E=66{,}828$、140 次溢出；其流量可直接分解为
+$C=12{,}672,D=27{,}078,V=39{,}750$，故
+$E=V+D=39{,}750+27{,}078=66{,}828$。
+
+\begin{table}[H]
+\centering
+\caption{Conv\_Case0 的方法路径。exact 行只证固定 \texttt{unlock-frontier} 序的流量最优。}
+\label{tab:supp-conv0-path-zh}
+\begin{tabular}{@{}llrrp{.34\linewidth}@{}}
+\toprule
+角色 & 工件/搜索范围 & $E$ & 溢出数 & 可作出的结论\\
+\midrule
+历史前身 & iter038 & 88,044 & 339 & 可扩展 P2 前身\\
+生产 & scalable v2，24 候选 & 66,828 & 140 & canonical-valid 生产结果\\
+离线修复 & 10,000 次随机单节点 proposal & 65,532 & 137 & Conv0 个案，非默认阶段\\
+固定序 exact & frontier gap+packing & 57,408 & 112 & 下界相等、打包成功、固定序流量证书\\
+官方 & 官方 P2 工件 & 73,500 & 141 & 同口径比较对象\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+固定序 exact 行进一步展示证书链：间隙 CP-SAT 在 0.88 秒的记录运行中给出
+下界与目标均为 57,408；连续地址打包状态为 OPTIMAL（这里只表示可满足性），
+标准 schedule/memory/spill 文件生成成功，canonical evaluator 返回零违规
+且同样计算出 57,408。由定理 3，它证明该 \texttt{unlock-frontier} 序的
+最小\emph{流量}；它没有证明 112 是同流量下最少溢出数，也没有搜索所有
+拓扑序。作为排序敏感性的受控证据，同一 planner 固定为 P1 序时证明的流量
+最优值为 81,504；这一对比只对 Conv0 成立。
+
+\subsection{离线代价修复与固定序 oracle}
+
+离线修复脚本观察高代价溢出前沿，提出保持依赖合法的节点或依赖链移动，
+重新运行物理规划，并只接受 P2 键严格改善的 proposal。实验预算并不统一：
+Conv\_Case0 使用 10,000 次随机单节点 hill search；Conv\_Case1 使用 beam
+宽度 10、两轮 frontier search；两个 FA 实例各尝试 2,000 个随机 proposal
+但没有接受移动；两个 Matmul 实例没有运行修复。因而它只能说明某些个案中
+代价语义可能影响排序，不能称为六例统一算法或普遍改进。
+
+固定序 oracle 先解式~\eqref{eq:supp-gap-obj-zh} 的加权间隙选择，再进行
+若干确定性贪心打包；必要时调用独立 \texttt{NoOverlap2D} 可满足性模型。
+最后它输出与生产求解器相同格式的 schedule/memory/spill 工件，并调用同一
+evaluator。8 个内部 17 节点 oracle 实例上，生产求解器在其\emph{自身所选
+固定序}的流量依次为 352、1,408、704、704、352、1,408、704 和 704；
+每一项都与该固定序的 CP-SAT 下界相等且通过验证。这是 8 个离散小图的
+固定序吻合，不是大规模扩展性或跨序全局最优性证据。
+
+\subsection{失败、未完成与复现边界}
+
+完整求解过程也包括失败状态，而不是只保留成功证书：
 \begin{itemize}
-  \item \textbf{候选序生成}：$O(K(N\log N+E))$，基于堆维护的就绪集拓扑排序。
-  \item \textbf{地址分配与溢出插入}：$O(N+E+B^2)$ 每个 $(\text{序},\text{窗口})$ 组合。沿序扫描线性，Belady 驱逐的最坏开销为 $B$ 次分配各扫描 $O(B)$ 个驻留缓冲。
-  \item \textbf{流水模拟}：$O(N+E)$ 每个组合。
-  \item \textbf{Portfolio 选优}：$O(KW)$ 个组合的枚举。
+  \item FA\_Case1 的固定序工件为 canonical-valid FEASIBLE：$E=32{,}512$，
+        下界 31,936，gap 为 576；不能称为 certified optimal；
+  \item Matmul\_Case0 的可复现 120.09 秒运行给出 FEASIBLE 34,816、下界
+        29,952；同一序另有合法启发式工件 34,688，故审计区间为
+        $[29{,}952,34{,}688]$，旧的“34,688 OPTIMAL”说法已撤销；
+  \item Conv\_Case1 未在研究预算内完成 exact+packing，Matmul\_Case1 未运行；
+  \item P3 在六个公开实例中对官方时间是 5 胜 1 负，Conv\_Case1 为
+        1,118,687 对 1,073,322，不能写成普遍占优；
+  \item 汇总 JSON 可核对指标和验证状态，但若其旁边没有配套文本工件，独立
+        replay 需要重跑确定性求解器。固定序证书则以机器 JSON 和匹配的
+        schedule/memory/spill 文件为准，旧的手写状态不得覆盖机器记录。
 \end{itemize}
-综合为 $O(KW(N\log N+E+B^2))$。由于 $K$、$W$ 为小常数，渐近主项为 $O(N\log N+E+B^2)$。空间复杂度为 $O(N+E+B)$。
+
+最后，生产路径的地址放置和驻留扫描在固定 portfolio 下是可扩展实现；
+CP-SAT 的间隙选择与后备 packing 最坏情况下为指数复杂度。当前
+canonical \texttt{solve} 没有 CP-SAT 规模阈值、超时切换或回退集成，故
+不能把 oracle 的成功结果描述为默认求解器能力。

@@ -1,18 +1,2 @@
 \section*{Supplement Overview}
-
-This supplement expands on the three contributions of the main paper.
-Section~\ref{sec:supp-problem} gives the full formalization of the problem
-definition, fixing the DAG input, the capacity parameters, and the three-stage
-evaluation protocol. Section~\ref{sec:supp-formal} provides complete proofs of the
-paper's three formal results---the spill-inevitability certificate
-(Theorem~\ref{thm:spill-inev}), Belady-margin stability
-(Proposition~\ref{prop:belady-margin}), and the overflow-area approximation
-guarantee (Theorem~\ref{thm:area-extra})---and discusses the applicability
-boundary of each. Section~\ref{sec:supp-solution} unfolds the design details
-compressed in the method section, covering candidate-order generation, the
-address-assignment procedure, and prefetch-window selection, together with an
-end-to-end comparison against an external reference solution.
-Section~\ref{sec:supp-cgo} supplies additional experimental evidence: the
-separation of schedule order from victim rule, the applicability validation on a
-synthetic distribution, the CP-SAT oracle optimality checks, and the controlled
-clean/dirty ablation.
+This supplement gives auditable details for the paper's exact-to-heuristic evidence chain. Section~\ref{sec:supp-problem} specifies P1/P2/P3 evaluator semantics and static backed/generated classes. Section~\ref{sec:supp-formal} proves the traffic identity, fixed-order lower bound, and certificate, with a contiguous-address counterexample. Section~\ref{sec:supp-solution} uses a pedagogical graph and Conv\_Case0 for an end-to-end walkthrough while separating production, nonuniform repair studies, and the fixed-order oracle. Section~\ref{sec:supp-cgo} reports complete P1/P2/P3 results, component attribution, one capacity sweep, all 36 synthetic and eight oracle instances, artifact boundaries, and negative results.

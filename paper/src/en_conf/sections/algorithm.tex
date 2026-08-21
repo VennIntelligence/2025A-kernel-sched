@@ -1,190 +1,116 @@
 \section{Method}\label{sec:method}
 
-Existing schedulers treat spills as a local consequence after capacity is
-exceeded and then apply a victim rule to a fixed order. Our experiments show
-that this is the wrong primary lever: on a fixed order, four
-Belady-style victim variants usually differ by at most $4\%$ in extra traffic,
-whereas legal schedule orders can vary by more than an order of magnitude
-(Section~\ref{sec:exp-mechanism}). Our method therefore optimizes schedule order
-to shape the clean/dirty composition of overflow windows.
+We separate three roles with different evidence status. The \emph{production
+solver} is a bounded candidate-order $\times$ online spill-planner portfolio and
+the only default component. \emph{Cost-aware repair} is an offline case study of
+whether cost semantics can improve an order. The \emph{fixed-order exact
+planner} is a CP-SAT research oracle for lower bounds and certificates.
 
-The method has three stages. First, spill diagnosis
-(Section~\ref{sec:theory}) asks whether spills are unavoidable for the given DAG
-and capacity. If they are, the objective shifts from eliminating spills to
-lowering their cost, and overflow area becomes a cheap cross-stage surrogate.
-Second, candidate-order generation and address assignment
-(Section~\ref{sec:liveness-shaping}) produce complementary topological orders
-and run best-fit placement with cost-aware spill insertion
-(Algorithm~\ref{alg:assign-spill}). Third, we simulate the Cartesian product of
-candidate orders and prefetch windows, then choose the best combination by a
-lexicographic objective (Figure~\ref{fig:pipeline}).
+\subsection{Production Solver}\label{sec:scalable}
+
+\paragraph{Dependency-frontier ordering.}
+Many simultaneously ready allocations can let a one-input stream starve a
+multi-input consumer and prolong its prepared operands. Dependency-frontier
+schedules frees and executable operations first; when only allocations remain,
+it completes the ready predecessor group of the earliest unlockable consumer
+(Figure~\ref{fig:frontier}, Algorithm~\ref{alg:canonical}). The new frontier
+order uses DAG structure and identifiers only. The portfolio also retains
+capfit-id, the P1 order, and id-raw; we do not relabel the whole portfolio as
+cost-aware or motif-agnostic. Complete tie rules are in Supplementary Sec.~3.1.
 
 \begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{\ksFigure{pipeline.pdf}}
-  \caption{Method overview. The optimization framework consists of three stages:
-  (1) inevitable spill determination to decide if optimization is needed;
-  (2) three complementary candidate topological orders generated via liveness shaping;
-  (3) Algorithm~\ref{alg:assign-spill} which executes address assignment and spill insertion along each order, followed by lexicographic key selection across candidate orders and prefetch windows.}
-  \label{fig:pipeline}
+\centering
+\includegraphics[width=0.9\textwidth]{\ksFigure{frontier_mechanism.pdf}}
+\caption{Predecessor-group completion. An indegree-greedy order delays the
+three-operand consumer $X$ to step 9 and accumulates 18 operand-steps; frontier
+fires $X$ at step 4 and reduces residency to 6 operand-steps ($-67\%$).}
+\Description{Two live-range panels showing delayed versus grouped operands.}
+\label{fig:frontier}
 \end{figure*}
 
-\subsection{Spill Diagnosis and Surrogate Objective}\label{sec:theory}
-
-If some schedule keeps every cache peak within capacity, then no spill is needed
-and the clean/dirty distinction is irrelevant. The first question is therefore:
-\emph{for this DAG and capacity, are spills unavoidable for all reasonable
-schedules?} We use a linear-time certificate. Let $\mathcal{O}_\epsilon$ denote
-schedules whose extra traffic is within $(1+\epsilon)$ of optimum, with
-$\epsilon=0.1$. Let
-$\underline{W}_c^\epsilon=\min_{S\in\mathcal{O}_\epsilon}\max_t W_c^S(t)$ be
-the best per-cache peak working set within that near-optimal set.
-
-\begin{theorem}[Spill-inevitability certificate]\label{thm:spill-inev}
-If $\underline{W}_c^\epsilon>\Capc_c$, then every schedule in
-$\mathcal{O}_\epsilon$ must spill on cache $c$. For any feasible implementation
-$P$ of a schedule $S$, the extra traffic satisfies
-$\extra(P)\ge\max_t(W_c^S(t)-\Capc_c)_+$. The proof is in the supplementary
-material.
-\end{theorem}
-
-This certificate is deliberately one-sided: $\underline{W}_c^\epsilon>\Capc_c$
-confirms that spills are unavoidable, but $\underline{W}_c^\epsilon\le\Capc_c$
-does not prove that a spill-free implementation exists. We use it as an
-applicability diagnostic rather than a complete feasibility test.
-
-Peak live bytes are a direct way to compare candidate orders, but a P1-optimal
-order can exceed capacity severely on a particular cache and produce high P2
-traffic. We therefore use overflow area as the scheduling surrogate:
-\begin{equation}\label{eq:area}
-  A(S)=\sum_t\sum_{c\in\mathcal{C}}\bigl(\livec_c(t)-\Capc_c\bigr)_+ .
-\end{equation}
-In the implementation we use the normalized score
-$\Phi(S)=\sum_t\sum_c(\livec_c(t)-\Capc_c)_+/\Capc_c$. The next result connects
-this cheap surrogate to optimal spill traffic under bounded absence durations.
-
-\begin{theorem}[Conditional overflow-area approximation]\label{thm:area-extra}
-Assume every spilled interval has absence duration at most $L$. Suppose there
-exists a feasible plan whose removed area satisfies $R(P)\le\lambda A(S)$ and
-whose spilled intervals have absence duration at least $\ell$. If unit costs
-obey $\kappa\in[1,2]$, then
-\begin{equation}\label{eq:area-extra-bound}
-  \frac{1}{L}\,A(S)\;\le\; E^\star(S)\;\le\; \frac{2\lambda}{\ell}\,A(S).
-\end{equation}
-The proof and a matching counterexample are in the supplementary material.
-\end{theorem}
-
-The surrogate $\Phi$ is useful for three reasons: it costs $O(N)$ to compute for
-each candidate order, it gives a single scalar used consistently across P1, P2,
-and P3, and Theorem~\ref{thm:area-extra} supplies a theoretical explanation for
-why it should track spill traffic in capacity-bound regimes. It is not a global
-optimality guarantee for schedule selection.
-
-\subsection{Candidate Orders and Spill Insertion}\label{sec:liveness-shaping}
-
-The candidate-order design is structure-agnostic. Orders depend only on buffer
-clean/dirty state, size, and cache capacity; they do not encode operator-specific
-motifs. The candidates share a memory-aware list-scheduling skeleton with three
-ready sets: frees, operations, and allocations. Ready frees are scheduled first
-to reduce residency pressure. Ready allocations are delayed until all ready
-frees and operations have been scheduled, which compresses allocation-to-free
-distance. We instantiate three complementary orders:
-
-\begin{enumerate}[leftmargin=2em,label=(\arabic*)]
-  \item \textbf{Pressure-aware order.} Allocation nodes are ranked by successor
-  indegree. A smaller indegree indicates that consumers will become ready soon,
-  so the allocation can be delayed until it is close to use.
-
-  \item \textbf{Capacity-throttled order.} Allocation nodes are ranked by
-  identifier and overlaid with capacity gating: an allocation that would push a
-  cache over capacity is held back until no further delay is possible, with
-  capacity weights normalized by $1/\Capc_c$ to balance caches of differing
-  tightness.
-
-  \item \textbf{ID-reserve order.} Within the three node classes, this order
-  chooses the minimum identifier and performs no capacity throttling. It is a
-  method candidate, not an external baseline: its purpose is to preserve the
-  stable input-buffer order that often keeps clean \textsc{copy-in} buffers resident
-  through compute windows, leaving cheap eviction reserve in overflow regions.
-\end{enumerate}
-
-Given a schedule order, Algorithm~\ref{alg:assign-spill} performs address
-assignment and spill insertion along the order. When capacity is insufficient,
-it selects an eviction victim by
-\begin{equation}\label{eq:victim}
-  \mathrm{victim}=\arg\max_b\; d(b)\cdot\frac{s_b}{e_b}
-  =\arg\max_b\begin{cases}d(b), & b\text{ clean},\\ d(b)/2, & b\text{ dirty},\end{cases}
-\end{equation}
-where $d(b)$ is the next-use distance. Dirty buffers have their effective
-distance halved, so the engine prefers cheap clean evictions when future-use
-distances are comparable.
-
-\begin{proposition}[Belady-margin stability]\label{prop:belady-margin}
-Consider distance-dominant scoring rules whose cost-factor ratio satisfies
-$\rho=g_{\max}/g_{\min}\le 2$. If the minimum next-use distance among selected
-victims is greater than $\rho$ times the maximum next-use distance among
-non-victims, then all such rules select the same victim set. The proof is in the
-supplementary material.
-\end{proposition}
-
-Thus schedule order, not the victim rule, is the dominant axis on spill cost; we
-quantify both effects in Section~\ref{sec:exp-mechanism}.
-
-\begin{algorithm}[t]
-\caption{Address assignment and spill insertion}\label{alg:assign-spill}
+\begin{algorithm}[H]
+\caption{Canonical scalable solver}\label{alg:canonical}
 \begin{algorithmic}[1]
-\Require Topological order $S$, capacities $\{\Capc_c\}$, prefetch window $H$
-\Ensure Extended order, address assignment, spill list
-\State Initialize a best-fit free-list manager $F_c$ for each cache $c$
-\For{$(t,v)\in\mathrm{enumerate}(S)$}
-  \If{$v=\textsc{Alloc}(b)$}
-    \State $\mathrm{offset}\gets\Call{Place}{b,t}$
-    \State $\mathrm{memory}[b]\gets\mathrm{offset}$
-  \ElsIf{$v=\textsc{Free}(b)$}
-    \If{$b$ is spilled} \Call{Reload}{$b,t$} \EndIf
-    \State $F_{\tau(b)}.\mathrm{Release}(\mathrm{offset}_b,s_b)$
-  \Else
-    \For{$b\in v.\mathrm{bufs}$ where $b$ is spilled}
-      \State \Call{Reload}{$b,t$}
-    \EndFor
-    \For{$b\in\mathrm{SpilledSet}$}
-      \If{$d(b)-t\le H$ and $F_{\tau(b)}$ has $\ge s_b$ free}
-        \State \Call{Reload}{$b,t$}
-      \EndIf
-    \EndFor
+\Require instance $I$, task $p\in\{1,2,3\}$
+\If{$p=1$} \State \Return \Call{P1MemoryOrder}{$I$} \EndIf
+\State $\mathcal O\gets\{\Call{Frontier}{I},\Call{CapFitID}{I}\}$
+\State Add $\Call{P1Order}{I}$ and $\Call{IDRaw}{I}$ to $\mathcal O$
+\State $\mathcal R\gets\{\textsc{DistCost},\textsc{Adaptive25}\}$
+\State $\mathcal H\gets\{0,5,40\}$ if $p=2$, else $\{0,5,40,80,120\}$
+\State $A^\star\gets\bot$; $k^\star\gets(+\infty,+\infty,+\infty)$
+\ForAll{$(S,r,H)\in\mathcal O\times\mathcal R\times\mathcal H$}
+  \State $A\gets\Call{BestFitPlan}{I,S,r,H}$
+  \If{$A$ is feasible}
+    \State $(\mathrm{Tr},n,T)\gets\Call{Evaluate}{A}$
+    \State $k\gets(\mathrm{Tr},n,T)$ if $p=2$, else $(T,\mathrm{Tr},n)$
+    \If{$k<k^\star$} \State $(A^\star,k^\star)\gets(A,k)$ \EndIf
   \EndIf
 \EndFor
-\Statex
-\Procedure{Place}{$b,t$}
-  \State $\mathrm{offset}\gets F_{\tau(b)}.\mathrm{BestFit}(s_b)$
-  \While{$\mathrm{offset}=\mathrm{nil}$}
-    \State $v^*\gets\arg\max_{b'\in\mathrm{Resident}_{\tau(b)}} d(b')s_{b'}/e_{b'}$
-    \State emit $\textsc{SpillOut}(v^*)$; release $(\mathrm{offset}_{v^*},s_{v^*})$
-    \State $\mathrm{offset}\gets F_{\tau(b)}.\mathrm{BestFit}(s_b)$
-  \EndWhile
-  \State $F_{\tau(b)}.\mathrm{Allocate}(\mathrm{offset},s_b)$
-  \State \Return $\mathrm{offset}$
-\EndProcedure
+\State \Return $A^\star$ \Comment{order, offsets, and spill entries}
 \end{algorithmic}
 \end{algorithm}
 
-Reload timing does not change spill traffic, but it does affect whether reload
-latency can overlap with computation. The prefetch window $H$ in
-Algorithm~\ref{alg:assign-spill} controls this dimension: a spilled buffer whose
-next use is within $H$ steps is reloaded early if free space is available and no
-extra eviction is needed. For P2 we use $H\in\{0,5,40\}$ and select by
-$(E,n,T)$. For P3 we use $H\in\{0,5,40,80,120\}$ and select by $(T,E,n)$. The
-candidate set is monotone: adding a new order or prefetch window can only
-improve or preserve the selected objective, because the final choice uses the
-true P2/P3 key rather than the surrogate (see the supplementary material).
+\paragraph{Placement and eviction.}
+Every base order uses true best-fit contiguous placement and compares a
+distance/cost score with an adaptive fragmentation policy. Both are heuristics;
+true-objective selection over complete artifacts absorbs local mistakes.
+Scores, thresholds, relocation bounds, and tie rules are in Supplementary
+Sec.~3.1 and Table~S2.
 
-\paragraph{Complexity.}
-The overall method runs in $O(K\cdot W\cdot(N\log N+E+B^2))$ time, where $K=3$ is
-the number of candidate orders, $W$ is the prefetch-window grid size ($3$ for P2,
-$5$ for P3), $N$ is the number of DAG nodes, and $B$ is the number of buffers.
-Candidate-order generation costs $O(N\log N+E)$ (topological sort with a priority
-queue). The bottleneck of address assignment is Belady victim selection: in the
-worst case each allocation scans all resident buffers, giving $O(B)$ per
-allocation over $B$ allocations, hence $O(B^2)$. The pipeline simulation is
-$O(N+E)$ in the number of edges $E$; on the sparse DAGs of our benchmark this
-term is below the combinatorial search and spill-assignment terms.
+\paragraph{True-objective portfolio selection.}
+P2/P3 form fixed portfolios over four orders, two policies, and three/five
+reload windows, selecting complete artifacts by $(\mathrm{Tr},n,T)$ or
+$(T,\mathrm{Tr},n)$. Infeasible members are skipped; no live-byte or overflow
+surrogate selects the output. Window semantics and artifact generation are in
+Supplementary Secs.~3.1--3.3.
+
+\subsection{Cost-Aware Repair Case Studies}\label{sec:repair}
+
+To probe order-level cost headroom, we try legal node or chain moves offline,
+replan, and accept only strict P2-key improvements. Different
+instances use different search procedures and budgets; small FlashAttention
+probes find no gain and Matmul is not searched. Repair is therefore neither a
+production stage nor a uniform algorithm. Budgets and negative probes appear in
+Supplementary Secs.~3.4 and~4.5.
+
+\subsection{Fixed-Order Weighted Residency Gaps}\label{sec:fixed-order}
+
+Under a fixed order, consecutive mandatory events of each buffer define
+residency gaps. Keeping a gap consumes capacity; interrupting it pays one
+class-weighted charge. A binary model minimizes interruption cost under
+per-cache, per-cut capacity. Its solution must still undergo contiguous packing,
+spill-dependency generation, and canonical validation
+(Figure~\ref{fig:gap-model}). Variables, cuts, the contiguity counterexample,
+and model encoding are in Supplementary Secs.~2.2--2.3 and~3.4.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{\ksFigure{gap_model.pdf}}
+\caption{Weighted residency gaps. Kept gaps consume capacity; interrupted gaps
+pay $\kappa_b s_b$. CP-SAT supplies a lower bound, while independent contiguous
+packing and canonical validation upgrade a bound-attaining artifact to a
+fixed-order traffic certificate.}
+\Description{Buffer gaps above a gap-selection, packing, validation, and
+certificate pipeline.}
+\label{fig:gap-model}
+\end{figure*}
+
+\begin{proposition}[Fixed-order traffic lower bound and certificate]
+\label{prop:gap-certificate}
+For a fixed order, the relaxation optimum lower-bounds every legal
+contiguous-address spill plan. If an optimal gap selection packs contiguously
+and its validated artifact has traffic equal to the bound, the artifact is
+traffic-optimal for that fixed order under the benchmark model.
+\end{proposition}
+
+The proof maps any legal physical plan to a capacity-feasible gap selection.
+The complete proof and a capacity-feasible but unpackable counterexample are in
+Supplementary Secs.~2.2--2.3. The certificate optimizes fixed-order traffic only,
+not spill count or time among ties, and proves no global order optimum.
+
+\paragraph{Complexity and deployment.}
+With fixed candidate counts, the scalable path is polynomial with a conservative
+quadratic buffer term in placement; gap selection and fallback packing are
+exponential in the worst case. CP-SAT remains a research oracle. Any integration
+requires a threshold/timeout and validated fallback; details are in
+Supplementary Sec.~2.5.

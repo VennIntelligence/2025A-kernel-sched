@@ -1,0 +1,7 @@
+case,label,production_predecessor_extra,h0_reference_extra,best_fit_only_extra,frontier_only_extra,selected_full_extra,production_delta,h0_reference_ratio,best_fit_only_ratio,frontier_only_ratio,selected_full_ratio,naive_additive_prediction,deviation_from_additive
+Conv_Case0,Conv 0,88044,88044,87660,85696,66828,-21216,1.0,0.9956385443641815,0.9733315160601518,0.7590295761210304,85312,18484
+Conv_Case1,Conv 1,72520,73348,72734,73348,72734,214,1.0,0.9916289469378852,1.0,0.9916289469378852,72734,0
+FlashAttention_Case0,FA 0,3904,3904,3620,3904,3584,-320,1.0,0.9272540983606558,1.0,0.9180327868852459,3620,36
+FlashAttention_Case1,FA 1,32920,32920,32852,32920,32512,-408,1.0,0.9979343863912515,1.0,0.9876063183475091,32852,340
+Matmul_Case0,Matmul 0,34688,34688,34688,34688,34688,0,1.0,1.0,1.0,1.0,34688,0
+Matmul_Case1,Matmul 1,460800,460800,460800,460800,460800,0,1.0,1.0,1.0,1.0,460800,0

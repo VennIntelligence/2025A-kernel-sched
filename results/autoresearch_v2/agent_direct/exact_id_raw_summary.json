@@ -1,0 +1,22 @@
+[
+  {
+    "case": "FlashAttention_Case0",
+    "problem": 2,
+    "base_order": "id_raw",
+    "wall_seconds": 2.1659630415961146,
+    "solver_status": "OPTIMAL",
+    "packing_status": "GREEDY_VALID",
+    "lower_bound_extra": 3584,
+    "optimality_gap": 0,
+    "valid": true,
+    "max_L1": 3328,
+    "max_UB": 1428,
+    "max_L0A_count": 1,
+    "max_L0B_count": 1,
+    "max_L0C_count": 2,
+    "spills": 14,
+    "extra": 3584,
+    "time": 45270,
+    "schedule_len": 1744
+  }
+]

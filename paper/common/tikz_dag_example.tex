@@ -1,0 +1,50 @@
+\begin{tikzpicture}[
+      font=\footnotesize,
+      op/.style={draw=ksTikzOp!85!black, fill=ksTikzOp!13, rounded corners=2.5pt,
+                 minimum height=8.6mm, minimum width=21mm, align=center,
+                 line width=0.7pt},
+      mgmt/.style={draw=ksTikzMg!70!black, fill=ksTikzMg!9, rounded corners=2.5pt,
+                   minimum height=8.6mm, minimum width=21mm, align=center,
+                   line width=0.7pt},
+      dep/.style={-{Stealth[length=2.4mm,width=2mm]}, line width=0.7pt,
+                  black!60},
+      life/.style={{Bar[width=1.5mm]}-{Bar[width=1.5mm]}, line width=1.1pt},
+      note/.style={font=\footnotesize, anchor=west, text=black}
+    ]
+    \definecolor{ksTikzOp}{HTML}{4C72B0}
+    \definecolor{ksTikzMg}{HTML}{C44E52}
+    \definecolor{ksTikzGen}{HTML}{DD8452}
+
+    % DAG nodes
+    \node[mgmt] (a0) at (0,0)    {\textsc{alloc} $b_0$\\[-1.5pt] {\scriptsize\color{black}backed}};
+    \node[op]   (ci) at (3.1,0)  {\textsc{copy-in}\\[-1.5pt] $\{b_0\}$};
+    \node[op]   (cp) at (6.2,0)  {\textsc{compute}\\[-1.5pt] $\{b_0,b_1\}$};
+    \node[op]   (co) at (9.3,0)  {\textsc{copy-out}\\[-1.5pt] $\{b_1\}$};
+    \node[mgmt] (a1) at (3.1,-1.8) {\textsc{alloc} $b_1$\\[-1.5pt] {\scriptsize\color{black}generated}};
+    \node[mgmt] (f0) at (6.2,-1.8) {\textsc{free} $b_0$};
+    \node[mgmt] (f1) at (9.3,-1.8) {\textsc{free} $b_1$};
+
+    % dependency edges
+    \draw[dep] (a0) -- (ci);
+    \draw[dep] (ci) -- (cp);
+    \draw[dep] (cp) -- (co);
+    \draw[dep] (a1) -- (cp);
+    \draw[dep] (cp) -- (f0);
+    \draw[dep] (co) -- (f1);
+
+    % logical lifetimes with spill-class costs
+    \draw[life, ksTikzOp]  (0,-3.0)  -- (6.2,-3.0);
+    \node[note, anchor=north, align=center] at (3.1,-3.12)
+      {$b_0$: backed ($\kappa_{b_0}{=}1$) $\Rightarrow$ $1\times s_{b_0}$ (reload only)};
+    \draw[life, ksTikzGen] (3.1,-3.72) -- (9.3,-3.72);
+    \node[note, anchor=north, align=center] at (6.2,-3.84)
+      {$b_1$: generated ($\kappa_{b_1}{=}2$) $\Rightarrow$ $2\times s_{b_1}$ (write-back $+$ reload)};
+
+    % legend
+    \node[mgmt, minimum width=4.5mm, minimum height=3.2mm] at (0.1,-4.60) {};
+    \node[note] at (0.4,-4.60) {cache management};
+    \node[op, minimum width=4.5mm, minimum height=3.2mm] at (3.15,-4.60) {};
+    \node[note] at (3.45,-4.60) {operation};
+    \node[note, anchor=west] at (5.25,-4.60)
+      {Canonical P2 identity: $\mathrm{Tr}=\mathrm{Cl}+2\mathrm{Dt}=(\mathrm{Cl}+\mathrm{Dt})+\mathrm{Dt}=\mathrm{Vol}+\mathrm{Dt}$};
+  \end{tikzpicture}

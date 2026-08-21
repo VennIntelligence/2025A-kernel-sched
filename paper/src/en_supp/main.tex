@@ -4,6 +4,7 @@
 \input{../../common/metadata}
 
 \usepackage{float}
+\usepackage{longtable}
 \geometry{letterpaper,left=0.95in,right=0.95in,top=0.9in,bottom=0.95in}
 \pagestyle{fancy}
 \fancyhf{}
@@ -12,6 +13,12 @@
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.25pt}
 \captionsetup{font=small,labelfont=bf}
+
+% Keep all supplementary tables at one readable body size. Wide tables use
+% their existing width controls or pagination rather than changing font size
+% from one table to the next.
+\AtBeginEnvironment{table}{\footnotesize}
+\AtBeginEnvironment{longtable}{\footnotesize}
 
 % --- Float placement: let large figures share pages with text and pack any
 % float-only page flush to the top, avoiding sparse one/two-figure pages. ---
@@ -46,7 +53,9 @@
 \begin{center}
 {\LARGE\bfseries Supplementary Material for\\\paperTitleEn\par}
 \vspace{0.55em}
-{\normalsize \paperAuthorLineEnAnon\par}
+{\normalsize \paperAuthorNamesEnConfPlain\par}
+\vspace{0.2em}
+{\normalsize \paperAuthorEmailsEnConf\par}
 \end{center}
 \vspace{0.4em}
 

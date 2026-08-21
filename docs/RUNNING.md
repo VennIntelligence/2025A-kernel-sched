@@ -1,186 +1,320 @@
-# Running the kernel-scheduling pipeline
+# Running and validating the kernel-scheduling repository
 
-End-to-end, copy-pasteable commands for every stage, verified against the
-current (post-reorg) layout. Unless noted, **run every command from the repo
-root** (`kernal_scheduling/`).
+Run commands from the repository root (`kernal_scheduling/`). The project is a
+Python 3.12 `uv` workspace; do not install dependencies with `pip`.
 
-The repo is a `uv` workspace. `ks-core` (the `src/ks_core` package) is installed
-editable into `.venv`, so scripts that `import ks_core` work without any
-`PYTHONPATH` juggling as long as you run them through `uv run` (or the project
-`.venv` interpreter).
+This guide distinguishes the production solver from two research-only layers:
 
-## Repo map (entry points)
+- **scalable v2** — `ks_core.solver.solve`, the default algorithm;
+- **fixed-order weighted traffic planner** — research-only CP-SAT oracle that
+  can certify minimum `E` for one order; it is not integrated into the default
+  solver and does not optimize P2's spill/time tie-breaks;
+- **cost-aware repair** — heterogeneous exploratory order searches, not a
+  uniform production stage.
 
-| Area | Path | Purpose |
-| --- | --- | --- |
-| Core library | `src/ks_core/` | `solver`, `plotting`, `data_utils`, `graph`, `io`, `metrics`, `evaluator`, `constants` |
-| Promoted algorithm | `algorithms/ours/solve.py` | re-exports `ks_core.solver.solve` (final iter038 candidate) |
-| Baseline algorithm | `algorithms/baseline/solve.py` | reference baseline |
-| AutoResearch process state | `autoresearch/` | iterations, `ledger.csv`, `best_iter.txt` (process, not method) |
-| Experiment runner | `experiments/run_experiment.py` | YAML-config-driven; loads `algorithms.<name>.solve` |
-| Experiment configs | `experiments/configs/*.yaml` | e.g. `exp001_baseline01.yaml` |
-| Paper experiment scripts | `scripts/paper/*.py` | regenerate `results/paper/*.csv` (SSOT) |
-| Artifact sync | `scripts/paper/sync_paper_artifacts.py` | CSVs -> `paper/assets/{tables,figures}` |
-| Paper SSOT data | `results/paper/*.csv`, `PAPER_NUMBERS.yml` | regeneratable, **not** git-tracked |
-| Notebooks (read-only) | `notebooks/0{1,2,3}_*/*.ipynb` | render figures/report from `results/paper/` |
-| Paper build | `paper/build.sh`, `paper/.latexmkrc`, `paper/src/<target>/` | 4 targets -> `paper/dist/<target>.pdf` |
-
-## 0. Environment setup
+## 0. Environment and correctness gate
 
 ```bash
-make setup            # installs uv if missing, then: uv sync --all-extras
-# or directly:
+make setup
+# equivalent dependency command:
 uv sync --all-extras
+
+make test
+# or:
+uv run pytest -v
 ```
 
-This creates `.venv/` with Python 3.12 and installs `ks-core` editable plus all
-deps (numpy, pandas, networkx, matplotlib, seaborn, jupyter, ortools, ...).
-
-Sanity check the import surface:
+Sanity-check the editable workspace package:
 
 ```bash
-uv run python -c "import ks_core; from ks_core import solver, plotting, data_utils; print('ok')"
+uv run python -c "from ks_core import solver; print(solver.solve.__module__)"
 ```
 
-Run the unit tests:
+## 1. Validate scalable v2
+
+The post-review validator invokes `algorithms.ours.solve`, evaluates every
+artifact with the canonical evaluator, and attaches official metrics only after
+the schedule has been generated.
+
+### P2 extra traffic
 
 ```bash
-make test             # uv run pytest -v
+uv run python scripts/validate_solver_v2.py \
+  --problems 2 \
+  --output results/autoresearch_v2/round11_audited_p2.json
 ```
 
-## 1. Run experiments (solver / baseline)
+Expected summary: five strict P2 wins and one tie against the official
+artifacts; every row valid with zero violations. This audited output is also the
+source of record for production backed volume `C`, generated/unbacked volume
+`D`, and total spill volume `V=C+D`.
 
-The runner loads the algorithm named in the config from `algorithms/<name>/solve.py`.
+### P3 pipeline time
 
 ```bash
-# Canonical baseline reference (writes results/exp001_baseline01/)
+uv run python scripts/validate_solver_v2.py \
+  --problems 3 \
+  --output results/autoresearch_v2/round6_formal_p3.json
+```
+
+Expected summary: five time wins and one loss. Conv_Case1 is the loss. Do not
+substitute P3 spill traffic for the P2 objective: P3 uses a time-first key.
+
+To run a subset while iterating:
+
+```bash
+uv run python scripts/validate_solver_v2.py \
+  --problems 2 \
+  --cases Conv_Case0 FlashAttention_Case0 \
+  --output results/autoresearch_v2/local_check.json
+```
+
+## 2. Run the fixed-order exact planner
+
+Full reference: [`scripts/agent_direct_search.md`](../scripts/agent_direct_search.md).
+
+The planner chooses weighted residency gaps for a fixed order, then runs an
+independent continuous-packing stage: 48 deterministic greedy attempts followed
+by NoOverlap2D only if those attempts fail. It emits schedule/memory/spill files
+and runs the canonical evaluator. A zero gap plus validated packing certifies
+minimum traffic `E` for that fixed order. It does not certify minimum spill
+count or time among equal-E plans.
+
+```bash
+uv run python scripts/agent_direct_search.py \
+  --cases Conv_Case0 \
+  --exact-order unlock_frontier \
+  --time-limit 30 \
+  --out results/autoresearch_v2/agent_direct
+```
+
+For Conv_Case0, the expected fixed-order result is 57,408 extra with objective
+equal to its lower bound, a validated contiguous packing, 112 spills, and zero
+violations.
+
+The three current machine-checkable traffic certificates can be reproduced as:
+
+```bash
+# Conv0 / unlock_frontier: E = LB = 57,408
+uv run python scripts/agent_direct_search.py \
+  --cases Conv_Case0 --exact-order unlock_frontier --time-limit 30 \
+  --out results/autoresearch_v2/agent_direct
+
+# Conv0 / p1: E = LB = 81,504
+uv run python scripts/agent_direct_search.py \
+  --cases Conv_Case0 --exact-order p1 --time-limit 30 \
+  --out results/autoresearch_v2/agent_direct
+
+# FA0 / id_raw: E = LB = 3,584
+uv run python scripts/agent_direct_search.py \
+  --cases FlashAttention_Case0 --exact-order id_raw --time-limit 30 \
+  --out results/autoresearch_v2/agent_direct
+```
+
+Accepted fixed-order names are `unlock_frontier`, `id_raw`, `capfit_id`,
+`capfit`, and `p1`. This research path is not uniformly scalable. Any future
+production integration must use a timeout and retain the default solver as a
+validated fallback. In the current study, FA1 is machine-checkable feasible at
+32,512 against lower bound 31,936, but is not certified. The old MM0 “34,688
+OPTIMAL” result is revoked: the reproducible CP-SAT incumbent is 34,816 with
+lower bound 29,952, while the legal production result 34,688 provides a better
+upper bound. Conv1 does not complete the research path and MM1 was not run.
+
+## 3. Run cost-aware order repair
+
+Full reference: [`scripts/agent_cost_order_search.md`](../scripts/agent_cost_order_search.md).
+
+The repair code contains several exploratory searches rather than one uniform
+six-case algorithm. The recorded runs use the asymmetric traffic key but differ
+in proposal family and budget:
+
+```bash
+# Conv0: seed-0 stochastic single-node hill search, 10,000 proposals
+uv run python scripts/agent_cost_order_search.py unlock_hill \
+  --cases Conv_Case0 --iters 10000 --seed 0
+
+# Conv1: targeted spill-frontier beam, width 10 for two rounds
+uv run python scripts/agent_cost_order_search.py unlock_targeted \
+  --cases Conv_Case1 --rounds 2 --beam 10
+
+# Smaller no-gain probes on FA0 and FA1
+uv run python scripts/agent_cost_order_search.py unlock_hill \
+  --cases FlashAttention_Case0 FlashAttention_Case1 --iters 2000 --seed 0
+
+# Compare the saved orders; this command does not itself run those searches
+uv run python scripts/agent_cost_order_search.py final
+```
+
+The source-of-record output is
+`results/autoresearch_v2/agent_cost_order/final_summary.json`. Expected
+additional improvements over the structural order are limited to:
+
+- Conv_Case0: 66,828 → 65,532;
+- Conv_Case1: 72,734 → 70,940;
+- FA0/FA1: no observed gain under their 2,000-proposal probes;
+- MM0/MM1: repair search not run.
+
+The directory does not persist a complete canonical artifact for every repair
+row. Treat the Conv gains as exploratory mechanism evidence, not as a uniform
+method, production default, or four-case negative result.
+
+## 3a. Ablation and capacity-sweep diagnostics
+
+`scripts/ablate_solver_v2.py` takes no arguments. It generates the public-case
+victim/placement-policy ablation grid, an L1-capacity sweep on `Conv_Case0`
+(2,048–16,384 bytes, including pinned-set infeasibility), and a synthetic-suite
+regression check against a cost-blind ordering comparator and `iter038`:
+
+```bash
+uv run python scripts/ablate_solver_v2.py
+```
+
+Outputs go to `results/autoresearch_v2/round7_public_ablation.json`,
+`round8_capacity_sweep.json`, `round9_synthetic.json`, and
+`round9_synthetic_summary.json`. `round7_public_ablation.json` is not the
+production source: it fixes H=0, selects by `(E, spills)` without the time
+tie-break, and omits two cells of the full frontier/best-fit/adaptive
+factorial design — its `full` row is not the selected production artifact.
+
+## 3b. Canonically validated synthetic re-evaluation
+
+The internal synthetic benchmarks (36-instance suite, 8-instance oracle set,
+clean/dirty pair) are re-run with the full production portfolio and validated
+row-by-row with the canonical evaluator:
+
+```bash
+uv run python scripts/paper/v2_synth_suite.py
+```
+
+Expected summary: the production solver ties the previous portfolio on all 36
+suite instances, records zero losses against the four cost-blind order
+baselines and best-of-8 random orders (wins concentrate in the capacity-bound
+regime), and matches the fixed-order CP-SAT traffic optimum on its own
+selected order for all 8 oracle instances. Outputs go to
+`results/paper/v2_synth_{suite,summary,oracle,pair}.csv`; instances are reused
+verbatim, never regenerated.
+
+## 4. Standard experiment runner
+
+The general runner loads `algorithms/<name>/solve.py` and writes schedules plus
+metrics under the configured output directory:
+
+```bash
 uv run python experiments/run_experiment.py experiments/configs/exp001_baseline01.yaml
-# equivalently:
-make run CONFIG=experiments/configs/exp001_baseline01.yaml
 ```
 
-Validate / compare produced schedules:
+`algorithms/baseline` is an adapter around stored official artifacts; running
+that configuration re-evaluates the reference rather than regenerating it with
+a disclosed scheduling algorithm.
+
+Useful repository-level checks:
 
 ```bash
-make validate         # uv run python scripts/validate_schedule.py --dir results/
-make compare          # uv run python scripts/compare_results.py
+uv run python scripts/validate_schedule.py --dir results/
+uv run python scripts/compare_results.py
 ```
 
-Quick solver-correctness gate (golden spill numbers for 3 cases):
+## 5. Paper figures
+
+The publication figure suite used by `paper/src/*` (bridge_conv0,
+headline_reductions, vd_plane, order_headroom, certificate_ladder, gap_model,
+frontier_mechanism, paired_accounting, ablation_attribution, robustness,
+p3_tradeoff) is regenerated from the SSOT CSVs in `results/paper/` with:
 
 ```bash
-uv run python scripts/paper/_t0_verify.py
+uv run python scripts/paper/v3_story_figures.py          # all figures
+uv run python scripts/paper/v3_story_figures.py vd_plane # one stem
 ```
 
-## 2. Regenerate the paper data (results/paper SSOT CSVs)
+PDFs go to `paper/assets/figures/` (PNG previews are cached under `output/`,
+which is gitignored and safe to delete/regenerate).
 
-Each `scripts/paper/*.py` is standalone and takes no arguments; it writes its
-own CSV(s) into `results/paper/`. Run the full set:
+Some legacy tables under `results/paper/` (the non-`v2_*` CSVs) contain parts of
+the pre-review narrative. Do not use them as the source for the public v2
+headline. The current v2 sources are listed in the next section.
+
+## 6. Artifact map and replay boundary
+
+The production implementation is `src/ks_core/solver.py`. The two
+research-only entry points are `scripts/agent_cost_order_search.py` (order repair)
+and `scripts/agent_direct_search.py` (fixed-order exact planning); calling the
+production `solve` interface does not invoke either research script. Audited
+outputs are grouped under `results/autoresearch_v2/`, with
+`RESEARCH_REPORT.md` as the consolidated evidence map.
+
+Regenerate the audited P1 ledger with:
 
 ```bash
-for s in scripts/paper/e1_headline.py scripts/paper/e2_victim_order.py \
-         scripts/paper/e5_residency.py scripts/paper/e6_corr.py \
-         scripts/paper/e6_surrogate.py scripts/paper/e7_misalign.py \
-         scripts/paper/e8_prefetch_sweep.py scripts/paper/e9_working_set.py \
-         scripts/paper/e10_portfolio.py scripts/paper/e11_synth_generality.py \
-         scripts/paper/e12_baselines.py scripts/paper/e13_synth_suite.py \
-         scripts/paper/e14_ilp_oracle.py scripts/paper/e15_applicability.py \
-         scripts/paper/e16_runtime.py scripts/paper/inv_inventory.py \
-         scripts/paper/prob_metrics.py scripts/paper/x1_dag_walk.py \
-         scripts/paper/x2_clean_dirty.py scripts/paper/x3_portfolio_traj.py \
-         scripts/paper/baselines.py; do
-  echo "=== $s ==="; uv run python "$s" || { echo "FAILED: $s"; break; }
-done
+uv run python scripts/validate_solver_v2.py \
+  --problems 1 \
+  --output results/autoresearch_v2/round12_audited_p1.json
 ```
 
-Notes:
-- `e13_synth_suite.py` is the slowest (synthetic suite); the whole sweep takes a
-  couple of minutes total.
-- `e16_runtime.csv` records wall-clock timings, so it is the only CSV expected
-  to differ between runs. Every other CSV regenerates byte-identically.
-- `e10_portfolio.py` / `x3_portfolio_traj.py` read `autoresearch/ledger.csv` and
-  depend on `results/exp001_baseline01/metrics.json` (stage 1) being present.
+The public JSON files and synthetic CSV files are metric/validation ledgers,
+not complete archived artifact bundles. In particular,
+`scripts/paper/v2_synth_suite.py` constructs and canonically validates 252
+schedule/memory/spill runs in memory, then persists their metrics. Reproducing
+those rows therefore requires rerunning the script; the repository reuses its
+versioned instances and fixed seeds rather than generating new instances. The
+three zero-gap fixed-order certificates are stronger persistence artifacts:
+they include matching schedule, memory, and spill files.
 
-## 3. Generate paper figures & tables (sync artifacts)
+For a comparable replay, preserve the published capacities, evaluator version,
+and lexicographic objectives. Replacing physical P2 residency with the logical
+P1 peak, treating static backed/generated labels as dynamic dirty state, or
+accepting a gap lower bound without contiguous packing changes the problem.
+Record the Git revision, `uv.lock`, hardware, and software environment before a
+run. One-shot wall times are provenance only, not stable performance claims.
 
-After the CSVs exist, sync the LaTeX number/table includes and copy figures into
-`paper/assets/`:
+## 7. Sources of record
+
+| Claim or artifact | Source |
+| --- | --- |
+| Scalable P2 and production C/D/V | `results/autoresearch_v2/round11_audited_p2.json` |
+| Scalable P3 | `results/autoresearch_v2/round6_formal_p3.json` |
+| Controlled H=0 component ablation | `results/autoresearch_v2/round7_public_ablation.json` |
+| Cost-aware repair | `results/autoresearch_v2/agent_cost_order/final_summary.json` |
+| Fixed-order exact evidence | `results/autoresearch_v2/agent_direct/` |
+| Capacity sweep | `results/autoresearch_v2/round8_capacity_sweep.json` |
+| Synthetic boundary (H=0 diagnostic) | `results/autoresearch_v2/round9_synthetic_summary.json` |
+| Canonically validated synthetic re-evaluation | `results/paper/v2_synth_{suite,summary,oracle,pair}.csv` |
+| Consolidated narrative | `results/autoresearch_v2/RESEARCH_REPORT.md` |
+
+The former E5 residency figure, 2.4–26× headline, 72-combination dominance
+claim, and overflow-area-surrogate claim are not valid v2 sources.
+
+Interpret the boundary files narrowly:
+
+- round7 is H=0, selects by `(E, spills)` without time, and is not factorial;
+  its `full` row is not the production artifact;
+- round8 covers only Conv0/L1 at H=0; `cp_free_first` is cost-blind only as an
+  ordering, while both sides share cost-aware planning machinery;
+- round9 uses the H=0 internal assigner and does not persist per-case canonical
+  artifacts. Its 36/36 tie with iter038 supports non-regression only.
+
+## 8. Build the website
 
 ```bash
-uv run python scripts/paper/sync_paper_artifacts.py
+cd web
+npm install
+npm run lint
+npm run build
+npm run dev       # local development server
 ```
 
-Writes `paper/assets/tables/{numbers,headline_results,headline_summary,remaining_losses}.tex`
-and refreshes `paper/assets/figures/`.
+The website uses bilingual strings in `web/src/lib/i18n.ts` and numerical
+tables in `web/src/data/paperTables.ts`. Update both languages whenever public
+claims change.
 
-## 4. Execute the notebooks (read-only renders)
+## 9. Build the v2 paper
 
-The three notebooks **only read** from `results/paper/` (regenerate it first,
-stage 2). They locate the repo root automatically, so they run both from Jupyter
-Lab and headless.
-
-Headless (executes top-to-bottom, embeds outputs in place):
+The LaTeX tree under `paper/` uses the post-review evidence map and can be built
+with:
 
 ```bash
-for nb in notebooks/01_data_and_problem/01_data_and_problem.ipynb \
-          notebooks/02_paper_figures/02_paper_figures.ipynb \
-          notebooks/03_results_report/03_results_report.ipynb; do
-  uv run jupyter nbconvert --to notebook --execute --inplace \
-    --ExecutePreprocessor.timeout=900 "$nb"
-done
-```
-
-Notebook figure outputs land under `output/<notebook-name>/` (gitignored).
-Run order matters: `03_results_report` embeds PNGs produced by
-`02_paper_figures`, so execute 02 before 03.
-
-Interactive:
-
-```bash
-make notebook         # uv run jupyter lab --notebook-dir=notebooks
-```
-
-> The Makefile `build-nb` / `build-all-nb` targets and
-> `scripts/build_notebook.py` / `scripts/build_all_notebooks.py` are the **old
-> fragment-based** builder (they expect `fragments/` subdirs that no longer
-> exist). The current notebooks are standalone `.ipynb` files; use the
-> `nbconvert` commands above instead.
-
-## 5. Build the paper PDFs
-
-Requires a TeX distribution with `latexmk` + `xelatex` on `PATH`
-(e.g. MacTeX / TeX Live).
-
-```bash
-bash paper/build.sh all        # all four targets
-# or one at a time:
-bash paper/build.sh en_conf
-bash paper/build.sh zh_conf
-bash paper/build.sh en_supp    # auto-builds en_conf first (xr cross-refs)
-bash paper/build.sh zh_supp    # auto-builds zh_conf first
-bash paper/build.sh clean      # rm -rf paper/build paper/dist
-```
-
-Outputs:
-
-```
-paper/dist/en_conf.pdf
-paper/dist/zh_conf.pdf
-paper/dist/en_supp.pdf
-paper/dist/zh_supp.pdf
-```
-
-The supplement targets depend on their conference counterpart's `.aux`
-(`xr` cross-references), which `build.sh` handles automatically. Regenerate the
-artifact includes (stage 3) before building if the data changed.
-
-## Full pipeline, in order
-
-```bash
-uv sync --all-extras
-uv run python experiments/run_experiment.py experiments/configs/exp001_baseline01.yaml
-# stage 2: run all scripts/paper/*.py  (see loop above)
-uv run python scripts/paper/sync_paper_artifacts.py
-# stage 4: execute the three notebooks (see loop above)
 bash paper/build.sh all
 ```
+
+A successful PDF build checks typesetting, not numerical provenance. Use the v2
+claim ledger and consolidated report for the final claim audit before
+distribution.

@@ -1,0 +1,10 @@
+case,L1_capacity,status,full_extra,full_order,blind_extra,blind_over_full
+Conv_Case0,2048,infeasible_pinned_working_set,,,,
+Conv_Case0,2560,infeasible_pinned_working_set,,,,
+Conv_Case0,3072,feasible,200960.0,capfit_id,272010.0,1.3535529458598725
+Conv_Case0,3584,feasible,101924.0,unlock_frontier,244868.0,2.4024567324673285
+Conv_Case0,4096,feasible,66828.0,unlock_frontier,210876.0,3.155503681091758
+Conv_Case0,6144,feasible,20744.0,unlock_frontier,109116.0,5.260123409178558
+Conv_Case0,8192,feasible,576.0,unlock_frontier,71144.0,123.51388888888889
+Conv_Case0,12288,feasible,0.0,unlock_frontier,13830.0,
+Conv_Case0,16384,feasible,0.0,unlock_frontier,0.0,

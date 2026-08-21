@@ -1,0 +1,36 @@
+[
+  {
+    "case": "Conv_Case0",
+    "source": "unlock_frontier",
+    "initial_key": [
+      66828,
+      140
+    ],
+    "rounds": 5,
+    "beam": 10,
+    "trace": [
+      {
+        "round": 0,
+        "key": [
+          66828,
+          140
+        ],
+        "source": "unlock_frontier"
+      }
+    ],
+    "search_wall_seconds": 0.32459266670048237,
+    "valid_topological": true,
+    "validation_reason": "",
+    "extra": 66828,
+    "clean_bytes": 12672,
+    "dirty_bytes": 54156,
+    "clean_count": 88,
+    "dirty_count": 52,
+    "spills": 140,
+    "time": 521034,
+    "time_source": "address",
+    "wall_seconds": 0.017532125115394592,
+    "fallback": false,
+    "policy": "share_adaptive_25"
+  }
+]

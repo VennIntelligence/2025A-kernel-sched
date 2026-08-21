@@ -1,109 +1,55 @@
 \section{方法}\label{sec:method}
+本文的设计区分三个证据地位不同的角色：\textbf{生产求解器}是有界的“候选序~$\times$~在线溢出规划器”组合，也是唯一进入默认流水线的部分；\textbf{代价感知修复}是检验代价语义能否改进拓扑序的离线个案研究；\textbf{固定序精确规划器}是提供下界与证书的 CP-SAT 研究 oracle。
 
-现有调度方法在容量超限后将溢出视为局部后果，在固定序上应用驱逐策略。然而实验表明，固定序时不同驱逐规则的 extra 差异通常不超过 $4\%$，而不同合法序之间的 extra 摆动可达一个数量级（\S\ref{sec:exp-mechanism}）。因此本文方法将调度序本身作为主要优化自由度，通过改变序来调控溢出窗口内的 clean/dirty 驻留构成。
+\subsection{生产求解器}
+\paragraph{依赖前沿序。}大量同时就绪的 ALLOC 可能使单输入操作流长期饿死一个多输入消费者，并延长其已就绪操作数的驻留。依赖前沿序优先释放和可执行操作；仅剩分配节点时，完成最早可解锁消费者的就绪前驱组（图~\ref{fig:frontier-zh} 与算法~\ref{alg:canonical-zh}）。新增前沿序仅使用 DAG 结构与节点编号；组合内另保留 capfit-id、P1 序与 id-raw 三个既有候选序，本文不将整个组合重新表述为代价感知或模式无关的调度器。完整平局规则见补充材料第 3.1 节。
 
-如图~\ref{fig:pipeline} 所示，本文方法包含三个环节，各解决一个递进的子问题。首先，溢出判定（\S\ref{sec:theory}）回答给定 DAG 溢出是否为所有近最优调度都不可避免——若不可避免则将优化目标从消除溢出转为降低溢出代价，并建立溢出面积作为跨阶段代理目标。其次，候选序生成与地址分配（\S\ref{sec:liveness-shaping}）以三种互补策略进行活跃度塑形，并沿序执行 best-fit 地址分配与代价感知的溢出插入（Algorithm~\ref{alg:assign-spill}）。最后，将候选序与预取窗口的笛卡尔积逐一模拟，按词典键取最优组合。
+\begin{figure}[t]\centering
+\includegraphics[width=.98\linewidth]{\ksFigure{frontier_mechanism.pdf}}
+\caption{前驱组完成机制的示意算例。左：入度贪心序穿插无关的单输入流，三操作数消费者 $X$ 迟至第 9 步执行，累计驻留为 18 操作数步；右：依赖前沿序先完成就绪前驱组，使 $X$ 在第 4 步执行，累计驻留降至 6 操作数步（$-67\%$）。}
+\label{fig:frontier-zh}\end{figure}
 
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{\ksFigure{pipeline.pdf}}
-  \caption{方法总览。本文的优化框架由三个阶段组成：
-  (1) 溢出不可避免性判定确定是否需要优化；
-  (2) 三个互补的候选拓扑序通过活跃度塑形塑造不同的驻留曲线；
-  (3) Algorithm~\ref{alg:assign-spill} 沿每个序执行地址分配与溢出插入，
-  跨候选序与预取窗口的 portfolio 选优得到最终方案。}
-  \label{fig:pipeline}
-\end{figure*}
-
-\subsection{溢出判定与代理目标}\label{sec:theory}
-
-若存在某调度序使所有 cache 峰值驻留不超过容量，则无需溢出，clean/dirty 区分无关紧要。方法的第一步判断：对于给定 DAG，溢出是否为所有合理调度都无法避免的？为此建立线性时间可计算的判定证书。设 $\mathcal{O}_\epsilon$ 为 extra 在最优值 $(1{+}\epsilon)$ 倍以内的调度子集（$\epsilon{=}0.1$），$\underline{W}_c^\epsilon=\min_{S\in\mathcal{O}_\epsilon}\max_t W_c^S(t)$ 为该子集上的工作集下界。
-
-\begin{theorem}[溢出不可避免性证书]\label{thm:spill-inev}
-若 $\underline{W}_c^\epsilon>\Capc_c$，则 $\mathcal{O}_\epsilon$ 中每一个调度都必须在 cache $c$ 上溢出，且对任意可行实现 $P$，$\extra(P)\ge\max_t(W_c^S(t)-\Capc_c)_+$。证明见补充材料 §2.2。
-\end{theorem}
-
-\noindent 该证书刻意采用单侧条件：$\underline{W}_c^\epsilon>\Capc_c$ 确认溢出不可避免，但 $\underline{W}_c^\epsilon\le\Capc_c$ 并不保证无溢出。本文将其作为适用域诊断，而非完整的无溢出可行性判定。一旦确认溢出不可避免，优化目标从消除溢出转为降低溢出代价。
-
-逐 cache 峰值是比较候选序溢出代价的直接选择，但 P1 最优序可能在某些 cache 上远超容量，导致 P2 代价反而更高。为此引入溢出面积作为代理目标：
-\begin{equation}\label{eq:area}
-  A(S)=\sum_t\sum_{c\in\mathcal{C}}\bigl(\livec_c(t)-\Capc_c\bigr)_+,
-\end{equation}
-该指标同时度量超容量驻留的体积与持续时长。实现中使用归一化版本 $\Phi(S)=\sum_t\sum_c (\livec_c(t)-\Capc_c)_+/\Capc_c$。下述定理在有界缺席时长假设下建立 $A(S)$ 与最优溢出流量的双边常数关系：
-
-\begin{theorem}[有条件溢出面积—extra 近似]\label{thm:area-extra}
-设每个 spill 缺席时长 $\le L$，存在可行 plan 其移除面积 $R(P)\le\lambda A(S)$ 且每段缺席时长 $\ge\ell$，单位代价 $\kappa\in[1,2]$。则
-\begin{equation}\label{eq:area-extra-bound}
-  \frac{1}{L}\,A(S)\;\le\; E^\star(S)\;\le\; \frac{2\lambda}{\ell}\,A(S).
-\end{equation}
-证明与反例构造见补充材料 §2.4。
-\end{theorem}
-
-\noindent $\Phi$ 兼具三项优势：$O(N)$ 计算代价使候选序全量评估可行，跨 P1/P2/P3 一致的标量避免多目标口径切换，Theorem~\ref{thm:area-extra} 解释了其为何在容量受限区域能够跟踪溢出流量。该代理目标不是对调度选择全局最优性的保证。
-
-\subsection{候选序生成与地址分配}\label{sec:liveness-shaping}
-
-候选序的设计原则为结构无关：所有序仅依赖缓冲的 clean/dirty 属性、大小和 cache 容量，不含算子类型的专用判断。三个候选序共享同一个"释放→操作→分配"三级就绪集的表调度结构：维护释放、操作、分配三级就绪集，释放节点优先调度以减少驻留压力，分配节点在就绪的释放和操作节点全部放行后才放行，从而压缩分配—释放间距。三级就绪集内的选择规则在各序间不同：压力感知序与容量节流序在各级内采用内存感知优先级，标识保留序在各级内一律按最小标识选择。具体采用三个互补的候选序：
-
-\begin{enumerate}[leftmargin=2em, label=(\arabic*)]
-  \item 压力感知序：分配节点按后继入度排序——入度越低说明消费者越快就绪，延迟到即将被消费时放行，将分配时机压到峰值最不敏感处；该序同时作为 P1 的输出。
-  \item 容量节流序：分配节点按最小标识排序，并叠加容量门控——会导致 cache 超容的分配被暂时跳过，直到无法继续推迟时才强制放行最快解锁后续工作的分配；容量权重按 $1/\Capc_c$ 归一化以平衡不同 cache 的稀缺性。
-  \item 标识保留序：三级就绪集内各取最小标识，不含内存感知优先级与容量节流；其作用是保留稳定的输入缓冲顺序，使 COPY\_IN clean 缓冲更容易在计算窗口内常驻，从而在溢出窗口内留下可半价换出的 clean 储备。它是方法候选而非外部基线。
-\end{enumerate}
-
-给定调度序，Algorithm~\ref{alg:assign-spill} 沿序执行地址分配与溢出插入。容量不足时按下式选择驱逐对象，将 \S\ref{sec:formulation} 中定义的非对称代价编码进评分：
-\begin{equation}\label{eq:victim}
-  \mathrm{victim}=\arg\max_b\; d(b)\cdot\frac{s_b}{e_b}
-  =\arg\max_b\begin{cases}d(b), & b\text{ clean},\\ d(b)/2, & b\text{ dirty},\end{cases}
-\end{equation}
-其中 $d(b)$ 为下一次使用距离。dirty 缓冲的有效距离折半，使引擎优先驱逐廉价的 clean 缓冲。下述命题表明，在距离主导条件下，不同代价加权规则选出相同的驱逐集合：
-
-\begin{proposition}[Belady-Margin 稳定性]\label{prop:belady-margin}
-设距离主导的评分规则中代价比 $\rho=g_{\max}/g_{\min}\le 2$。若被选驱逐集合的最小 next-use 距离超过未选集合最大距离的 $\rho$ 倍，则所有此类规则选出相同的驱逐集合。这一策略的最优性论证见补充材料 §2.3。
-\end{proposition}
-
-\noindent 因此调度序为主要优化自由度：不同序之间 extra 摆动可达一个数量级，而固定序时不同驱逐规则的差异通常可忽略。
-
-\begin{algorithm}[!htbp]
-\caption{地址分配与溢出插入}\label{alg:assign-spill}
+\begin{algorithm}[t]
+\caption{Canonical 可扩展求解器}\label{alg:canonical-zh}
 \begin{algorithmic}[1]
-\Require 拓扑序 $S$，cache 容量 $\{\Capc_c\}$，预取窗口 $H$
-\Ensure 扩展序（含溢出节点）、地址分配、溢出列表
-\State 初始化各 cache $c$ 的 best-fit 空闲区间管理器 $F_c$
-\For{$(t, v) \in \mathrm{enumerate}(S)$}
-  \If{$v = \textsc{Alloc}(b)$}
-    \State $\mathrm{offset} \gets \Call{Place}{b, t}$
-    \State $\mathrm{memory}[b] \gets \mathrm{offset}$
-  \ElsIf{$v = \textsc{Free}(b)$}
-    \If{$b$ 已被溢出} \Call{Reload}{$b, t$}
-    \EndIf
-    \State $F_{\tau(b)}.\mathrm{Release}(\mathrm{offset}_b, s_b)$
-  \Else \Comment{操作节点}
-    \For{$b \in v.\mathrm{bufs}$，$b$ 已被溢出}
-      \State \Call{Reload}{$b, t$} \Comment{按需重载}
-    \EndFor
-    \For{$b \in \mathrm{SpilledSet}$} \Comment{预取扫描}
-      \If{$d(b) {-} t \le H$ 且 $F_{\tau(b)}$ 有 $\ge s_b$ 的空闲}
-        \State \Call{Reload}{$b, t$} \Comment{不触发驱逐}
-      \EndIf
-    \EndFor
+\Require 实例 $I$，任务 $p\in\{1,2,3\}$
+\If{$p=1$} \State \Return \Call{P1MemoryOrder}{$I$} \EndIf
+\State $\mathcal O\gets\{\Call{Frontier}{I},\Call{CapFitID}{I}\}$
+\State 将 $\Call{P1Order}{I}$ 与 $\Call{IDRaw}{I}$ 加入 $\mathcal O$
+\State $\mathcal R\gets\{\textsc{DistCost},\textsc{Adaptive25}\}$
+\State $\mathcal H\gets\{0,5,40\}$（$p=2$），否则 $\{0,5,40,80,120\}$
+\State $A^\star\gets\bot$；$k^\star\gets(+\infty,+\infty,+\infty)$
+\ForAll{$(S,r,H)\in\mathcal O\times\mathcal R\times\mathcal H$}
+  \State $A\gets\Call{BestFitPlan}{I,S,r,H}$
+  \If{$A$ 可行}
+    \State $(\mathrm{Tr},n,T)\gets\Call{Evaluate}{A}$
+    \State $k\gets(\mathrm{Tr},n,T)$（$p=2$），否则 $(T,\mathrm{Tr},n)$
+    \If{$k<k^\star$} \State $(A^\star,k^\star)\gets(A,k)$ \EndIf
   \EndIf
 \EndFor
-\Statex
-\Procedure{Place}{$b, t$}
-  \State $\mathrm{offset} \gets F_{\tau(b)}.\mathrm{BestFit}(s_b)$
-  \While{$\mathrm{offset} = \mathrm{nil}$} \Comment{驱逐循环}
-    \State $v^* \gets \arg\max_{b' \in \mathrm{Resident}_{\tau(b)}} d(b') \cdot s_{b'} / e_{b'}$\Comment{公式~\eqref{eq:victim}}
-    \State 输出 $\textsc{SpillOut}(v^*)$；$F_{\tau(b)}.\mathrm{Release}(\mathrm{offset}_{v^*}, s_{v^*})$
-    \State $\mathrm{offset} \gets F_{\tau(b)}.\mathrm{BestFit}(s_b)$
-  \EndWhile
-  \State $F_{\tau(b)}.\mathrm{Allocate}(\mathrm{offset}, s_b)$
-  \State \Return $\mathrm{offset}$
-\EndProcedure
+\State \Return $A^\star$ \Comment{拓扑序、地址偏移与溢出记录}
 \end{algorithmic}
 \end{algorithm}
 
-溢出缓冲的重载时机不影响溢出流量，但影响重载阻塞能否与计算重叠。Algorithm~\ref{alg:assign-spill} 中的预取窗口 $H$ 控制该维度：已换出缓冲若在 $\le H$ 步内被使用且 cache 有空闲，则提前取回而不引发额外驱逐。P2 以最小化流量为主，用紧网格 $H\in\{0,5,40\}$；P3 以最小化时间为主，用宽网格 $H\in\{0,5,40,80,120\}$。将 3 个候选序与预取窗口网格做笛卡尔积，对每个组合执行 Algorithm~\ref{alg:assign-spill}，P2 按 $(E,n,T)$、P3 按 $(T,E,n)$ 词典键取最优。候选集扩展具有单调性：加入新候选只改善或持平（见补充材料 §2.5）。
+\paragraph{地址分配与驱逐策略。}每个基础序使用 best-fit 连续地址分配，并比较距离/代价评分与自适应碎片策略。两者均为启发式，最终由完整工件的真实目标选优吸收其局部失误；精确评分、阈值、搬移边界与平局规则见补充材料第 3.1 节及表 S2。
 
-\paragraph{复杂度分析。}
-整体方法的时间复杂度为 $O(K \cdot W \cdot (N \log N + B^2))$，其中 $K=3$ 为候选序数，$W$ 为预取窗口网格大小（P2 取 3，P3 取 5），$N$ 为 DAG 节点数，$B$ 为缓冲数。候选序生成阶段的复杂度为 $O(N \log N)$（拓扑排序 + 优先级队列维护）；地址分配阶段的瓶颈在 Belady 驱逐选择，最坏情况下每次分配扫描所有驻留缓冲，单次分配 $O(B)$，共 $B$ 次分配，故 $O(B^2)$。流水模拟为 $O(N + E)$，其中 $E$ 为 DAG 边数；在本文基准的稀疏 DAG 上，该项低于组合搜索和溢出分配项。
+\paragraph{真实目标组合选择。}P2/P3 分别在四个序、两种策略和 3/5 个重载窗口上形成固定规模组合，并按 $(\mathrm{Tr},n,T)$ 或 $(T,\mathrm{Tr},n)$ 选择完整工件。不可行成员被跳过，任何活跃量或溢出面积代理均不参与最终选择；窗口语义和完整工件生成过程见补充材料第 3.1--3.3 节。
+
+\subsection{代价感知修复个案}
+为探查代价语义进入拓扑序后的潜在余量，我们离线提出依赖合法的节点或链移动，重新规划并仅接受 P2 键严格改善的候选。该研究在不同实例上使用不同搜索器和预算，FlashAttention 小预算探针无收益，Matmul 未运行，因此它不是生产阶段或统一算法。搜索预算、负探针和逐案结果见补充材料第 3.4 节与第 4.5 节。
+
+\subsection{固定序加权驻留间隙模型}
+固定拓扑序后，每个缓冲区的相邻强制事件形成驻留间隙。保持间隙驻留消耗容量，中断则支付一次类别加权流量。二元间隙模型在逐缓存、逐切面的容量约束下最小化中断代价；其解还必须经过连续地址打包、溢出依赖生成与标准评测验证（图~\ref{fig:gap-model-zh}）。完整变量定义、容量切面、连续地址反例与模型编码见补充材料第 2.2--2.3 节和第 3.4 节。
+
+\begin{figure}[t]\centering
+\includegraphics[width=.98\linewidth]{\ksFigure{gap_model.pdf}}
+\caption{加权驻留间隙模型。强制事件将缓冲区生命周期划分为可选间隙：保持驻留占用容量，中断则支付按类别加权的计费 $\kappa_b s_b$（有备份 $1\times$、生成 $2\times$）。CP-SAT 松弛给出流量下界；独立的连续地址打包与标准评测验证使达到下界的目标升级为固定序流量证书。}
+\label{fig:gap-model-zh}\end{figure}
+
+\begin{proposition}[固定序流量下界与证书]\label{prop:gap-zh}
+对固定拓扑序，上述松弛的最优值是该序下一切合法连续地址溢出计划流量的下界；若某最优间隙选择可完成连续地址打包，且输出工件通过评测器验证并且流量等于该下界，则该工件在基准模型下是该固定序的流量最优计划。
+\end{proposition}
+
+证明将任意合法物理计划映射为容量松弛的可行间隙选择；完整证明以及“容量可行但无法连续打包”的反例见补充材料第 2.2--2.3 节。证书只优化固定序流量，不优化同流量下的次数或时间，也不证明跨拓扑序全局最优。
+
+\paragraph{复杂度与部署边界。}在固定候选数下，可扩展路径为多项式实现，地址规划含保守的缓冲区二次项；间隙选择与后备连续打包最坏为指数复杂度。因此 CP-SAT 目前仅作研究 oracle，未来集成必须提供阈值/超时和经验证的回退；详细复杂度见补充材料第 2.5 节。

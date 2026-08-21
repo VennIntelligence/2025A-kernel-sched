@@ -1,120 +1,120 @@
-\section{问题定义补充}\label{sec:supp-problem}
+\section{问题定义与评测器语义}\label{sec:supp-problem-zh}
 
-正文 \S\ref{sec:formulation} 以精简的定义建立了 P1/P2/P3 的评估框架。本节补充实验复现所需的完整形式化约定，包括 DAG 字段、评价指标的公式细节以及 spill 机制的精确参数。
+本节把输入、输出和评测器之间的契约完整写出。这样做很重要：P1 的
+``驻留量''、P2 的物理驻留段以及 P3 的流水完成时间是三个不同对象，不能
+互相替代；同样，评测器中的有备份/无备份分类也不是硬件动态 dirty bit。
 
-\subsection{DAG 与缓冲生命周期}\label{sec:supp-input}
+\subsection{输入 DAG 与缓冲区生命周期}
 
-正文仅给出节点两分类的概要，此处列出完整的字段定义。输入是一个有向无环图 $\daggraph$。节点分为两类：
-
+输入为有向无环图 $G=(N,E)$。节点集合由三类节点组成：
 \begin{enumerate}
-  \item 操作节点携带 $(\ksField{Id},\ksField{Op},\ksField{Pipe},\ksField{Cycles},\ksField{Bufs})$，表示在某条硬件管线上的计算或数据搬运指令；\ksField{Bufs} 给出该指令读写的逻辑缓冲。
-  \item 缓存管理节点携带 $(\ksField{Id},\ksField{Op},\ksField{BufId},\ksField{Size},\ksField{Type})$，其中 $\mathrm{Op}\in\{\ksOp{alloc},\ksOp{free}\}$。每个逻辑缓冲 $b$ 有唯一分配节点 $a_b$、唯一释放节点 $f_b$、大小 $s_b$ 与所属 cache 类型 $\tau(b)$。
+  \item \texttt{ALLOC} 节点创建缓冲区；
+  \item \texttt{FREE} 节点结束该缓冲区的逻辑生命周期；
+  \item 其余节点为计算或搬运操作，并列出它所访问的缓冲区、执行流水线与
+        周期数。
 \end{enumerate}
+每个缓冲区 $b$ 具有唯一标识、大小 $s_b$、存储类型
+$\tau(b)\in\{\mathrm{L1},\mathrm{UB},\mathrm{L0A},\mathrm{L0B},\mathrm{L0C}\}$、
+唯一的分配节点 $a_b$ 和释放节点 $f_b$。把操作节点中出现 $b$ 的位置连同
+$a_b,f_b$ 称为 $b$ 的\emph{强制事件}。原始调度
+$\pi=(\pi_0,\ldots,\pi_{|N|-1})$ 必须恰好包含每个原始节点一次，并满足
+所有 $(u,v)\in E$ 的 $\operatorname{pos}_\pi(u)<\operatorname{pos}_\pi(v)$。
 
-边表示必须满足的执行依赖。忽略缓存管理节点后，样例图通常从 \ksOp{copy-in} 进入，经片上计算或搬运，最终由 \ksOp{copy-out} 写回片外；但本文算法不依赖具体算子族或 motif 名称。调度 $S=(v_1,\ldots,v_N)$ 是覆盖所有必需节点的一条拓扑序。
+这里有两个容易误读的边界。第一，数据只给出操作访问了哪些缓冲区，并未
+给出逐次访问的读/写角色。第二，canonical evaluator 把 \texttt{FREE} 也
+视为强制驻留事件：如果缓冲区此前被换出，就必须先换入，之后才能释放。
 
-\subsection{三个评估视角}\label{sec:supp-objective}
+\subsection{P1：逻辑生命周期峰值}
 
-正文将 P1/P2/P3 浓缩为一段文字，此处展开其数学定义。三个子问题在同一图上逐步增加约束。令节点 $v$ 对缓冲驻留量的增量为
-\begin{equation}\label{eq:supp-mv}
-  M_{v}=
-  \begin{cases}
-    +\,s_b, & v=a_b\ (\ksOp{alloc}),\\
-    -\,s_b, & v=f_b\ (\ksOp{free}),\\
-    0, & \text{其他节点}.
-  \end{cases}
+P1 不输出地址或溢出。对每个存储类型，评测器沿原始调度扫描：遇到
+\texttt{ALLOC} 就增加相应大小（L0 类型增加一个缓冲区计数），遇到
+\texttt{FREE} 就减少它。因而 L1/UB 的指标是 ALLOC/FREE 前缀和的最大值，
+L0A/L0B/L0C 的指标是同时逻辑活跃的缓冲区最大个数。
+
+该量是\emph{逻辑生命周期统计}，不是 P2 中某一时刻真实占用物理地址的
+字节数。特别地，一个逻辑活跃缓冲区在 P2 中可以暂时换出；反过来，P1 的
+峰值也没有包含地址碎片、换出/换入节点或地址复用依赖。因此 P1 只能描述
+调度造成的逻辑压力，不能单独证明存在合法的连续地址布局。
+
+\subsection{P2：连续地址与显式溢出工件}
+
+P2 工件由三部分组成：含合成换出/换入节点的增广调度 $\widehat\pi$、每个
+缓冲区初始驻留段的地址 $m_b$，以及按出现顺序记录的
+$(b,m'_b)$ 溢出表。第 $j$ 条溢出记录对应两个确定编号的合成节点
+$o_j$（spill-out）和 $i_j$（spill-in）；$m'_b$ 是换入后新驻留段的地址。
+
+一个 P2 工件合法，当且仅当它通过以下检查：
+\begin{enumerate}
+  \item \textbf{覆盖与拓扑：}每个原始节点和每个合成溢出节点恰出现一次，
+        原始 DAG 的全部依赖保持成立；
+  \item \textbf{溢出次序：}$a_b\prec o_j\prec i_j\prec f_b$，且
+        $o_j$ 与 $i_j$ 之间没有访问 $b$ 的操作；同一缓冲区的两次溢出区间
+        不得交叠；
+  \item \textbf{地址范围：}每个驻留段占用半开区间
+        $[m_b,m_b+s_b)$ 或 $[m'_b,m'_b+s_b)$，必须完全落在其存储容量内；
+  \item \textbf{时空不交叠：}同一存储类型中，生命周期在调度位置上重叠的
+        两个驻留段，其地址区间不得相交。
+\end{enumerate}
+第 4 条同时表达容量和连续地址要求。只验证“某时刻总字节数不超过容量”
+是不够的：多个小空洞的总和可能足够，却没有一个空洞能容纳新的连续段。
+
+\subsection{静态类别与 P2 目标}
+
+评测器对缓冲区作\emph{静态}二分类。若 $b$ 出现在任一
+\texttt{COPY-IN} 操作中，则称其为有输入备份（下文简写为 backed/clean）；
+否则称为生成且无备份（generated/dirty）。这一规则不会随操作执行而改变，
+也不推断一次访问究竟是读还是写。
+
+有备份缓冲区被中断一次只需从外存重新读入 $s_b$ 字节；无备份缓冲区需先
+写回再读入，计 $2s_b$ 字节。若所有溢出记录中两类缓冲区的累计原始体积为
+$C$ 与 $D$，令 $V=C+D$，则额外流量为
+\begin{equation}\label{eq:supp-extra-zh}
+ E=C+2D=(C+D)+D=V+D.
 \end{equation}
+P2 按字典序最小化
+$K_2=(E,n_{\mathrm{spill}},T)$：先比较额外流量，再比较溢出记录数，最后
+比较完成时间。论文中的 P2 比较均使用与之对应的 P2 官方工件；不能把 P3
+官方工件的数值混入该比较。
 
-\paragraph{\mdseries P1：峰值驻留。}
-P1 只评判节点序，不要求物理地址或 spill 列表。以前缀和定义
-\begin{equation}\label{eq:supp-vstay}
-  V_{\mathrm{stay}}(0)=0,\qquad
-  V_{\mathrm{stay}}(i)=V_{\mathrm{stay}}(i-1)+M_{v_i},\qquad
-  V_{\mathrm{stay}}^{\max}=\max_{0\le i\le N}V_{\mathrm{stay}}(i).
-\end{equation}
-主目标为最小化 $\max V_{\mathrm{stay}}$。本文在报告中同时给出逐 cache 峰值，便于解释 P1 序与 P2/P3 之间的错配。
+\subsection{P3：增广 DAG 的流水完成时间}
 
-\paragraph{\mdseries P2：额外 DDR 搬运量。}
-P2 在容量约束下给出物理地址和 spill 列表，目标为最小化 spill 引入的额外数据搬运
-\begin{equation}\label{eq:supp-extra}
-  \extra(S)=\sum_{b\in \mathrm{Spilled}(S)} e_b,\qquad
-  e_b=\kappa_b s_b,\qquad
-  \kappa_b=
-  \begin{cases}
-  1, & b\ \text{为 clean},\\
-  2, & b\ \text{为 dirty}.
-  \end{cases}
-\end{equation}
+P3 使用与 P2 相同的物理合法性条件，但首要目标改为增广调度的完成时间。
+评测器为每个节点取其全部依赖完成时间、所属硬件流水线可用时间以及所用
+地址区间可复用时间三者的最大值作为开始时间，再加上该节点周期数。合成
+spill-out/spill-in 节点及其依赖也参与模拟；同一流水线串行，复用同一地址
+区间的新驻留段必须等待旧段结束。最终目标键为
+$K_3=(T,E,n_{\mathrm{spill}})$。
 
-\paragraph{\mdseries P3：流水执行时间。}
-P3 在插入 spill 节点和地址复用依赖后，按多管线最早发射模型计算 makespan。记起始时间 $\sigma(v)$、结束时间 $\epsilon(v)$、增强依赖集合为 $E'$：
-\begin{equation}\label{eq:supp-time}
-  \sigma(v)\ge 0,\quad
-  \sigma(v)\ge \epsilon(u)\ \ \forall (u,v)\in E',\quad
-  \epsilon(v)=\sigma(v)+\mathrm{Cycles}(v),\quad
-  T=\max_v \epsilon(v).
-\end{equation}
-缓存管理节点周期为 $0$；同一 \ksField{Pipe} 上的节点按调度序串行执行，不允许在管线内部重新排序。
+因此 P2 与 P3 不是同一目标的两种写法。扩大提前重载窗口可能增加流量，
+却把搬运隐藏到计算后面并降低 $T$；P3 允许这种交换，只要 $K_3$ 更小。
+本工作只把观测到的候选组合称为流量--时间权衡，不声称得到全局 Pareto
+前沿。
 
-\paragraph{词典键。}
-本文以与正文一致的词典键进行比较：P1 使用 $\bigl(\max\livec_{\mathrm{L1}},\max\livec_{\mathrm{UB}},\mathrm{L0\ count},T\bigr)$；P2 使用 $\bigl(\extra,\#\mathrm{spills},T\bigr)$；P3 使用 $\bigl(T,\extra,\#\mathrm{spills}\bigr)$。基准定义未给出将运行时间与额外搬运合并的单一标量，因此 P3 的次级目标在本文中显式采用该词典序口径。
+\subsection{验证、复现与数据范围}
 
-\subsection{容量、地址与 spill 规则}\label{sec:supp-constraints}
+本文把三个层次严格分开：模型目标值、生成出的物理工件、canonical
+evaluator 验证结果。松弛模型的低目标值不是可提交结果；只有地址、溢出
+依赖和调度均生成成功，且 evaluator 返回零违规，才报告为合法工件。固定序
+精确后端的 JSON 与对应 schedule/memory/spill 文本共同构成可重放证据；
+仅含汇总指标的 ledger 需要重跑确定性求解器才能恢复完整工件。
 
-正文简述了 clean/dirty 的非对称代价；此处给出地址分配与 spill 机制的完整规则。P2/P3 中，缓冲 $b$ 以偏移 $o_b$ 占据同一 cache 内的连续区间 $[o_b,o_b+s_b)$。任一时刻同时驻留且属于同一 cache 的缓冲区间不得相交，并且必须满足 $0\le o_b$、$o_b+s_b\le \Capc_{\tau(b)}$。容量参数见表~\ref{tab:supp-cap}。
+六个公开实例的原始节点数见表~\ref{tab:supp-public-size-zh}。仓库内另有
+36 个内部合成实例和 8 个 17 节点固定序 oracle 实例；它们用于边界与机制
+检查，不能称为额外公开数据集。求解器不按 case 名选择分支；但 portfolio
+保留的旧 P1 fallback 含操作类型相关 tie-break，因此不能把整个求解器写成
+motif-agnostic（第~\ref{sec:supp-solution-zh}~节给出精确边界）。
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
-\caption{硬件 cache 类型与容量（抽象单位）。}\label{tab:supp-cap}
-\begin{tabular}{lccccc}
+\caption{六个公开实例的原始 DAG 规模。FA 表示 FlashAttention。}
+\label{tab:supp-public-size-zh}
+\begin{tabular}{@{}lrlr@{}}
 \toprule
-Cache 类型 & L1 & UB & L0A & L0B & L0C \\
+实例 & 节点数 & 实例 & 节点数\\
 \midrule
-容量 $\Capc$ & 4096 & 1024 & 256 & 256 & 512 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-本文称缓冲 $b$ 为 clean，当且仅当它出现在某个 \ksOp{copy-in} 节点的 \ksField{Bufs} 中；此时片外已有备份，换出无需写回。其余缓冲称为 dirty。相应的 spill 周期模型为
-\begin{equation}\label{eq:supp-spillcycle}
-  \mathrm{Cycles}(\mathrm{SPILL\_IN}_b)=2s_b+150,\qquad
-  \mathrm{Cycles}(\mathrm{SPILL\_OUT}_b)=
-  \begin{cases}
-    0, & b\ \text{为 clean},\\
-    2s_b+150, & b\ \text{为 dirty}.
-  \end{cases}
-\end{equation}
-
-若原图有 $N$ 个节点，第 $k$ 次 spill 生成一对隐式节点：
-\begin{equation}\label{eq:supp-spillid}
-  \mathrm{Id}(\mathrm{SPILL\_OUT}_k)=N+2(k-1),\qquad
-  \mathrm{Id}(\mathrm{SPILL\_IN}_k)=N+2(k-1)+1.
-\end{equation}
-\ksOp{spill-out} 使用 MTE3，\ksOp{spill-in} 使用 MTE2。目标缓冲 $b$ 的基本依赖链为
-\begin{equation}
-  a_b\to \mathrm{SPILL\_OUT}\to \mathrm{SPILL\_IN}\to f_b.
-\end{equation}
-已经使用过 $b$ 的操作节点必须位于 \ksOp{spill-out} 之前，尚未使用 $b$ 的操作节点必须位于 \ksOp{spill-in} 之后。物理地址可在 \ksOp{spill-in} 时改变，因此可行性按驻留段检查，而不是只按逻辑生命期 $a_b\to f_b$ 检查。
-
-地址复用会引入额外依赖：若缓冲 $b$ 复用更早缓冲 $a$ 的物理区间，则计时前加入 $f_a\to a_b$。该依赖不改变 spill 流量，却可能改变 P3 makespan。
-
-\subsection{Benchmark 数据描述}\label{sec:supp-data}
-
-本文使用的六个公开 NPU 核内调度实例规模见表~\ref{tab:supp-cases}。所有实验均从 DAG 图结构出发，不使用针对 Conv、FlashAttention 或 Matmul 的专用规则。
-
-\begin{table}[htbp]
-\centering
-\caption{公开 NPU 核内调度实例规模。}\label{tab:supp-cases}
-\begin{tabular}{lrrrr}
-\toprule
-任务 & 节点数 & 边数 & 缓冲数 & 操作节点数 \\
-\midrule
-Matmul\_Case0         &  4160 &  7104 &  1216 &  1728 \\
-Matmul\_Case1         & 30976 & 55040 &  8960 & 13056 \\
-FlashAttention\_Case0 &  1716 &  2712 &   572 &   572 \\
-FlashAttention\_Case1 &  6952 & 11184 &  2328 &  2296 \\
-Conv\_Case0           &  2580 &  3869 &   831 &   918 \\
-Conv\_Case1           & 36086 & 85653 & 12013 & 12060 \\
+Conv\_Case0 & 2,580 & Conv\_Case1 & 36,086\\
+FA\_Case0 & 1,716 & FA\_Case1 & 6,952\\
+Matmul\_Case0 & 4,160 & Matmul\_Case1 & 30,976\\
 \bottomrule
 \end{tabular}
 \end{table}

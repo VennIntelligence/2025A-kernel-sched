@@ -1,8 +1,8 @@
 """Unified P1/P2/P3 solver — the canonical "ours" implementation.
 
-This module is the single source of truth for the promoted solver. It mirrors
-the final AutoResearch candidate (iter038; see ``autoresearch/best_iter.txt``)
-that was lifted here as the project's permanent home.
+This module is the single source of truth for the active solver.  The original
+implementation was promoted from AutoResearch iter038; the post-review v2
+changes are evaluated under ``results/autoresearch_v2``.
 
 * ``algorithms/ours/solve.py`` re-exports :func:`solve` as the ``algorithms.<name>``
   entry point used by ``experiments/run_experiment.py``.
@@ -13,15 +13,14 @@ P1 keeps the promoted iter031 memory-aware list scheduler (lexicographic score).
 
 P2/P3 take a global view instead of P1's max_L1-only objective:
 
-1. Generate candidate topological orders (id-tiebreak gated, generic, and a
-   capacity-normalized variant that values UB/L0 overflow as much as L1).
-2. Pick the candidate with the smallest predicted spill traffic, i.e. the
-   capacity overflow integral over the schedule, not the lexicographic P1 key.
-3. Assign physical offsets with best-fit and insert SPILL_OUT/SPILL_IN pairs
-   with farthest-next-use (Belady) victim selection when a cache overflows.
+1. Generate four candidate topological orders, including a generic
+   ``unlock_frontier`` order that completes ready predecessor groups.
+2. Assign physical offsets with true best-fit and compare a distance/cost
+   victim rule with a clean-share/fragmentation-adaptive rule.
+3. Select the complete order/policy/window combination by the real P2 or P3
+   lexicographic objective; no overflow surrogate is used for final selection.
 
-The default ``victim_policy="dist_size_cost"`` reproduces the promoted solver
-exactly; the other policies exist only for the paper's sensitivity studies.
+The internal policy variants remain exposed for controlled ablations.
 """
 
 from __future__ import annotations
@@ -59,31 +58,44 @@ def solve(instance: ProblemInstance, config: dict | None = None) -> Schedule:
         return schedule
 
     nodes = {node.id: node for node in instance.nodes}
-    # P2 minimizes extra, which a prefetch window can only increase, so a tight
-    # window grid suffices. P3 minimizes time, where reload-hiding prefetch is
-    # the main lever, so explore a wider window grid for it.
+    # P2 uses a tight window grid because prefetch can perturb later residency
+    # and spill choice. P3 explores wider windows to hide reload latency.
     windows = (0, 5, 40, 80, 120) if instance.problem_id >= 3 else (0, 5, 40)
     best = None
+    victim_policies = ("dist_size_cost", "share_adaptive_25")
     for base_order in _candidate_orders(instance):
-        for window in windows:
-            order, memory, spill_entries = _assign_memory_with_spills(
-                instance, base_order, prefetch_window=window
-            )
-            extra = _extra_traffic(spill_entries, nodes)
-            time = compute_total_time(
-                order,
-                nodes,
-                instance.edges,
-                memory=memory,
-                spill_entries=spill_entries,
-                num_original_nodes=len(instance.nodes),
-            )
-            if instance.problem_id >= 3:
-                key = (time, extra, len(spill_entries))
-            else:
-                key = (extra, len(spill_entries), time)
-            if best is None or key < best[0]:
-                best = (key, order, memory, spill_entries)
+        for victim_policy in victim_policies:
+            for window in windows:
+                try:
+                    order, memory, spill_entries = _assign_memory_with_spills(
+                        instance,
+                        base_order,
+                        prefetch_window=window,
+                        victim_policy=victim_policy,
+                    )
+                except RuntimeError:
+                    # Some policy/window pairs can dead-end when every
+                    # resident interval needed by the next operation is
+                    # pinned.  They are infeasible portfolio members, not a
+                    # reason to discard other valid candidates.
+                    continue
+                extra = _extra_traffic(spill_entries, nodes)
+                time = compute_total_time(
+                    order,
+                    nodes,
+                    instance.edges,
+                    memory=memory,
+                    spill_entries=spill_entries,
+                    num_original_nodes=len(instance.nodes),
+                )
+                if instance.problem_id >= 3:
+                    key = (time, extra, len(spill_entries))
+                else:
+                    key = (extra, len(spill_entries), time)
+                if best is None or key < best[0]:
+                    best = (key, order, memory, spill_entries)
+    if best is None:
+        raise RuntimeError("no feasible order/policy/window candidate")
     _, schedule.order, schedule.memory, schedule.spill_entries = best
     return schedule
 
@@ -102,10 +114,110 @@ def _extra_traffic(spill_entries: list[tuple[int, int]], nodes: dict[int, Node])
 
 def _candidate_orders(instance: ProblemInstance) -> list[list[int]]:
     return [
+        _unlock_frontier_order(instance),
         _memory_aware_order(instance, variant="capfit_id"),
         _memory_aware_order(instance, variant="p1"),
         _id_raw_order(instance),
     ]
+
+
+def _unlock_frontier_order(instance: ProblemInstance) -> list[int]:
+    """Locality-preserving order that completes ready predecessor groups.
+
+    A lexicographic ``successor_wait`` rule can starve a multi-input operation:
+    a stream of one-input transfers always looks one step closer to readiness.
+    This scheduler instead finds the earliest consumer whose *remaining*
+    predecessors are all ready allocations and completes that allocation group.
+    The signal is purely structural and applies to any operation/cache type.
+    """
+    nodes = {node.id: node for node in instance.nodes}
+    successors: dict[int, list[int]] = defaultdict(list)
+    predecessors: dict[int, list[int]] = defaultdict(list)
+    indegree = {node_id: 0 for node_id in nodes}
+    for edge in instance.edges:
+        if edge.src not in nodes or edge.dst not in nodes:
+            continue
+        successors[edge.src].append(edge.dst)
+        predecessors[edge.dst].append(edge.src)
+        indegree[edge.dst] += 1
+    for values in successors.values():
+        values.sort()
+    for values in predecessors.values():
+        values.sort()
+
+    ready_free: set[int] = set()
+    ready_ops: set[int] = set()
+    ready_alloc: set[int] = set()
+    alloc_heap: list[tuple[tuple[int, int], int]] = []
+
+    def alloc_key(node_id: int) -> tuple[int, int]:
+        unlockable = []
+        for dst in successors[node_id]:
+            if nodes[dst].op == "FREE" or indegree[dst] <= 0:
+                continue
+            ready_predecessors = sum(pred in ready_alloc for pred in predecessors[dst])
+            if ready_predecessors == indegree[dst]:
+                unlockable.append(dst)
+        return (min(unlockable, default=1 << 60), node_id)
+
+    def refresh_group(node_id: int) -> None:
+        for dst in successors[node_id]:
+            for sibling in predecessors[dst]:
+                if sibling in ready_alloc:
+                    heapq.heappush(alloc_heap, (alloc_key(sibling), sibling))
+
+    def add_ready(node_id: int) -> None:
+        node = nodes[node_id]
+        if node.op == "FREE":
+            ready_free.add(node_id)
+        elif node.op == "ALLOC":
+            ready_alloc.add(node_id)
+            heapq.heappush(alloc_heap, (alloc_key(node_id), node_id))
+            refresh_group(node_id)
+        else:
+            ready_ops.add(node_id)
+
+    def pop_alloc() -> int:
+        while alloc_heap:
+            key, node_id = heapq.heappop(alloc_heap)
+            if node_id in ready_alloc and key == alloc_key(node_id):
+                ready_alloc.remove(node_id)
+                return node_id
+        for node_id in ready_alloc:
+            heapq.heappush(alloc_heap, (alloc_key(node_id), node_id))
+        if not alloc_heap:
+            raise RuntimeError("ready ALLOC set unexpectedly empty")
+        return pop_alloc()
+
+    for node_id, degree in indegree.items():
+        if degree == 0:
+            add_ready(node_id)
+
+    order: list[int] = []
+    while ready_free or ready_ops or ready_alloc:
+        if ready_free:
+            # LIFO keeps release events close to the local producer/consumer
+            # group that made them ready.
+            node_id = max(ready_free)
+            ready_free.remove(node_id)
+        elif ready_ops:
+            node_id = min(ready_ops)
+            ready_ops.remove(node_id)
+        else:
+            node_id = pop_alloc()
+
+        order.append(node_id)
+        for dst in successors[node_id]:
+            indegree[dst] -= 1
+            for pred in predecessors[dst]:
+                if pred in ready_alloc:
+                    heapq.heappush(alloc_heap, (alloc_key(pred), pred))
+            if indegree[dst] == 0:
+                add_ready(dst)
+
+    if len(order) != len(nodes):
+        raise ValueError("Input graph is not a DAG")
+    return order
 
 
 def _id_raw_order(instance: ProblemInstance) -> list[int]:
@@ -306,7 +418,10 @@ def _memory_aware_order(instance: ProblemInstance, variant: str) -> list[int]:
             while alloc_heap:
                 entry = heapq.heappop(alloc_heap)
                 *priority, candidate = entry
-                if candidate not in ready_alloc or tuple(priority) != alloc_priority(nodes[candidate])[:-1]:
+                if (
+                    candidate not in ready_alloc
+                    or tuple(priority) != alloc_priority(nodes[candidate])[:-1]
+                ):
                     continue
                 node = nodes[candidate]
                 cap = CACHE_CAPACITIES.get(node.mem_type or "", 1 << 30)
@@ -383,10 +498,12 @@ class _FreeSpace:
         self.free: list[tuple[int, int]] = [(0, capacity)]  # (offset, size)
 
     def find(self, size: int) -> int | None:
-        for offset, free_size in sorted(self.free):
-            if free_size >= size:
-                return offset
-        return None
+        candidates = [
+            (free_size, offset)
+            for offset, free_size in self.free
+            if free_size >= size
+        ]
+        return min(candidates)[1] if candidates else None
 
     def alloc_at(self, offset: int, size: int) -> None:
         for index, (start, free_size) in enumerate(self.free):
@@ -436,6 +553,12 @@ def _assign_memory_with_spills(
         state.event_positions.sort()
 
     copy_in_bufs = {b for n in instance.nodes if n.op == "COPY_IN" for b in n.bufs}
+    clean_mem_types = {bufs[b].mem_type for b in copy_in_bufs if b in bufs}
+    size_ratio_by_mem: dict[str, float] = {}
+    for mem_type in CACHE_CAPACITIES:
+        sizes = [state.size for state in bufs.values() if state.mem_type == mem_type]
+        if sizes:
+            size_ratio_by_mem[mem_type] = max(sizes) / max(1, min(sizes))
     space = {cache: _FreeSpace(cap) for cache, cap in CACHE_CAPACITIES.items()}
     resident: dict[str, set[int]] = defaultdict(set)
     memory: dict[int, int] = {}
@@ -444,7 +567,10 @@ def _assign_memory_with_spills(
     order: list[int] = []
 
     def next_event(state: _BufState, pos: int) -> int:
-        while state.event_ptr < len(state.event_positions) and state.event_positions[state.event_ptr] <= pos:
+        while (
+            state.event_ptr < len(state.event_positions)
+            and state.event_positions[state.event_ptr] <= pos
+        ):
             state.event_ptr += 1
         if state.event_ptr < len(state.event_positions):
             return state.event_positions[state.event_ptr]
@@ -466,6 +592,19 @@ def _assign_memory_with_spills(
         while offset is None:
             victims = [b for b in resident[mem_type] if b not in pinned]
             if victims:
+                share_adaptive = victim_policy.startswith("share_adaptive_")
+                has_clean_victim = share_adaptive and any(
+                    b in copy_in_bufs for b in victims
+                )
+                resident_bytes = (
+                    sum(bufs[b].size for b in victims) if share_adaptive else 1
+                )
+                resident_clean_bytes = (
+                    sum(bufs[b].size for b in victims if b in copy_in_bufs)
+                    if share_adaptive
+                    else 0
+                )
+
                 def victim_score(b: int) -> tuple:
                     dist = min(next_event(bufs[b], pos) - pos, 1 << 20)
                     is_clean = b in copy_in_bufs
@@ -475,6 +614,22 @@ def _assign_memory_with_spills(
                         return (dist * size / cost, size)
                     if victim_policy == "cost_then_dist":
                         return (size / cost, dist, size)
+                    if victim_policy.startswith("share_adaptive_"):
+                        threshold = int(victim_policy.rsplit("_", 1)[1]) / 100
+                        # All-dirty, highly heterogeneous caches benefit from
+                        # releasing a large contiguous interval; homogeneous
+                        # caches retain Belady's distance priority.
+                        if mem_type not in clean_mem_types:
+                            if size_ratio_by_mem.get(mem_type, 1.0) >= 8:
+                                return (size, dist)
+                            return (dist, size)
+                        # If backed bytes are a scarce eviction reserve, use
+                        # them before paying dirty write-back.  Otherwise the
+                        # smoother distance/cost rule avoids repeated reloads.
+                        clean_share = resident_clean_bytes / max(1, resident_bytes)
+                        if has_clean_victim and clean_share <= threshold:
+                            return (1 if is_clean else 0, dist, size)
+                        return (dist * size / cost, size)
                     if victim_policy == "cheap_first":
                         return (1 if is_clean else 0, dist, size)
                     if victim_policy == "far_only":

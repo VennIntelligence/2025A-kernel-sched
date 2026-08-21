@@ -1,0 +1,7 @@
+case,label,p2_extra,p3_extra,traffic_delta_bytes,traffic_delta_pct,p2_time,p3_time,latency_delta_cycles,latency_delta_pct,interpretation
+Conv_Case0,Conv 0,66828,69712,2884,4.315556353624229,521034,515634,-5400,-1.0364006955400222,P3 uses more traffic and less time
+Conv_Case1,Conv 1,72734,72742,8,0.010998982594110045,1154672,1118687,-35985,-3.1164694389402356,P3 uses more traffic and less time
+FlashAttention_Case0,FA 0,3584,4096,512,14.285714285714286,44956,36344,-8612,-19.156508586173146,P3 uses more traffic and less time
+FlashAttention_Case1,FA 1,32512,34304,1792,5.511811023622047,164166,152364,-11802,-7.1890647271664045,P3 uses more traffic and less time
+Matmul_Case0,Matmul 0,34688,34944,256,0.7380073800738007,192380,186820,-5560,-2.8901133173926605,P3 uses more traffic and less time
+Matmul_Case1,Matmul 1,460800,460928,128,0.027777777777777776,1783083,1771383,-11700,-0.6561668750136701,P3 uses more traffic and less time

@@ -1,0 +1,9 @@
+inst_id,n_nodes,bound_cache,v2_extra,v2_valid,fixed_opt_status,fixed_opt_extra,fixed_opt_bound,v2_over_fixed_opt
+oracle_000,17,L0C,352,True,OPTIMAL,352,352,1
+oracle_001,17,UB,1408,True,OPTIMAL,1408,1408,1
+oracle_002,17,L0C,704,True,OPTIMAL,704,704,1
+oracle_003,17,UB,704,True,OPTIMAL,704,704,1
+oracle_004,17,L0C,352,True,OPTIMAL,352,352,1
+oracle_005,17,UB,1408,True,OPTIMAL,1408,1408,1
+oracle_006,17,L0C,704,True,OPTIMAL,704,704,1
+oracle_007,17,UB,704,True,OPTIMAL,704,704,1

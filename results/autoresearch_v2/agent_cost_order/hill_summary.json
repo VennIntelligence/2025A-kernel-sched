@@ -1,0 +1,52 @@
+[
+  {
+    "case": "Conv_Case0",
+    "initial": "local_j1_s17",
+    "initial_key": [
+      86124,
+      335
+    ],
+    "iterations": 20000,
+    "seed": 1,
+    "accepted": 2,
+    "valid_topological": true,
+    "validation_reason": "",
+    "wall_seconds": 0.022357041016221046,
+    "trace": [
+      {
+        "iteration": 0,
+        "key": [
+          86124,
+          335
+        ],
+        "source": "local_j1_s17"
+      },
+      {
+        "iteration": 10492,
+        "key": [
+          85356,
+          334
+        ],
+        "accepted": 1
+      },
+      {
+        "iteration": 17833,
+        "key": [
+          85356,
+          333
+        ],
+        "accepted": 2
+      }
+    ],
+    "extra": 85356,
+    "clean_bytes": 0,
+    "dirty_bytes": 85356,
+    "clean_count": 0,
+    "dirty_count": 333,
+    "spills": 333,
+    "time": 613054,
+    "time_source": "address",
+    "fallback": false,
+    "policy": "dist_size_cost"
+  }
+]

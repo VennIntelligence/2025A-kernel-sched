@@ -1,0 +1,5 @@
+instance,solver,extra,backed_volume,generated_volume,spills,valid,violations
+clean,v2,1024,1024,0,2,True,0
+clean,prev_portfolio,1024,1024,0,2,True,0
+dirty,v2,2048,0,1024,2,True,0
+dirty,prev_portfolio,2048,0,1024,2,True,0

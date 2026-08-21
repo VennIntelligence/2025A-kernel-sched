@@ -16,49 +16,9 @@
 | `algorithms/<name>/` | 算法实现 | 算法负责人 |
 | `experiments/configs/` | 实验配置 YAML | 实验执行者 |
 | `results/<exp_name>/` | 实验输出 | 自动生成 |
-| `notebooks/<name>/` | Notebook (fragment-based) | 分析负责人 |
-| `output/<notebook_name>/` | Notebook 缓存产物 (CSV, PNG) | cache builder |
 | `paper/` | 论文源文件 | 论文负责人 |
 | `scripts/` | 工具脚本 | 全员 |
-| `conventions/` | 约定文档（绘图标准等） | 全员 |
 | `docs/` | 参考文档 | 全员 |
-
----
-
-## 📓 Notebook 约定
-
-### Fragment 构建系统
-
-**绝不手动编辑 `.ipynb`** — 它是构建产物，被 `.gitignore` 忽略。
-
-Notebook 源码在 `notebooks/<name>/fragments/` 下，使用 jupytext percent 格式：
-
-```
-notebooks/01_data_exploration/
-├── fragments/
-│   ├── manifest.txt          # 片段排列顺序
-│   ├── 01_setup.py           # jupytext percent 格式
-│   ├── 02_case_overview.py
-│   └── ...
-└── 01_data_exploration.ipynb  ← 构建产物
-```
-
-### 构建命令
-
-```bash
-# 单个 notebook
-uv run python scripts/build_notebook.py notebooks/01_data_exploration --execute
-
-# 一键构建所有 notebook
-uv run python scripts/build_all_notebooks.py --execute
-```
-
-### 内容原则
-
-- **Notebook 是「报告」，不是「脚本」**
-- 通用逻辑提取到 `src/ks_core/`，notebook 只保留调用 + 展示 + 解读
-- 每个图表/数值输出后紧跟 Markdown 解读（是什么 → 分布/模式 → 核心发现）
-- 表格用 Markdown/HTML 表格，**不要渲染成图片**
 
 ---
 

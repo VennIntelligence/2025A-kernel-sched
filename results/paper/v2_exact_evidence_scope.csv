@@ -1,0 +1,8 @@
+case,label,order,original_nodes,status,objective,lower_bound,gap,wall_seconds,packing_status,validity,record_kind,source
+FlashAttention_Case0,FA 0,id_raw,1716,OPTIMAL,3584.0,3584.0,0.0,2.1659630415961146,GREEDY_VALID,canonical-valid,machine_traffic_certificate,results/autoresearch_v2/agent_direct/P2_FlashAttention_Case0_id_raw_exact.json
+Conv_Case0,Conv 0,unlock_frontier,2580,OPTIMAL,57408.0,57408.0,0.0,0.8822492500767112,OPTIMAL,canonical-valid,machine_traffic_certificate,results/autoresearch_v2/agent_direct/P2_Conv_Case0_unlock_frontier_exact.json
+Conv_Case0,Conv 0,p1,2580,OPTIMAL,81504.0,81504.0,0.0,19.489993708208203,OPTIMAL,canonical-valid,machine_traffic_certificate,results/autoresearch_v2/agent_direct/P2_Conv_Case0_p1_exact.json
+Matmul_Case0,Matmul 0,capfit_id,4160,FEASIBLE,34816.0,29952.0,4864.0,120.09237370826304,GREEDY_VALID,canonical-valid,machine_feasible_artifact,results/autoresearch_v2/agent_direct/P2_Matmul_Case0_capfit_id_exact.json
+FlashAttention_Case1,FA 1,capfit_id,6952,FEASIBLE,32512.0,31936.0,576.0,123.96380800008774,OPTIMAL,canonical-valid,machine_feasible_artifact,results/autoresearch_v2/agent_direct/P2_FlashAttention_Case1_capfit_id_exact.json
+Matmul_Case1,Matmul 1,run-log only,30976,FALLBACK_NOT_RUN,,,,,,provisional run-log only,audited_status_metadata,results/autoresearch_v2/CLAIM_LEDGER.md
+Conv_Case1,Conv 1,run-log only,36086,FALLBACK_TIMEOUT,,,,,,provisional run-log only,audited_status_metadata,results/autoresearch_v2/agent_direct/REPORT.md + results/autoresearch_v2/CLAIM_LEDGER.md

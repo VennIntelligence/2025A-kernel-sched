@@ -4,6 +4,7 @@
 \input{../../common/metadata}
 
 \usepackage{indentfirst}
+\usepackage{longtable}
 \geometry{a4paper,left=2.05cm,right=2.05cm,top=2.0cm,bottom=2.15cm}
 \pagestyle{fancy}
 \fancyhf{}
@@ -13,6 +14,10 @@
 \renewcommand{\headrulewidth}{0.25pt}
 \renewcommand{\refname}{参考文献}
 \captionsetup{font=small,labelfont=bf}
+% Supplement tables use one readable body size.  Wide tables adjust column
+% spacing or paginate instead of shrinking their text independently.
+\AtBeginEnvironment{table}{\small}
+\AtBeginEnvironment{longtable}{\small}
 \setlength{\parindent}{2em}
 \titleformat{\section}{\zihao{4}\bfseries}{\thesection}{0.6em}{}
 \titleformat{\subsection}{\zihao{-4}\bfseries}{\thesubsection}{0.6em}{}

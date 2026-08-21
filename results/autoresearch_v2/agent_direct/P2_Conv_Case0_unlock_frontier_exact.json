@@ -1,0 +1,20 @@
+{
+  "case": "Conv_Case0",
+  "problem": 2,
+  "base_order": "unlock_frontier",
+  "wall_seconds": 0.8822492500767112,
+  "solver_status": "OPTIMAL",
+  "packing_status": "OPTIMAL",
+  "lower_bound_extra": 57408,
+  "optimality_gap": 0,
+  "valid": true,
+  "max_L1": 7488,
+  "max_UB": 0,
+  "max_L0A_count": 0,
+  "max_L0B_count": 1,
+  "max_L0C_count": 0,
+  "spills": 112,
+  "extra": 57408,
+  "time": 538956,
+  "schedule_len": 2804
+}

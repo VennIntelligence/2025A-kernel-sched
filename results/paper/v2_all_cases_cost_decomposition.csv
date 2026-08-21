@@ -1,0 +1,7 @@
+case,label,official_backed_volume,official_generated_volume,official_volume,official_extra,scalable_backed_volume,scalable_generated_volume,scalable_volume,scalable_extra,volume_reduction,generated_reduction,extra_reduction
+Conv_Case0,Conv 0,11664,30918,42582,73500,12672,27078,39750,66828,2832,3840,6672
+Conv_Case1,Conv 1,67576,2832,70408,73240,66728,3003,69731,72734,677,-171,506
+FlashAttention_Case0,FA 0,0,1846,1846,3692,0,1792,1792,3584,54,54,108
+FlashAttention_Case1,FA 1,8448,12196,20644,32840,8448,12032,20480,32512,164,164,328
+Matmul_Case0,Matmul 0,34944,0,34944,34944,34688,0,34688,34688,256,0,256
+Matmul_Case1,Matmul 1,460800,0,460800,460800,460800,0,460800,460800,0,0,0

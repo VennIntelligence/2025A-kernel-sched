@@ -1,28 +1,20 @@
 \section{Conclusion}\label{sec:conclusion}
 
-This paper identifies a structural lever in NPU intra-kernel scheduling: the
-$2\times$ asymmetry between clean and dirty spill costs means that schedule order
-controls not only peak live bytes, but also the cost composition of the buffers
-available for eviction in capacity-pressure windows. When spills are unavoidable,
-keeping more cheaply evictable clean reserve substantially reduces real off-chip
-traffic. Around this finding we give a spill-inevitability certificate
-(Theorem~\ref{thm:spill-inev}), a conditional overflow-area approximation
-(Theorem~\ref{thm:area-extra}), and a Belady-margin stability result
-(Proposition~\ref{prop:belady-margin}) that explains the empirical pattern of an
-insensitive victim rule alongside a highly sensitive schedule order.
+This work recasts NPU kernel memory planning as two separable questions: which
+legal order exposes a tractable residency frontier, and which backed or
+generated gaps should remain resident under capacity.  Our production answer is
+a bounded, exact-objective portfolio built around dependency-frontier ordering;
+our fixed-order research answer is a weighted-gap lower bound coupled to a
+contiguous-packing traffic certificate.  The identity $\mathrm{Tr}=\mathrm{Vol}+\mathrm{Dt}$ keeps the source
+of every P2 change auditable throughout.
 
-Experiments support the claim at four levels. On the public benchmark cases,
-clean/dirty-blind memory-pressure schedulers pay $2.4\text{--}26\times$ more P2
-spill traffic than our method (Section~\ref{sec:exp-baselines}). The synthetic
-distribution shows that the gains concentrate in the capacity-bound region
-delimited by the certificate; in order-reachable instances a simple order already
-avoids spills and our method has no systematic advantage
-(Section~\ref{sec:exp-mechanism}). Small-graph CP-SAT oracles confirm fixed-order
-engine optimality and the empirical constant ranges of the two bounds, and the
-controlled ablation isolates the $2\times$ clean/dirty cost gap, showing that the
-benefit is not an artifact of particular instances.
-
-Future work includes extending spill-cost-aware liveness shaping to multi-core
-scheduling and cross-core cache coherence; supporting graphs with dynamic control
-flow such as conditional branches and loops; and modeling cross-level spill
-cascades in deeper memory hierarchies.
+The evidence is useful but deliberately narrow.  The scalable solver improves
+five of six public P2 cases and ties the sixth, and improves P3 time on five of
+six.  Nonuniform repair studies help the two convolution cases, and the
+canonically validated synthetic re-evaluation establishes non-regression and
+small-scale same-order traffic optimality rather than new generalization.  The result is therefore not a universal clean/dirty scheduling
+principle; it is an honest exact-to-heuristic bridge together with a validated
+improvement on the studied kernel family.  Future work should integrate guarded
+exact solving behind a timeout with a validated fallback, derive a cheaper and
+uniform cost-aware order repair, and evaluate on broader hardware traces whose
+read/write semantics are richer than the current static benchmark labels.

@@ -1,0 +1,66 @@
+[
+  {
+    "case": "Conv_Case0",
+    "trials": 10,
+    "wall_seconds": 3.847838332876563,
+    "best": {
+      "trial": 0,
+      "seed": 1000003,
+      "weights": {
+        "alloc_wait": 12.0,
+        "alloc_pressure": 1.0,
+        "alloc_dirty": -2.0,
+        "alloc_users": -0.25,
+        "alloc_id": -2.0,
+        "alloc_depth": -2.0,
+        "alloc_noise": 0.0,
+        "op_release_dirty": 5.0,
+        "op_release_clean": 1.0,
+        "op_touched": 0.2,
+        "op_unlock_free": 3.0,
+        "op_unlock_op": 0.5,
+        "op_id": 0.0,
+        "op_noise": 0.0,
+        "interleave_threshold": 0.0,
+        "capacity_gate": 1.0
+      },
+      "extra": 304564,
+      "spills": 516,
+      "time": 1014542,
+      "policy": "dist_size_cost",
+      "valid": true
+    }
+  },
+  {
+    "case": "FlashAttention_Case0",
+    "trials": 10,
+    "wall_seconds": 1.4189614597707987,
+    "best": {
+      "trial": 9,
+      "seed": 1000012,
+      "weights": {
+        "alloc_wait": 12.0,
+        "alloc_pressure": 1.0,
+        "alloc_dirty": -2.0,
+        "alloc_users": -0.25,
+        "alloc_id": -0.5,
+        "alloc_depth": -2.0,
+        "alloc_noise": 0.0,
+        "op_release_dirty": 5.0,
+        "op_release_clean": 1.0,
+        "op_touched": 0.2,
+        "op_unlock_free": 3.0,
+        "op_unlock_op": 0.5,
+        "op_id": 0.0,
+        "op_noise": 0.0,
+        "interleave_threshold": 0.0,
+        "capacity_gate": 1.0
+      },
+      "extra": 35092,
+      "spills": 265,
+      "time": 149991,
+      "policy": "dist_size_cost",
+      "valid": true
+    }
+  }
+]

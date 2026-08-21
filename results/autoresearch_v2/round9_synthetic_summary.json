@@ -1,0 +1,35 @@
+[
+  {
+    "regime": "all",
+    "n": 36,
+    "wins": 14,
+    "ties": 22,
+    "losses": 0,
+    "improved_vs_iter038": 0,
+    "tied_vs_iter038": 36,
+    "regressed_vs_iter038": 0,
+    "median_full_over_blind": 0.5
+  },
+  {
+    "regime": "capacity_bound",
+    "n": 18,
+    "wins": 14,
+    "ties": 4,
+    "losses": 0,
+    "improved_vs_iter038": 0,
+    "tied_vs_iter038": 18,
+    "regressed_vs_iter038": 0,
+    "median_full_over_blind": 0.5
+  },
+  {
+    "regime": "order_reachable",
+    "n": 18,
+    "wins": 0,
+    "ties": 18,
+    "losses": 0,
+    "improved_vs_iter038": 0,
+    "tied_vs_iter038": 18,
+    "regressed_vs_iter038": 0,
+    "median_full_over_blind": null
+  }
+]

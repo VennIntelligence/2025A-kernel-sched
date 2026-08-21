@@ -1,189 +1,343 @@
-\section{附加实验证据}\label{sec:supp-cgo}
+\section{完整证据与负面结果}\label{sec:supp-cgo-zh}
 
-正文实验节只保留了最能支撑主线的图表。本节补充更细粒度的证据，并按论证角色组织：同引擎换序对照与敏感性分析用于隔离"调度序"这一自由度；合成分布用于说明方法适用域；CP-SAT oracle 用于核验理论下界与给定序最优性；代理目标、工作集和预取窗口实验用于解释算法设计；clean/dirty 消融用于隔离 $2\times$ 代价梯度。
+本节展开主文中压缩呈现的实验，并为每张表明确目标和工件角色。P2 与 P3 来自使用不同字典序键的独立搜索；精确结果仅是研究 oracle 的证据，不属于生产输出。
 
-\subsection{调度序的作用}\label{sec:supp-e12}
+\subsection{公开实例的完整 P1、P2 与 P3 结果}\label{sec:supp-public-zh}
 
-正文 \S\ref{sec:exp-mechanism} 的受控对照表明固定序时驱逐规则差异不超过 $4\%$，但不同序的 extra 可摆动一个数量级。本节用三组互补的实验量化这一发现：同引擎换序对照、驱逐策略敏感性分析、以及跨序摆动可视化。
+六个公开实例均来自 2025 年“华为杯”第二十二届中国研究生数学建模竞赛 A
+题发布的 DAG；本节后续报告的合成族是另行构造的内部测试集。
 
-表~\ref{tab:supp-e12} 给出六个公开实例在 P2 视角下的受控对照。所有方法共享同一地址分配与 spill 引擎，仅替换输入拓扑序。因此，extra 的差异可归因于调度序改变了高压窗口内的驻留构成，而不是归因于不同分配器或不同 victim policy。
+表~\ref{tab:supp-public-p1-zh} 补齐当前求解器的 P1 逻辑生命周期指标。该表由
+\path{results/autoresearch_v2/round12_audited_p1.json} 重新生成，六行均经
+evaluator 检查为零违规；括号内为相匹配的官方 P1 工件。这里的 L1/UB 是
+ALLOC--FREE 前缀和峰值，L0A/B/C 是同时逻辑活跃的缓冲区个数，均不是 P2
+溢出后的物理驻留轨迹。当前序在两个 Conv 实例上略降 L1 峰值，却显著增加
+L0B 活跃计数；这一负面结果说明 P1 各分量及其时间不能被压缩成“全面优于
+官方”的单一结论，也不能用于替代后续 P2/P3 工件比较。
 
-\begin{table}[htbp]
-\centering\small
-\caption{受控对照：P2 溢出流量（同一地址/spill 引擎，仅替换调度序）。}
-\label{tab:supp-e12}
-\begin{tabular*}{0.88\linewidth}{@{\extracolsep{\fill}}lrrrrr@{}}
-\toprule
-Case & CP-list & CP-free & pressure & G--Hsu & ours \\
-\midrule
-Conv\_Case0    & 694{,}506     & 212{,}956 & 207{,}932     & 210{,}844     & 88{,}044 \\
-Conv\_Case1    & 1{,}695{,}264 & 73{,}348  & 1{,}048{,}524 & 1{,}053{,}484 & 72{,}520 \\
-FA\_Case0      & 211{,}784     & 3{,}904   & 101{,}356     & 90{,}092      & 3{,}904 \\
-FA\_Case1      & 965{,}944     & 33{,}152  & 445{,}876     & 418{,}228     & 32{,}920 \\
-Matmul\_Case0  & 823{,}168     & 34{,}944  & 296{,}064     & 298{,}240     & 34{,}688 \\
-Matmul\_Case1  & 6{,}506{,}240 & 460{,}800 & 2{,}556{,}928 & 2{,}560{,}640 & 460{,}800 \\
+\begin{table}[htbp]\centering
+\caption{六个公开实例的 P1 逻辑指标，格式为本文（官方）。时间为评测器计算的调度周期。}
+\label{tab:supp-public-p1-zh}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrrrr@{}}\toprule
+实例 & L1 & UB & L0A & L0B & L0C & 时间\\\midrule
+Conv\_Case0 & 6,912 (7,488) & 0 (0) & 0 (0) & 300 (1) & 0 (0) & 394,430 (359,570)\\
+Conv\_Case1 & 13,786 (14,040) & 0 (0) & 0 (0) & 5,264 (1) & 0 (0) & 650,044 (573,395)\\
+FA\_Case0 & 256 (3,328) & 8,258 (1,428) & 24 (1) & 32 (1) & 4 (1) & 31,063 (31,429)\\
+FA\_Case1 & 256 (5,376) & 33,010 (2,468) & 112 (1) & 128 (1) & 8 (1) & 112,458 (113,445)\\
+Matmul\_Case0 & 128 (9,216) & 0 (0) & 57 (1) & 448 (1) & 8 (1) & 82,308 (82,773)\\
+Matmul\_Case1 & 128 (34,816) & 0 (0) & 241 (1) & 3,840 (1) & 16 (1) & 629,076 (583,525)\\
 \bottomrule
-\end{tabular*}
+\end{tabular}
 \end{table}
 
-clean/dirty 无感的内存压力调度器（uniform pressure 与 Goodman--Hsu）在全部真实 case 上均显著高于本文序，extra 倍数约为 $2.4$--$26\times$。关键路径导向的 CP-list 差距更大。相比之下，CP-free 是一个强 companion：它通过优先释放节点间接缩短生命期，在多数组合上接近本文序，但在 Conv\_Case0 等 clean 储备对代价起决定作用的实例上仍明显落后。这一结果说明，仅降低活跃字节或提前释放并不足以解释全部收益；高压窗口中 clean/dirty 组成的差异是必要因素。
-
-为直接检验驱逐策略的边际效应，图~\ref{fig:supp-e2} 在固定调度序上替换四种 Belady 风格 victim rule，比较各 case 的 extra 变化。结果显示多数 Matmul 与 FlashAttention 实例上四种策略完全重合，Conv 行存在可见差异但量级仍远小于跨序差异。这与命题~\ref{prop:belady-margin} 的理论预测一致：在距离主导条件下，驱逐策略的边际收益有限。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.82\textwidth]{\ksFigure{e2_victim_sensitivity.png}}
-\caption{固定调度序下的 victim rule 敏感性。多数 Matmul 与 FlashAttention 行完全重合；Conv 行存在可见差异，但量级仍小于跨序差异。}
-\label{fig:supp-e2}
-\end{figure}
-
-反过来，图~\ref{fig:supp-e3} 展示不同合法拓扑序在同一引擎下的 extra 摆动。替换合法拓扑序会显著改变高压窗口中可驱逐缓冲的组成，因此带来远大于驱逐规则微调的 extra 差距。这两组实验从正反两面确认：驱逐策略仅是局部修补，调度序才是驱动溢出代价的主要自由度。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.82\textwidth]{\ksFigure{e3_order_sensitivity.png}}
-\caption{调度序敏感性。相比在固定序上微调驱逐规则，替换合法拓扑序会显著改变高压窗口中可驱逐缓冲的组成，因此带来更大的 extra 摆动。}
-\label{fig:supp-e3}
-\end{figure}
-
-三组证据共同支持"调度序是主要优化自由度"的论点。表~\ref{tab:supp-e12} 量化了同引擎换序的差距，图~\ref{fig:supp-e2} 表明固定序下驱逐策略的边际有限，图~\ref{fig:supp-e3} 给出跨序摆动的数量级差异。可见溢出代价的差距主要来自调度序对峰值窗口中 clean/dirty 驻留构成的塑形，而非驱逐规则可单独弥补。
-
-本文涉及两种比较口径。表~\ref{tab:supp-e12} 为同引擎换序对照，用于隔离科学机制；表~\ref{tab:supp-headline} 为端到端参考对照，比较各自完整输出。前者支撑"调度序塑形驻留构成"的论点，后者反映最终求解器在公开实例上的提交质量，二者不应混用。
-
-\subsection{合成分布与适用域}\label{sec:supp-e13}
-
-正文图~\ref{fig:e15-applicability} 展示了 capacity-bound 区域的系统优势。本节给出完整的 36 个合成实例的逐实例数据与分区统计。
-
-图~\ref{fig:supp-e13} 与表~\ref{tab:supp-e13} 报告 36 个合成实例上的分布结果。我们将实例分为 capacity-bound 与 order-reachable 两类：前者在容量压力下不可避免需要 spill，后者存在可通过好序直接避免 spill 的空间。该划分对应正文溢出不可避免性证书的使用方式：它不是完整可行性判定，而是识别"必须优化 spill 代价构成"的区域。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.88\textwidth]{\ksFigure{e13_synth_suite.png}}
-\caption{合成实例分布。(a) 逐实例 extra 比值；(b) 按 capacity-bound 与 order-reachable 分区统计胜率。优势主要集中在容量受限区域。}
-\label{fig:supp-e13}
-\end{figure}
-
-\begin{table}[htbp]
-\centering\small
-\caption{合成 suite 分布统计。中位倍数为 ours/comparator，数值越低表示本文序越优。}
-\label{tab:supp-e13}
-\begin{tabular*}{0.72\linewidth}{@{\extracolsep{\fill}}llrr@{}}
-\toprule
-Comparator & Regime & 中位 ours/comp & 胜率 \\
-\midrule
-\ksName{CP-list}        & all              & 0.39 & 83.3\% \\
-                         & capacity\_bound  & 0.40 & 100\% \\
-                         & order\_reachable & 0.00 & 66.7\% \\
-\midrule
-\ksName{CP-free} & all              & 1.00 & 38.9\% \\
-                         & capacity\_bound  & 0.50 & 77.8\% \\
-                         & order\_reachable & 1.00 & 0\% \\
-\midrule
-\ksName{Pressure} & all            & 1.00 & 36.1\% \\
-                         & capacity\_bound  & 0.84 & 55.6\% \\
-                         & order\_reachable & 1.00 & 16.7\% \\
-\midrule
-\ksName{G--Hsu}    & all              & 0.67 & 52.8\% \\
-                         & capacity\_bound  & 1.00 & 38.9\% \\
-                         & order\_reachable & 0.00 & 66.7\% \\
-\midrule
-\ksName{Random-best}    & all              & 0.34 & 75.0\% \\
-                         & capacity\_bound  & 0.34 & 100\% \\
-                         & order\_reachable & 0.50 & 50.0\% \\
-\bottomrule
-\end{tabular*}
+\begin{table}[htbp]\centering
+\caption{生产求解器的完整 P2 记录。$\mathrm{Vol}$ 为原始溢出体积，$\mathrm{Dt}$ 为生成缓冲体积；wall 为一次审计运行的求解器墙钟记录，不是重复测量的性能估计。六行均通过 canonical evaluator，零违规。}
+\label{tab:supp-public-zh}
+\setlength{\tabcolsep}{2.2pt}
+\begin{tabular}{@{}lrrrrrrrrr@{}}\toprule
+实例 & $\mathrm{Tr}$ & 次数 & $\mathrm{Vol}$ & $\mathrm{Dt}$ & $T$ & 调度长度 & 官方 $\mathrm{Tr}$ & 结果 & wall (s)\\\midrule
+Conv\_Case0 & 66,828 & 140 & 39,750 & 27,078 & 521,034 & 2,860 & 73,500 & 胜 & 0.552\\
+Conv\_Case1 & 72,734 & 1,987 & 69,731 & 3,003 & 1,154,672 & 40,060 & 73,240 & 胜 & 43.055\\
+FA\_Case0 & 3,584 & 14 & 1,792 & 1,792 & 44,956 & 1,744 & 3,692 & 胜 & 0.263\\
+FA\_Case1 & 32,512 & 127 & 20,480 & 12,032 & 164,166 & 7,206 & 32,840 & 胜 & 2.216\\
+Matmul\_Case0 & 34,688 & 271 & 34,688 & 0 & 192,380 & 4,702 & 34,944 & 胜 & 0.927\\
+Matmul\_Case1 & 460,800 & 3,600 & 460,800 & 0 & 1,783,083 & 38,176 & 460,800 & 平 & 20.973\\\bottomrule
+\end{tabular}
 \end{table}
 
-结果与理论定位一致。capacity-bound 子群中，本文相对 CP-list 与 random-best 全胜，相对 CP-free 的中位优势为 $2\times$。order-reachable 子群中，好序可以直接消除 spill，clean/dirty 塑形自然不再提供系统优势；本文相对 CP-free 的胜率降为 $0\%$。因此，方法的目标不是支配所有 DAG，而是在 spill 不可避免时降低每单位 spill 的真实代价。
-
-\subsection{CP-SAT oracle}\label{sec:supp-e14}
-
-正文 \S\ref{sec:exp-mechanism} 报告了 CP-SAT oracle 的汇总结论。本节给出逐实例数据，包括容量约束比、理论下界和固定序最优 extra。小图 oracle 用于回答两个问题：给定本文选择的序，地址/spill 引擎是否达到 capacity-only 最优；理论下界与面积代理是否在精确解上保持一致。
-
-表~\ref{tab:supp-e14} 给出 8 个 capacity-bound 小图的结果。$\mathrm{ratio}_{W^\star}=W^\star/\Capc>1$ 表示该实例处于容量受限状态；$\mathrm{lb}_{T1}$ 是正文溢出不可避免性证书给出的下界；$E^\star$ 是固定序下的最优 extra。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.86\textwidth]{\ksFigure{e14_oracle.png}}
-\caption{CP-SAT oracle 验证。(a) 溢出面积 $A(S)$ 与固定序最优 extra $E^\star(S)$ 的经验常数带；(b) 溢出不可避免性下界与固定序最优 extra 的对照。}
-\label{fig:supp-e14}
-\end{figure}
-
-\begin{table}[htbp]
-\centering\small
-\caption{Oracle 逐实例数据。所有实例均满足 $\mathrm{lb}_{T1}\le E^\star$，且本文引擎在固定序上达到 $E^\star$。}
-\label{tab:supp-e14}
-\begin{tabular*}{0.82\linewidth}{@{\extracolsep{\fill}}lrrrrrr@{}}
-\toprule
-inst & bound & $\Capc$ & $\mathrm{ratio}_{W^\star}$ & $\mathrm{lb}_{T1}$ & $E^\star$ & $E^\star/A$ \\
-\midrule
-oracle\_000 & L0C & 512  & 1.375 & 192 & 352  & 0.564 \\
-oracle\_001 & UB  & 1024 & 1.375 & 384 & 1408 & 1.128 \\
-oracle\_002 & L0C & 512  & 1.375 & 192 & 704  & 1.128 \\
-oracle\_003 & UB  & 1024 & 1.375 & 384 & 704  & 0.564 \\
-oracle\_004 & L0C & 512  & 1.375 & 192 & 352  & 0.564 \\
-oracle\_005 & UB  & 1024 & 1.375 & 384 & 1408 & 1.128 \\
-oracle\_006 & L0C & 512  & 1.375 & 192 & 704  & 1.128 \\
-oracle\_007 & UB  & 1024 & 1.375 & 384 & 704  & 0.564 \\
-\bottomrule
-\end{tabular*}
+\begin{table}[htbp]\centering
+\caption{生产求解器的完整 P3 记录。P3 以时间优先；官方流量与时间均来自相匹配的 P3 工件。wall 同样只是一轮审计运行记录。六行均通过 canonical evaluator，零违规。}
+\label{tab:supp-public-p3-zh}
+\setlength{\tabcolsep}{2.4pt}
+\begin{tabular}{@{}lrrrrrrrr@{}}\toprule
+实例 & $\mathrm{Tr}$ & 次数 & $T$ & 调度长度 & 官方 $\mathrm{Tr}$ & 官方 $T$ & 时间结果 & wall (s)\\\midrule
+Conv\_Case0 & 69,712 & 147 & 515,634 & 2,874 & 73,500 & 535,312 & 胜 & 1.106\\
+Conv\_Case1 & 72,742 & 2,015 & 1,118,687 & 40,116 & 86,690 & 1,073,322 & 负 & 61.133\\
+FA\_Case0 & 4,096 & 16 & 36,344 & 1,748 & 4,128 & 46,761 & 胜 & 0.434\\
+FA\_Case1 & 34,304 & 134 & 152,364 & 7,220 & 32,840 & 193,059 & 胜 & 3.119\\
+Matmul\_Case0 & 34,944 & 273 & 186,820 & 4,706 & 34,944 & 194,331 & 胜 & 1.585\\
+Matmul\_Case1 & 460,928 & 3,601 & 1,771,383 & 38,178 & 460,800 & 1,800,218 & 胜 & 36.963\\\bottomrule
+\end{tabular}
 \end{table}
 
-所有小图上，本文引擎相对固定序最优的 gap 为 $1.0$，说明在该组 oracle 中瓶颈不在分配/驱逐实现，而在序选择。溢出不可避免性下界均成立，且 $E^\star/A\in[0.56,1.13]$，落在正文所述常数因子解释范围内。跨序联合最优模型需要将排列变量与驻留变量耦合，CP-SAT 求解频繁超时；因此本文不声称相对全局最优的 gap，只使用固定序 oracle 验证局部最优性和理论界。
+P2 五胜一平，中位降幅 $0.866\%$、最大降幅 $9.08\%$；Matmul\_Case1 的流量持平，但以时间次级键获胜。P3 五胜一负，中位降幅 $3.77\%$；Conv\_Case1 回退 $4.23\%$。这些统计只比较生产求解器与目标相匹配的官方 P2 或 P3 工件，不混入修复个案或固定序 oracle。表中 JSON 是指标与验证 ledger，并未在同目录持久化六例生产运行的完整 schedule/memory/spill 三件套；完整工件的独立 replay 需要重跑确定性求解器。因此 wall 只用于记录本次运行，不能据此声称稳定吞吐或扩展律。
 
-\subsection{代理目标与诊断工具}\label{sec:supp-mechanism}
+\subsection{选定消融路径与描述性非加性}\label{sec:supp-components-zh}
 
-正文 \S\ref{sec:exp-mechanism} 以汇总形式报告了溢出面积代理、工作集证书和预取窗口的实验结论。本节给出这些诊断工具的逐实例数据和可视化，并补充 P1 与 P2/P3 错配的量化分析。
+表~\ref{tab:supp-components-zh} 给出固定 $H=0$ 的选定受控配置。这里的参考值不是实际晋级版本，“选定”行也不是完整 canonical 组合；round7 的每个配置只按 $(E,n)$ 选择。该设计并非完整 factorial，缺少两个成对组合，因此只能观察一条具有非加性的配置路径，不能识别孤立主效应或交互系数。
 
-\paragraph{溢出面积代理。}
-图~\ref{fig:supp-e6} 比较溢出面积代理 $\Phi$ 与逐 cache 峰值压力对 P2 extra 的解释能力。两者的 Spearman 相关性非常接近（$0.958$ 与 $0.955$）。因此，本文不把 $\Phi$ 表述为经验上显著更强的预测器；它的价值在于计算代价低、可在候选序筛选中稳定使用，并且与正文的面积--extra 近似解释一致。
+\begin{table}[htbp]\centering\small
+\caption{选定的固定 $H=0$ 流量消融配置。BF 为 best-fit，F 为 frontier；“选定”还启用自适应策略，但不是 factorial 估计。}
+\label{tab:supp-components-zh}
+\begin{tabular}{lrrrrrr}\toprule
+实例 & 实际前身 & $H=0$ 参考 & 仅 BF & 仅 F & 选定 & 生产差值\\\midrule
+Conv\_Case0 & 88,044 & 88,044 & 87,660 & 85,696 & 66,828 & $-21,216$\\
+Conv\_Case1 & 72,520 & 73,348 & 72,734 & 73,348 & 72,734 & $+214$\\
+FA\_Case0 & 3,904 & 3,904 & 3,620 & 3,904 & 3,584 & $-320$\\
+FA\_Case1 & 32,920 & 32,920 & 32,852 & 32,920 & 32,512 & $-408$\\
+Matmul\_Case0 & 34,688 & 34,688 & 34,688 & 34,688 & 34,688 & 0\\
+Matmul\_Case1 & 460,800 & 460,800 & 460,800 & 460,800 & 460,800 & 0\\\bottomrule
+\end{tabular}\end{table}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.82\textwidth]{\ksFigure{e6_surrogate.png}}
-\caption{溢出面积代理 $\Phi$ 与峰值压力的对照。(a) $\Phi$ 对 P2 extra 的解释能力；(b) 逐 cache 峰值超容量对 P2 extra 的解释能力。二者相关性接近，$\Phi$ 的主要作用是作为便宜且跨阶段一致的选择信号。}
-\label{fig:supp-e6}
-\end{figure}
+\begin{figure}[htbp]\centering
+\includegraphics[width=.98\textwidth]{\ksFigure{ablation_attribution.pdf}}
+\caption{选定的受控 $H=0$ 配置相对参考值的 P2 流量。空心圆表示把“仅 BF”和“仅 F”的实测变化直接相加所得的参照预测；它只用于显示这条配置路径的非加性，不作 factorial 归因。相对实际前身，选定配置为三胜、两平、一负。}
+\label{fig:supp-components-zh}\end{figure}
 
-\paragraph{工作集证书。}
-图~\ref{fig:supp-e9} 报告近最优 extra 子集上的工作集/容量比。该限定很重要：若跨所有序无约束地取最小峰值，一个 P2 代价很高的低峰值序可能会错误地削弱容量受限诊断。Matmul\_Case1/L1 的近最优口径为 $8.5$，说明该实例处于强 capacity-bound 区域，剩余优化空间主要来自 spill 代价构成，而非简单消除 spill。
+Conv\_Case0 中，仅根据 best-fit-only 与 frontier-only 的测得变化作朴素加法会预测 85,312 字节，而启用全部机制的选定 $H=0$ 配置达到 66,828，描述性偏差为 18,484 字节。这说明测得配置路径非加性，但不能称为已隔离的“协同”：选定配置还含自适应策略，且缺失的成对单元阻止 factorial 归因。FA\_Case0 也从 first-fit 下 frontier+adaptive 的 4,608 变为加入 best-fit 后的 3,584，表明策略结果依赖地址放置。Conv\_Case1 则是另一边界：相对受控 $H=0$ 参考有所改善，却比实际前身差 214 字节。两个 Matmul 行不变。证据只支持完整配置评价，不支持普适的单模块收益。
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.82\textwidth]{\ksFigure{e9_working_set.png}}
-\caption{近最优 extra 子集上的工作集/容量比。红色项显示 Matmul\_Case1/L1 在近最优口径下远超容量。}
-\label{fig:supp-e9}
-\end{figure}
+\subsection{$\mathrm{Tr}=\mathrm{Vol}+\mathrm{Dt}$ 下的三类溢出区间}\label{sec:supp-cost-regimes-zh}
 
-\paragraph{P1 与 P2/P3 的目标错配。}
-P1 以压低逐 cache 峰值为目标，但正文 \S\ref{sec:theory} 指出低峰值不等价于低 spill 代价。图~\ref{fig:supp-e7} 量化了这一错配：单独压低 P1 目标不保证容量受限下的可行性或低 spill 代价。在一些实例上，P1 最优序的 P2 extra 反而高于本文方法选出的序，原因在于 P1 不区分 clean/dirty 储备：一个以低峰值为唯一目标的序可能在高压窗口中堆积大量 dirty 缓冲，导致实际驱逐代价上升。溢出面积代理 $\Phi$ 的选择信号更直接地反映多 cache 溢出压力，从而避免了这种错配。
+表~\ref{tab:supp-decomp-zh} 将每个可扩展 P2 输出与对应官方 P2 工件配对。表中 $\mathrm{Vol}$ 为原始总溢出体积，$\mathrm{Dt}$ 为其中生成/无备份部分，故每行满足 $\mathrm{Tr}=\mathrm{Vol}+\mathrm{Dt}$。差值定义为官方减本文，因此 $\Delta\mathrm{Tr}=\Delta\mathrm{Vol}+\Delta\mathrm{Dt}$。这种配对计账不预设体积或附加代价哪一个是唯一机制。
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.82\textwidth]{\ksFigure{e7_misalignment_worst_ratio.png}}
-\caption{P1 与 P2/P3 的错配。单独压低 P1 目标不保证容量受限下的可行性或低 spill 代价；$\Phi$ 选择更直接反映多 cache 溢出压力。}
-\label{fig:supp-e7}
-\end{figure}
+\begin{table}[htbp]\centering\small
+\caption{全部公开实例的配对 P2 字节分解。差值为官方减本文，并满足 $\Delta\mathrm{Tr}=\Delta\mathrm{Vol}+\Delta\mathrm{Dt}$。}
+\label{tab:supp-decomp-zh}
+\setlength{\tabcolsep}{2.2pt}
+\begin{tabular}{@{}lrrrrrrrrr@{}}\toprule
+实例 & 官 $\mathrm{Vol}$ & 官 $\mathrm{Dt}$ & 官 $\mathrm{Tr}$ & 本文 $\mathrm{Vol}$ & 本文 $\mathrm{Dt}$ & 本文 $\mathrm{Tr}$ & $\Delta\mathrm{Vol}$ & $\Delta\mathrm{Dt}$ & $\Delta\mathrm{Tr}$\\\midrule
+Conv\_Case0 & 42,582 & 30,918 & 73,500 & 39,750 & 27,078 & 66,828 & 2,832 & 3,840 & 6,672\\
+Conv\_Case1 & 70,408 & 2,832 & 73,240 & 69,731 & 3,003 & 72,734 & 677 & $-171$ & 506\\
+FA\_Case0 & 1,846 & 1,846 & 3,692 & 1,792 & 1,792 & 3,584 & 54 & 54 & 108\\
+FA\_Case1 & 20,644 & 12,196 & 32,840 & 20,480 & 12,032 & 32,512 & 164 & 164 & 328\\
+Matmul\_Case0 & 34,944 & 0 & 34,944 & 34,688 & 0 & 34,688 & 256 & 0 & 256\\
+Matmul\_Case1 & 460,800 & 0 & 460,800 & 460,800 & 0 & 460,800 & 0 & 0 & 0\\\bottomrule
+\end{tabular}
+\end{table}
 
-\paragraph{预取窗口解耦。}
-图~\ref{fig:supp-e8} 展示预取窗口 $H$ 对 P3 time 与 extra 的影响。非零窗口可能明显降低时间，但 extra 往往保持不变或小幅上升。这说明 spill 集合选择与重载放置是两个相关但可分离的自由度：P2 需要保守控制流量，P3 则可以用更宽窗口换取流水重叠。
+\begin{figure}[htbp]\centering
+\includegraphics[width=.98\textwidth]{\ksFigure{paired_accounting.pdf}}
+\caption{各实例相对官方工件的 P2 分项计账。五个严格胜例都降低总溢出量 $\mathrm{Vol}$，生成附加量 $\mathrm{Dt}$ 则有升有降；两项带符号变化之和就是净流量降幅，即 $\Delta\mathrm{Tr}=\Delta\mathrm{Vol}+\Delta\mathrm{Dt}$。}
+\label{fig:supp-cost-decomp-zh}\end{figure}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.82\textwidth]{\ksFigure{e8_decoupling.png}}
-\caption{预取窗口 $H$ 对时间与额外搬运量的影响。(a) P3 time 随 $H$ 的变化；(b) extra 随 $H$ 的变化。预取主要移动 \ksOp{spill-in} 的放置时机，而不是重新定义 spill 集合。}
-\label{fig:supp-e8}
-\end{figure}
+这些行仍覆盖三类区间：FA\_Case0 为全生成（$\mathrm{Dt}=\mathrm{Vol}$），两个 Matmul 为全有备份（$\mathrm{Dt}=0$），Conv 与 FA\_Case1 为混合。五个严格 P2 胜例全部降低 $\mathrm{Vol}$。$\mathrm{Dt}$ 在 Conv\_Case0、FA\_Case0 和 FA\_Case1 中下降，在 Matmul\_Case0 中保持为零，却在 Conv\_Case1 中上升 171 字节；Conv\_Case1 仍获胜，是因为 677 字节的体积下降抵消了该回退，即 $506=677-171$。FA\_Case0 的 $\mathrm{Vol},\mathrm{Dt}$ 同降 54，类别占比未变；Matmul\_Case0 在 $\mathrm{Dt}=0$ 时完全靠 $\mathrm{Vol}$ 降 256 获胜。这些配对事实直接排除了统一的构成解释。
 
-\subsection{Clean/dirty 受控消融}\label{sec:supp-clean-dirty}
+\subsection{组合内部的 P2--P3 权衡}\label{sec:supp-decoupling-zh}
 
-正文 \S\ref{sec:exp-mechanism} 的消融实验报告了 clean 储备 extra 为 $1{,}536$、dirty 为 $3{,}072$ 的 $2\times$ 代价差异。本节给出完整的实验设计和结果，以排除公开样例的 motif 偶然性。
+P2 按 $(\mathrm{Tr},n,T)$ 选择，P3 按 $(T,\mathrm{Tr},n)$ 选择。表~\ref{tab:supp-p2p3-zh} 在同一实例、同一有界组合内比较两个目标分别选出的本文工件；这控制了求解器和实例，但不建立全局 Pareto 前沿。
 
-图~\ref{fig:supp-e11} 使用合成 GEMM 核隔离 clean/dirty 代价梯度。其中 (a) 固定 DAG 结构、峰值和 spill 数，仅改变高压窗口中可供驱逐的储备类型，clean 储备的 extra 为 $1536$，dirty 储备为 $3072$，恰为 $2\times$；(b) 在同一 clean 实例上扫描多种序，可见 peak residency 中 clean 占比越高，extra 越低。该实验排除了公开样例 motif 的影响，直接验证正文关于 clean/dirty $2\times$ 代价非对称的机制论点。
+\begin{table}[htbp]\centering\small
+\caption{组合内部的目标权衡。$\mathrm{Tr}_2,T_2$ 属于 P2 选中工件，$\mathrm{Tr}_3,T_3$ 属于独立选出的 P3 工件。}
+\label{tab:supp-p2p3-zh}
+\begin{tabular}{lrrrrrr}\toprule
+实例 & $\mathrm{Tr}_2$ & $\mathrm{Tr}_3$ & $\mathrm{Tr}_3-\mathrm{Tr}_2$ & $T_2$ & $T_3$ & $T_3-T_2$\\\midrule
+Conv\_Case0 & 66,828 & 69,712 & 2,884 & 521,034 & 515,634 & $-5,400$\\
+Conv\_Case1 & 72,734 & 72,742 & 8 & 1,154,672 & 1,118,687 & $-35,985$\\
+FA\_Case0 & 3,584 & 4,096 & 512 & 44,956 & 36,344 & $-8,612$\\
+FA\_Case1 & 32,512 & 34,304 & 1,792 & 164,166 & 152,364 & $-11,802$\\
+Matmul\_Case0 & 34,688 & 34,944 & 256 & 192,380 & 186,820 & $-5,560$\\
+Matmul\_Case1 & 460,800 & 460,928 & 128 & 1,783,083 & 1,771,383 & $-11,700$\\\bottomrule
+\end{tabular}\end{table}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.86\textwidth]{\ksFigure{e11_synth_generality.png}}
-\caption{合成核上的 clean/dirty 机制验证。(a) 受控消融隔离 $2\times$ 代价梯度；(b) extra 随峰值处 clean 占比上升而下降。}
-\label{fig:supp-e11}
-\end{figure}
+\begin{figure}[htbp]\centering
+\includegraphics[width=.98\textwidth]{\ksFigure{p3_tradeoff.pdf}}
+\caption{同一组合内，从 P2 选中工件切换到独立选出的 P3 工件所发生的变化。左右两栏分别给出新增流量与时间降幅；六例均以更多流量换取更短时间。这只是有界组合内的观察，不是全局 Pareto 主张。}
+\label{fig:supp-p2p3-zh}\end{figure}
+
+P3 搜索在全部公开实例上都比 P2 输出接受更多流量，范围从 Conv\_Case1 的 8 字节到 Conv\_Case0 的 2,884 字节，同时在每个实例上都比本文 P2 工件更快。Conv\_Case1 是接近零流量变化的鲜明例子：多 8 字节对应少 35,985 周期。这才是目标解耦的直接组合内部证据。官方 P2 与官方 P3 是不同基线，因此“Conv\_Case1 相对官方 P2 获胜、相对官方 P3 失败”只能提醒我们不能跨目标转移胜负结论，不能用来推导上述权衡。
+
+\subsection{个案修复与固定序研究 oracle}\label{sec:supp-exact-zh}
+
+\begin{table}[htbp]\centering\small
+\caption{两个非统一的代价感知拓扑序修复个案。搜索过程与预算不同，不构成一个覆盖六例的统一方法阶段。}
+\label{tab:supp-repair-zh}
+\begin{tabular}{lrrrl}\toprule
+实例 & 基础 $\mathrm{Tr}$ & 修复 $\mathrm{Tr}$ & $\Delta\mathrm{Tr}$ & 搜索预算\\\midrule
+Conv\_Case0 & 66,828 & 65,532 & $-1,296$ & 10,000 次单节点 hill，seed 0\\
+Conv\_Case1 & 72,734 & 70,940 & $-1,794$ & spill-frontier beam 10，两轮\\\bottomrule
+\end{tabular}\end{table}
+
+Conv\_Case0 与 Conv\_Case1 的收益因此来自两个不同修复原型，并非在统一预算下评价的同一算法。FA\_Case0 和 FA\_Case1 各自另做 2,000-proposal、seed-0 的 hill 小预算探针，均未接受移动；该负面探针不能与两个 Conv 预算直接比较。Matmul 没有运行修复搜索，其他位置出现的 Matmul 数字只是复用结构序。
+
+\begin{table}[htbp]\centering\small
+\caption{固定序研究 oracle 的流量证据。“证书”要求机器可读 gap 结果、打包后的 schedule/memory/spill 工件、canonical 验证及流量等于下界。}
+\label{tab:supp-exact-zh}
+\begin{tabular}{llrrrl}\toprule
+实例 & 固定序 & 流量 & 下界 & 差距 & 证据状态\\\midrule
+Conv\_Case0 & unlock-frontier & 57,408 & 57,408 & 0 & 流量证书\\
+Conv\_Case0 & 旧 P1 & 81,504 & 81,504 & 0 & 流量证书\\
+FA\_Case0 & id-raw & 3,584 & 3,584 & 0 & 流量证书\\
+FA\_Case1 & capfit-id & 32,512 & 31,936 & 576 & 机器可检可行解\\
+Matmul\_Case0 & capfit-id & 34,816 & 29,952 & 4,864 & 机器可检可行解\\
+Conv\_Case1 & -- & -- & -- & -- & run-log 打包超时\\
+Matmul\_Case1 & -- & -- & -- & -- & 未运行\\\bottomrule
+\end{tabular}\end{table}
+
+Conv\_Case0/unlock-frontier 的证书含 112 次溢出，耗时 0.88 秒；同一 planner 还以 81,504、328 次溢出、19.49 秒证明旧 P1 序的固定序流量最优。二者在同一实例、同一 planner 下相差 24,096 字节，严格暴露固定序瓶颈，但不声称跨拓扑序全局最优。FA\_Case0 是第三份机器可检流量证书，并把证据覆盖扩展到第二个公开实例（14 次溢出，2.17 秒）。FA\_Case1 与 Matmul\_Case0 均有通过 canonical 验证的打包工件，但正的下界差距使其只能称可行/暂定，旧 Matmul\_Case0 34,688 最优结论撤销。CP-SAT 仍是研究 oracle，canonical \texttt{solve} 不调用它；这些证书也不优化同流量下的次数或时间。
+
+两条驻留轨迹及其证书值直接支撑序空间的机制结论，因此移至正文展示。
+
+\clearpage
+\subsection{单实例容量边界}\label{sec:supp-robustness-zh}
+
+\begin{table}[H]\centering\small
+\caption{Conv\_Case0 的 L1 容量扫描。不可行行在强制驻留事件处已超过容量，并非算法失败。}
+\label{tab:supp-capacity-zh}
+\begin{tabular}{rrrrl}\toprule
+L1 容量 & 选定 $\mathrm{Tr}$ & 无感拓扑序 $\mathrm{Tr}$ & 比值 & 选中拓扑序\\\midrule
+2,048 & -- & -- & -- & 强制驻留不可行\\
+2,560 & -- & -- & -- & 强制驻留不可行\\
+3,072 & 200,960 & 272,010 & 1.354 & capfit-id\\
+3,584 & 101,924 & 244,868 & 2.402 & unlock-frontier\\
+4,096 & 66,828 & 210,876 & 3.156 & unlock-frontier\\
+6,144 & 20,744 & 109,116 & 5.260 & unlock-frontier\\
+8,192 & 576 & 71,144 & 123.514 & unlock-frontier\\
+12,288 & 0 & 13,830 & -- & unlock-frontier\\
+16,384 & 0 & 0 & -- & unlock-frontier\\\bottomrule
+\end{tabular}\end{table}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=.62\linewidth]{\ksFigure{capacity_sweep.pdf}}
+\caption{Conv\_Case0 的受控 $H=0$ L1 容量扫描（纵轴 symlog）。曲线间标注为比较器与选定配置的流量比值；阴影带仅表示该受控切片中与拓扑序选择相关的差距。容量低于 3,072 字节时强制驻留集本身超容。}
+\label{fig:supp-capacity-zh}\end{figure}
+
+在该扫描的所有可行容量上，受控固定-$H=0$ 选择从未输给代价无感拓扑序比较器。选定侧比较四种结构序、两种 victim 策略与 best-fit；比较器固定 cp-free-first 拓扑序，但仍使用 best-fit，并在两种 victim 策略中选择，其中包括非对称策略，因此它不是完整的代价无感 planner。选定拓扑序在 3,072 为 capfit-id，从 3,584 起为 unlock-frontier。流量接近零时比值不稳定，故表~\ref{tab:supp-capacity-zh} 保留原始值并将零分母留空。该扫描只覆盖 Conv\_Case0、L1、固定 $H=0$ 与流量指标；现有记录不含逐点 $C/D$、溢出次数、时间或 canonical 验证字段，因而不外推为跨算子、跨缓存的鲁棒性结论。
+
+\clearpage
+\subsection{自有合成基准的标准验证复评}\label{sec:supp-synth-v2-zh}
+
+早期固定 $H=0$ 的内部 assign/extra-split 诊断没有 canonical 验证，现已由本节的标准复评取代，不再作为论文结果。我们在不改动任何实例的前提下，以完整生产求解器重跑全部三个自有合成集：36 例套件（目标缓存覆盖 UB、L0C 与 L1，容量受限与序可规避两种体制各 18 例）、8 例小规模 oracle 集（各 17 节点），以及 clean/dirty 镜像对。36 例的每个实例评估 7 个配置，共 252 次运行；脚本在每次运行生成调度、地址与溢出表后立即调用 canonical evaluator，CSV 记录的 252 行均为 \texttt{valid=True}、零违规。指标文件为 \path{results/paper/v2_synth_suite.csv} 等四个表，由 \path{scripts/paper/v2_synth_suite.py} 再生。
+
+\begin{table}[htbp]\centering\small
+\caption{生产求解器在 36 例合成套件上的标准验证比较。前代组合指 capfit-id/P1/id-raw 三个候选序加距离驱逐策略的完整组合选择；四个代价无感序基线沿用原合成套件的定义；random-best 取 8 个种子随机拓扑序中的最优。中位比值为本文 $\mathrm{Tr}$ 除以比较者 $\mathrm{Tr}$（$0/0$ 计为 1）。}
+\label{tab:supp-synth-v2-suite-zh}
+\begin{tabular}{lcccr}\toprule
+比较者 & 全部 36 胜/平/负 & 容量受限 18 & 序可规避 18 & 中位比值\\\midrule
+前代组合 & 0/36/0 & 0/18/0 & 0/18/0 & 1.00\\
+cp-list & 30/6/0 & 18/0/0 & 12/6/0 & 0.39\\
+cp-free-first & 14/22/0 & 14/4/0 & 0/18/0 & 1.00\\
+pressure-uniform & 13/23/0 & 10/8/0 & 3/15/0 & 1.00\\
+goodman-hsu & 19/17/0 & 7/11/0 & 12/6/0 & 0.67\\
+random-best & 27/9/0 & 18/0/0 & 9/9/0 & 0.34\\\bottomrule
+\end{tabular}\end{table}
+
+三个结论。其一，生产求解器与前代组合在 36 例上完全持平。由于前代配置是生产组合候选集的子集，这一零负关系由组合单调性保证；标准验证确认了实现没有破坏该包含关系，但不能把它当作独立泛化证据。新模块在该合成族上未表现出相对前代的额外收益。其二，逐实例核对还表明 \texttt{cp-free-first} 序与生产组合中的 \texttt{id-raw} 序在 36/36 例上相同，且其距离策略、$H=0$ 也属于生产搜索空间；因此相对它的 14 胜 22 平同样是候选包含下的非回归检查。真正未被生产候选直接包含的是 cp-list、pressure-uniform、goodman-hsu 与 best-of-8 随机序；生产求解器相对这四组比较均为零负，但该观察只适用于这里固定的实现和随机预算。其三，记录在案的全部 252 行（36 例 $\times$ 7 个求解器配置）均通过 canonical 验证、零违规，该合成族的证据等级由“内部诊断”升级为“标准验证”。
+
+表~\ref{tab:supp-synth-v2-detail-a-zh}--\ref{tab:supp-synth-v2-detail-b-zh} 给出全部 36 例的逐实例记录。C/R 表示容量受限/序可规避；$C,D$ 表示有备份/生成缓冲的溢出体积；“前代”为完整前代组合，random 取 best-of-8。
+
+\begingroup
+\small
+\setlength{\tabcolsep}{2.4pt}
+\renewcommand{\arraystretch}{1.03}
+\begin{longtable}{lccrrrrrr}
+\caption{36 例逐实例结果（第一部分）：实例属性、生产结果及前代组合。所有数值均为字节；次数为生产结果的溢出条目数。}\label{tab:supp-synth-v2-detail-a-zh}\\
+\toprule
+实例 & 体制 & 缓存 & 节点 & 本文 $\mathrm{Tr}$ & $C$ & $D$ & 次数 & 前代 $\mathrm{Tr}$\\\midrule
+\endfirsthead
+\multicolumn{9}{c}{表~\thetable（续）}\\
+\toprule
+实例 & 体制 & 缓存 & 节点 & 本文 $\mathrm{Tr}$ & $C$ & $D$ & 次数 & 前代 $\mathrm{Tr}$\\\midrule
+\endhead
+\midrule\multicolumn{9}{r}{续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+synth\_000 & C & L0C & 35 & 224 & 224 & 0 & 2 & 224 \\
+synth\_001 & R & L1 & 38 & 0 & 0 & 0 & 0 & 0 \\
+synth\_002 & C & UB & 40 & 1,088 & 0 & 544 & 2 & 1,088 \\
+synth\_003 & R & L0C & 40 & 0 & 0 & 0 & 0 & 0 \\
+synth\_004 & C & L1 & 34 & 1,376 & 1,376 & 0 & 2 & 1,376 \\
+synth\_005 & R & UB & 30 & 0 & 0 & 0 & 0 & 0 \\
+synth\_006 & C & L0C & 39 & 448 & 0 & 224 & 2 & 448 \\
+synth\_007 & R & L1 & 32 & 0 & 0 & 0 & 0 & 0 \\
+synth\_008 & C & UB & 44 & 544 & 544 & 0 & 2 & 544 \\
+synth\_009 & R & L0C & 46 & 0 & 0 & 0 & 0 & 0 \\
+synth\_010 & C & L1 & 38 & 2,752 & 0 & 1,376 & 2 & 2,752 \\
+synth\_011 & R & UB & 24 & 0 & 0 & 0 & 0 & 0 \\
+synth\_012 & C & L0C & 43 & 224 & 224 & 0 & 2 & 224 \\
+synth\_013 & R & L1 & 38 & 0 & 0 & 0 & 0 & 0 \\
+synth\_014 & C & UB & 28 & 1,088 & 0 & 544 & 2 & 1,088 \\
+synth\_015 & R & L0C & 40 & 0 & 0 & 0 & 0 & 0 \\
+synth\_016 & C & L1 & 42 & 1,376 & 1,376 & 0 & 2 & 1,376 \\
+synth\_017 & R & UB & 30 & 0 & 0 & 0 & 0 & 0 \\
+synth\_018 & C & L0C & 47 & 448 & 0 & 224 & 2 & 448 \\
+synth\_019 & R & L1 & 32 & 0 & 0 & 0 & 0 & 0 \\
+synth\_020 & C & UB & 32 & 544 & 544 & 0 & 2 & 544 \\
+synth\_021 & R & L0C & 46 & 0 & 0 & 0 & 0 & 0 \\
+synth\_022 & C & L1 & 46 & 2,752 & 0 & 1,376 & 2 & 2,752 \\
+synth\_023 & R & UB & 24 & 0 & 0 & 0 & 0 & 0 \\
+synth\_024 & C & L0C & 31 & 224 & 224 & 0 & 2 & 224 \\
+synth\_025 & R & L1 & 38 & 0 & 0 & 0 & 0 & 0 \\
+synth\_026 & C & UB & 36 & 1,088 & 0 & 544 & 2 & 1,088 \\
+synth\_027 & R & L0C & 40 & 0 & 0 & 0 & 0 & 0 \\
+synth\_028 & C & L1 & 50 & 1,376 & 1,376 & 0 & 2 & 1,376 \\
+synth\_029 & R & UB & 30 & 0 & 0 & 0 & 0 & 0 \\
+synth\_030 & C & L0C & 35 & 448 & 0 & 224 & 2 & 448 \\
+synth\_031 & R & L1 & 32 & 0 & 0 & 0 & 0 & 0 \\
+synth\_032 & C & UB & 40 & 544 & 544 & 0 & 2 & 544 \\
+synth\_033 & R & L0C & 46 & 0 & 0 & 0 & 0 & 0 \\
+synth\_034 & C & L1 & 34 & 2,752 & 0 & 1,376 & 2 & 2,752 \\
+synth\_035 & R & UB & 24 & 0 & 0 & 0 & 0 & 0 \\
+\end{longtable}
+
+\begin{longtable}{lrrrrr}
+\caption{36 例逐实例结果（第二部分）：五种比较顺序的 $\mathrm{Tr}$。random 为 best-of-8。}\label{tab:supp-synth-v2-detail-b-zh}\\
+\toprule
+实例 & cp-list & cp-free-first & pressure & Goodman--Hsu & random\\\midrule
+\endfirsthead
+\multicolumn{6}{c}{表~\thetable（续）}\\
+\toprule
+实例 & cp-list & cp-free-first & pressure & Goodman--Hsu & random\\\midrule
+\endhead
+\midrule\multicolumn{6}{r}{续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+synth\_000 & 560 & 336 & 224 & 224 & 688 \\
+synth\_001 & 1,024 & 0 & 0 & 256 & 0 \\
+synth\_002 & 2,464 & 2,176 & 1,520 & 1,632 & 3,984 \\
+synth\_003 & 384 & 0 & 192 & 48 & 336 \\
+synth\_004 & 2,064 & 1,376 & 1,376 & 2,064 & 2,064 \\
+synth\_005 & 0 & 0 & 0 & 0 & 0 \\
+synth\_006 & 1,184 & 896 & 800 & 448 & 1,152 \\
+synth\_007 & 1,376 & 0 & 0 & 688 & 688 \\
+synth\_008 & 1,936 & 1,360 & 1,104 & 1,088 & 2,896 \\
+synth\_009 & 256 & 0 & 0 & 32 & 160 \\
+synth\_010 & 5,504 & 2,752 & 2,752 & 2,752 & 5,856 \\
+synth\_011 & 0 & 0 & 0 & 0 & 0 \\
+synth\_012 & 688 & 448 & 336 & 336 & 1,024 \\
+synth\_013 & 1,024 & 0 & 0 & 256 & 0 \\
+synth\_014 & 1,632 & 1,632 & 1,088 & 1,088 & 1,664 \\
+synth\_015 & 384 & 0 & 192 & 48 & 336 \\
+synth\_016 & 3,440 & 2,064 & 1,376 & 1,376 & 4,480 \\
+synth\_017 & 0 & 0 & 0 & 0 & 0 \\
+synth\_018 & 1,312 & 896 & 864 & 672 & 1,696 \\
+synth\_019 & 1,376 & 0 & 0 & 688 & 688 \\
+synth\_020 & 1,088 & 1,088 & 816 & 544 & 1,504 \\
+synth\_021 & 256 & 0 & 0 & 32 & 160 \\
+synth\_022 & 8,256 & 5,504 & 3,104 & 2,752 & 7,936 \\
+synth\_023 & 0 & 0 & 0 & 0 & 0 \\
+synth\_024 & 448 & 224 & 336 & 224 & 448 \\
+synth\_025 & 1,024 & 0 & 0 & 256 & 0 \\
+synth\_026 & 2,320 & 2,176 & 1,376 & 1,088 & 3,440 \\
+synth\_027 & 384 & 0 & 192 & 48 & 336 \\
+synth\_028 & 4,480 & 2,752 & 1,376 & 1,376 & 5,872 \\
+synth\_029 & 0 & 0 & 0 & 0 & 0 \\
+synth\_030 & 1,120 & 672 & 448 & 448 & 1,152 \\
+synth\_031 & 1,376 & 0 & 0 & 688 & 688 \\
+synth\_032 & 1,376 & 1,088 & 960 & 816 & 2,048 \\
+synth\_033 & 256 & 0 & 0 & 32 & 160 \\
+synth\_034 & 4,128 & 2,752 & 2,752 & 4,128 & 4,128 \\
+synth\_035 & 0 & 0 & 0 & 0 & 0 \\
+\end{longtable}
+\endgroup
+
+\begin{table}[htbp]\centering\small
+\caption{8 例 oracle 集上生产求解器与其自身所选拓扑序的固定序 CP-SAT 流量最优值。全部 8 例求解器输出恰好等于最优值（差距为零，状态均为 OPTIMAL）。}
+\label{tab:supp-synth-v2-oracle-zh}
+\begin{tabular}{lrrrr}\toprule
+实例 & 受限缓存 & 本文 $\mathrm{Tr}$ & 固定序最优 & 差距\\\midrule
+oracle\_000 & L0C & 352 & 352 & 0\\
+oracle\_001 & UB & 1,408 & 1,408 & 0\\
+oracle\_002 & L0C & 704 & 704 & 0\\
+oracle\_003 & UB & 704 & 704 & 0\\
+oracle\_004 & L0C & 352 & 352 & 0\\
+oracle\_005 & UB & 1,408 & 1,408 & 0\\
+oracle\_006 & L0C & 704 & 704 & 0\\
+oracle\_007 & UB & 704 & 704 & 0\\\bottomrule
+\end{tabular}\end{table}
+
+oracle 集给出一个公开实例上无法整体获得的量化标尺：对每个 17 节点实例，以生产求解器实际选出的拓扑序运行第~\ref{sec:supp-formal-zh}~节的固定序 CP-SAT 模型，8 例全部求得最优并与求解器输出严格相等（表~\ref{tab:supp-synth-v2-oracle-zh}）。即在该小规模族上，可扩展驱逐启发式没有在其自身拓扑序下留下任何流量余量。该结论仅覆盖 17 节点实例与流量目标，不外推到公开规模——Conv\_Case0 上生产结果 66,828 相对同序证书 57,408 的 $14.1\%$ 差距（正文第~\ref{sec:experiments}~节）表明大规模实例上余量确实存在。
+
+clean/dirty 镜像对进一步以最小算例复核 $\mathrm{Tr}=\mathrm{Vol}+\mathrm{Dt}$ 的计费语义：两个实例的溢出体积同为 $\mathrm{Vol}=1{,}024$、溢出次数同为 2，clean 版全部有备份（$\mathrm{Dt}=0$，$\mathrm{Tr}=1{,}024$），dirty 版全部为生成缓冲（$\mathrm{Dt}=1{,}024$，$\mathrm{Tr}=2{,}048$），计费严格加倍；生产求解器与前代组合在两例上持平。

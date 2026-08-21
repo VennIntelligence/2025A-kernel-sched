@@ -1,0 +1,97 @@
+\begingroup
+\setlength{\tabcolsep}{2.4pt}
+\renewcommand{\arraystretch}{1.03}
+\begin{longtable}{lccrrrrrr}
+\caption{All 36 instances, part I: properties, production result, and predecessor. C/R denotes capacity-bound/order-reachable; numeric results are bytes.}\label{tab:supp-synth-v2-detail-a}\\
+\toprule
+Instance & Regime & Cache & Nodes & Ours $\mathrm{Tr}$ & $C$ & $D$ & Spills & Pred. $\mathrm{Tr}$\\\midrule
+\endfirsthead
+\multicolumn{9}{c}{Table~\thetable\ (continued)}\\
+\toprule Instance & Regime & Cache & Nodes & Ours $\mathrm{Tr}$ & $C$ & $D$ & Spills & Pred. $\mathrm{Tr}$\\\midrule
+\endhead
+\midrule\multicolumn{9}{r}{Continued on next page}\\\endfoot
+\bottomrule\endlastfoot
+synth\_000 & C & L0C & 35 & 224 & 224 & 0 & 2 & 224 \\
+synth\_001 & R & L1 & 38 & 0 & 0 & 0 & 0 & 0 \\
+synth\_002 & C & UB & 40 & 1,088 & 0 & 544 & 2 & 1,088 \\
+synth\_003 & R & L0C & 40 & 0 & 0 & 0 & 0 & 0 \\
+synth\_004 & C & L1 & 34 & 1,376 & 1,376 & 0 & 2 & 1,376 \\
+synth\_005 & R & UB & 30 & 0 & 0 & 0 & 0 & 0 \\
+synth\_006 & C & L0C & 39 & 448 & 0 & 224 & 2 & 448 \\
+synth\_007 & R & L1 & 32 & 0 & 0 & 0 & 0 & 0 \\
+synth\_008 & C & UB & 44 & 544 & 544 & 0 & 2 & 544 \\
+synth\_009 & R & L0C & 46 & 0 & 0 & 0 & 0 & 0 \\
+synth\_010 & C & L1 & 38 & 2,752 & 0 & 1,376 & 2 & 2,752 \\
+synth\_011 & R & UB & 24 & 0 & 0 & 0 & 0 & 0 \\
+synth\_012 & C & L0C & 43 & 224 & 224 & 0 & 2 & 224 \\
+synth\_013 & R & L1 & 38 & 0 & 0 & 0 & 0 & 0 \\
+synth\_014 & C & UB & 28 & 1,088 & 0 & 544 & 2 & 1,088 \\
+synth\_015 & R & L0C & 40 & 0 & 0 & 0 & 0 & 0 \\
+synth\_016 & C & L1 & 42 & 1,376 & 1,376 & 0 & 2 & 1,376 \\
+synth\_017 & R & UB & 30 & 0 & 0 & 0 & 0 & 0 \\
+synth\_018 & C & L0C & 47 & 448 & 0 & 224 & 2 & 448 \\
+synth\_019 & R & L1 & 32 & 0 & 0 & 0 & 0 & 0 \\
+synth\_020 & C & UB & 32 & 544 & 544 & 0 & 2 & 544 \\
+synth\_021 & R & L0C & 46 & 0 & 0 & 0 & 0 & 0 \\
+synth\_022 & C & L1 & 46 & 2,752 & 0 & 1,376 & 2 & 2,752 \\
+synth\_023 & R & UB & 24 & 0 & 0 & 0 & 0 & 0 \\
+synth\_024 & C & L0C & 31 & 224 & 224 & 0 & 2 & 224 \\
+synth\_025 & R & L1 & 38 & 0 & 0 & 0 & 0 & 0 \\
+synth\_026 & C & UB & 36 & 1,088 & 0 & 544 & 2 & 1,088 \\
+synth\_027 & R & L0C & 40 & 0 & 0 & 0 & 0 & 0 \\
+synth\_028 & C & L1 & 50 & 1,376 & 1,376 & 0 & 2 & 1,376 \\
+synth\_029 & R & UB & 30 & 0 & 0 & 0 & 0 & 0 \\
+synth\_030 & C & L0C & 35 & 448 & 0 & 224 & 2 & 448 \\
+synth\_031 & R & L1 & 32 & 0 & 0 & 0 & 0 & 0 \\
+synth\_032 & C & UB & 40 & 544 & 544 & 0 & 2 & 544 \\
+synth\_033 & R & L0C & 46 & 0 & 0 & 0 & 0 & 0 \\
+synth\_034 & C & L1 & 34 & 2,752 & 0 & 1,376 & 2 & 2,752 \\
+synth\_035 & R & UB & 24 & 0 & 0 & 0 & 0 & 0 \\
+\end{longtable}
+\begin{longtable}{lrrrrr}
+\caption{All 36 instances, part II: $\mathrm{Tr}$ of five comparison orders. Random is best-of-8.}\label{tab:supp-synth-v2-detail-b}\\
+\toprule Instance & cp-list & cp-free-first & pressure & Goodman--Hsu & random\\\midrule
+\endfirsthead
+\multicolumn{6}{c}{Table~\thetable\ (continued)}\\
+\toprule Instance & cp-list & cp-free-first & pressure & Goodman--Hsu & random\\\midrule
+\endhead
+\midrule\multicolumn{6}{r}{Continued on next page}\\\endfoot
+\bottomrule\endlastfoot
+synth\_000 & 560 & 336 & 224 & 224 & 688 \\
+synth\_001 & 1,024 & 0 & 0 & 256 & 0 \\
+synth\_002 & 2,464 & 2,176 & 1,520 & 1,632 & 3,984 \\
+synth\_003 & 384 & 0 & 192 & 48 & 336 \\
+synth\_004 & 2,064 & 1,376 & 1,376 & 2,064 & 2,064 \\
+synth\_005 & 0 & 0 & 0 & 0 & 0 \\
+synth\_006 & 1,184 & 896 & 800 & 448 & 1,152 \\
+synth\_007 & 1,376 & 0 & 0 & 688 & 688 \\
+synth\_008 & 1,936 & 1,360 & 1,104 & 1,088 & 2,896 \\
+synth\_009 & 256 & 0 & 0 & 32 & 160 \\
+synth\_010 & 5,504 & 2,752 & 2,752 & 2,752 & 5,856 \\
+synth\_011 & 0 & 0 & 0 & 0 & 0 \\
+synth\_012 & 688 & 448 & 336 & 336 & 1,024 \\
+synth\_013 & 1,024 & 0 & 0 & 256 & 0 \\
+synth\_014 & 1,632 & 1,632 & 1,088 & 1,088 & 1,664 \\
+synth\_015 & 384 & 0 & 192 & 48 & 336 \\
+synth\_016 & 3,440 & 2,064 & 1,376 & 1,376 & 4,480 \\
+synth\_017 & 0 & 0 & 0 & 0 & 0 \\
+synth\_018 & 1,312 & 896 & 864 & 672 & 1,696 \\
+synth\_019 & 1,376 & 0 & 0 & 688 & 688 \\
+synth\_020 & 1,088 & 1,088 & 816 & 544 & 1,504 \\
+synth\_021 & 256 & 0 & 0 & 32 & 160 \\
+synth\_022 & 8,256 & 5,504 & 3,104 & 2,752 & 7,936 \\
+synth\_023 & 0 & 0 & 0 & 0 & 0 \\
+synth\_024 & 448 & 224 & 336 & 224 & 448 \\
+synth\_025 & 1,024 & 0 & 0 & 256 & 0 \\
+synth\_026 & 2,320 & 2,176 & 1,376 & 1,088 & 3,440 \\
+synth\_027 & 384 & 0 & 192 & 48 & 336 \\
+synth\_028 & 4,480 & 2,752 & 1,376 & 1,376 & 5,872 \\
+synth\_029 & 0 & 0 & 0 & 0 & 0 \\
+synth\_030 & 1,120 & 672 & 448 & 448 & 1,152 \\
+synth\_031 & 1,376 & 0 & 0 & 688 & 688 \\
+synth\_032 & 1,376 & 1,088 & 960 & 816 & 2,048 \\
+synth\_033 & 256 & 0 & 0 & 32 & 160 \\
+synth\_034 & 4,128 & 2,752 & 2,752 & 4,128 & 4,128 \\
+synth\_035 & 0 & 0 & 0 & 0 & 0 \\
+\end{longtable}
+\endgroup

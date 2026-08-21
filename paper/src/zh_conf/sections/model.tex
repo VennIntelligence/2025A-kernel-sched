@@ -1,13 +1,13 @@
 \section{问题模型}\label{sec:formulation}
+输入为微操作 DAG $G=(\mathcal V,\mathcal E)$。操作节点携带流水线、周期数与缓冲区集合；缓存管理节点为每个缓冲区 $b$ 给出唯一的分配节点 $a_b$、释放节点 $f_b$、大小 $s_b$ 与缓存类型 $\tau(b)$。基础调度是全部原始节点的一个拓扑排列。评测使用五个抽象容量：L1${}=4096$、UB${}=1024$、L0A${}=256$、L0B${}=256$、L0C${}=512$。
 
-本文考虑的 DAG 结构与 cache 层级参数来源于公开 NPU 核内调度基准，该基准模拟编译器生成的核函数级调度问题。输入为一个神经算子的微操作计算图 $\daggraph$，节点分为两类（图~\ref{fig:dag-example}）：执行计算或数据搬运的\textbf{操作节点}，具有执行单元、延迟以及所读写的缓冲集合；以及标记缓冲生命周期起止的\textbf{缓存管理节点}。每个逻辑缓冲 $b$ 有唯一的分配节点 $a_b$ 与释放节点 $f_b$，携带缓冲大小 $s_b$ 与所属 cache 类型 $\tau(b)\in\mathcal{C}$。每种 cache $c\in\mathcal{C}$ 具有抽象容量 $\Capc_c$（具体参数见 \S\ref{sec:experiments}）。一个\textbf{调度} $S=(v_1,\dots,v_m)$ 是所有必需节点的一个拓扑序。
+\begin{figure}[t]\centering
+\resizebox{.98\linewidth}{!}{\input{../../common/tikz_dag_example}}
+\caption{微操作 DAG 与基准溢出类别。缓存管理节点界定每个缓冲区的逻辑生命周期：有输入备份的缓冲区溢出计费一次（仅重载），生成且无备份的缓冲区计费两次（写回加重载）。}
+\label{fig:dag-example-zh}\end{figure}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.75\linewidth]{\ksFigure{e1_dag_example.pdf}}
-\caption{微操作 DAG 示例。粉色为缓存管理节点（分配/释放），蓝色为操作节点。缓冲 $b_0$ 经外存读入（片外已有备份），属于 clean 缓冲（$\kappa=1$）；缓冲 $b_1$ 由计算产生，属于 dirty 缓冲（$\kappa=2$）。}\label{fig:dag-example}
-\end{figure}
+评测器对缓冲区作\textbf{静态}分类：若 $b$ 出现在任意 \texttt{COPY-IN} 节点中，则 $\kappa_b=1$（有备份）；否则 $\kappa_b=2$（生成且无备份）。一次溢出事件计费 $\mathrm{tr}_b=\kappa_b s_b$。由于输入不提供逐操作的读写角色，本文不推断动态 dirty 状态；该分类是评测器的定义，而非对硬件一致性协议的断言。令两类累计溢出体积（有备份/clean、生成/dirty）为 $\mathrm{Cl},\mathrm{Dt}$，则
+\begin{equation}\label{eq:extra-decomp-zh}\mathrm{Tr}=\mathrm{Cl}+2\mathrm{Dt}=\mathrm{Vol}+\mathrm{Dt},\qquad \mathrm{Vol}=\mathrm{Cl}+\mathrm{Dt},\end{equation}
+故 $\mathrm{Vol}\le\mathrm{Tr}\le2\mathrm{Vol}$。该界说明固定溢出体积时，类别构成的影响至多为两倍，但拓扑序和地址规划还可改变 $\mathrm{Vol}$ 本身；紧性证明及适用边界见补充材料第 2.1 节。
 
-称缓冲 $b$ 为 clean（干净），当且仅当它由某个从外存读入数据的操作节点写入——此时片外存储中存在其备份，溢出换出时无需写回，额外流量仅为重载代价 $e_b=s_b$；否则称 $b$ 为 dirty（脏），换出必须先写后读，额外流量 $e_b=2s_b$。这一非对称结构是本文方法的核心出发点：clean 与 dirty 缓冲在容量模型中占用相同的片上空间，但溢出代价相差 $2\times$。
-
-同一代价模型从三个递进视角度量调度质量：P1（峰值驻留）只评判节点序，最小化逐 cache 峰值；P2（溢出流量）进一步输出物理地址与溢出列表，最小化总额外流量 $E(S)=\sum_{b\in\mathrm{Spills}}e_b$；P3（执行时间）在固定序下按依赖与管线约束求最早完成时间。三者共享上述非对称代价，因此一个能在溢出窗口保留更多 clean 储备的调度序会在三个层面同时获益。
+物理驻留段必须占据所属缓存内的连续地址区间，且同时驻留的区间互不重叠。溢出以 \texttt{SPILL-OUT} 与 \texttt{SPILL-IN} 配对中断驻留，重载后的地址可以不同；原始使用者与基准的 \texttt{FREE} 事件均为强制驻留事件。P1 仅评价 ALLOC--FREE 的逻辑活跃峰值；P2 输出扩展调度、地址与溢出表，按键 $(\mathrm{Tr},n,T)$ 排序；P3 按 $(T,\mathrm{Tr},n)$ 排序，其中 $T$ 为流水线最早完成时间。P1 逻辑峰值不等于溢出后 P2 计划的物理峰值，P3 亦可能有意接受更多流量以换取更短时间，因此三种视图从不混合比较。所有物理结果均通过标准评测器检查节点覆盖、拓扑合法性、连续地址打包与溢出依赖；完整评测器契约及 P2--P3 配对权衡见补充材料第 1 节和第 4.4 节。

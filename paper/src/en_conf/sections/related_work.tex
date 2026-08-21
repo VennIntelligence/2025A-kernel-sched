@@ -1,35 +1,33 @@
 \section{Related Work}\label{sec:related}
 
-Joint scheduling and memory optimization has a long history in DNN accelerator
-compilation. COSMA~\citep{li2023combined}, for example, observes that
-non-compulsory off-chip accesses depend jointly on operator schedule, memory
-allocation, and tensor replacement, and optimizes the three with an ILP. That
-line of work solves a graph-level placement and replacement problem. In
-contrast, NPU intra-kernel scratchpad scheduling operates at a much finer
-micro-operation granularity: clean and dirty buffer states introduce a
-$2\times$ spill-cost asymmetry, and schedule order determines not only the live
-byte peak but also the cost composition of the buffers exposed to eviction.
+\paragraph{Joint schedule--memory optimization.}
+COSMA~\citep{li2023combined} jointly optimizes operator scheduling, allocation,
+and tensor replacement with an ILP, so joint schedule--memory optimization is
+established prior art and we claim no such first.  Our setting is narrower and
+finer-grained: multi-cache micro-operation DAGs with the benchmark's static
+input-backed and generated spill classes, a dependency-frontier production
+heuristic, and a fixed-order continuous-offset certificate that connects the
+heuristic to a machine-checked optimum.
 
-Compiler back-ends have also long recognized the coupling between scheduling
-and live ranges. Goodman--Hsu-style integrated prepass scheduling
-~\citep{goodman1988integrated} and later register-pressure-aware schedulers
-~\citep{shobaki2013preallocation,shobaki2022register} trade instruction-level
-parallelism against register pressure. Local allocators and replacement
-heuristics exploit the fact that clean values can be evicted without a store
-~\citep{liberatore1999evaluation,guo2004belady}. Caching theory generalizes
-Belady's farthest-future rule~\citep{belady1966study} to nonuniform-size and
-nonuniform-cost objects~\citep{coester2022blockaware}. These results show that
-``schedule affects liveness'' and ``clean victims are cheaper'' are not new in
-isolation. The additional freedom in intra-kernel DAG scheduling is that the
-request order itself can be changed: a compiler can actively shape live-range
-overlap and clean/dirty composition rather than only choose victims for a fixed
-stream.
+\paragraph{Register pressure and rematerialization.}
+Integrated instruction scheduling and register allocation
+\citep{goodman1988integrated,shobaki2013preallocation,shobaki2022register}
+likewise reshapes live ranges under a capacity constraint.
+Checkmate~\citep{jain2019checkmate} computes offline rematerialization
+schedules, and Dynamic Tensor Rematerialization~\citep{kirisame2020dtr} is its
+online counterpart for dynamic models; both trade recomputation for memory.
+Our benchmark forbids recomputation and instead demands explicit spill and
+reload operations with concrete offsets for a static kernel DAG, which is why
+packing validation is part of our certificate.
 
-Rematerialization and activation checkpointing reduce memory pressure from a
-different direction~\citep{chen2016training,jain2019checkmate}; recent
-spill-free compilation~\citep{chatarasi2026spillfree} aims to eliminate spills
-by shortening live ranges. These techniques are complementary. In large
-kernel-level NPU schedules, capacity constraints often make some spills
-unavoidable. In that regime, reloadable input buffers form a natural clean
-reserve, and the central question is how schedule order can reduce the write-back
-cost of unavoidable evictions.
+\paragraph{Caching and replacement.}
+Belady's rule for fixed request streams~\citep{belady1966study} and weighted or
+variable-size caching~\citep{coester2022blockaware} already treat nonuniform
+sizes and retrieval costs, and clean-aware replacement is established in
+compiler-managed memory~\citep{liberatore1999evaluation,guo2004belady}.  We
+accordingly make no general weighted-caching claim.  The contribution is the
+concrete combination: a topological request order that the optimizer itself
+may change, multiple scratchpad caches, canonical one- versus two-transfer
+spill costs, and a lower-bound-to-physical-packing bridge.  Spill-free
+compilation~\citep{chatarasi2026spillfree} is complementary; our planner
+targets instances where the evaluator still requires spill traffic.

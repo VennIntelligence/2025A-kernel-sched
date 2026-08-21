@@ -1,0 +1,10 @@
+artifact,source,claim
+v2_public_p2_p3.csv,round10_final_p2.json + round6_formal_p3.json,public P2/P3
+v2_conv0_method_path.csv,round7 + round10 + repair final + exact JSON,Conv0 method path
+v2_conv0_cost_identity.csv,validated spill artifacts and split fields,E=V+D identity
+v2_exact_evidence_scope.csv,v2_exact_scope_summary.json,fixed-order traffic certificates and provisional scope (not scaling)
+v2_capacity_boundary.csv,round8_capacity_sweep.json,controlled H=0 capacity boundary
+v2_synthetic_boundary.csv,round9_synthetic_summary.json,internal non-canonical synthetic non-regression
+v2_component_attribution.csv,round7_public_ablation.json + agent_cost_order/final_summary.json,six-case selected H=0 configurations (non-factorial)
+v2_all_cases_cost_decomposition.csv,round11_audited_p2.json + official P2 spill artifacts,official vs production Scalable v2 E=V+D accounting
+v2_p2_p3_decoupling.csv,round10_final_p2.json + round6_formal_p3.json,within-portfolio P2/P3 artifact tradeoff

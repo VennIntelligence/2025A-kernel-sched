@@ -1,120 +1,75 @@
-\section{Problem Definition Supplement}\label{sec:supp-problem}
+\section{Problem Definition and Evaluator Semantics}\label{sec:supp-problem}
 
-The main text (\S\ref{sec:formulation}) establishes the P1/P2/P3 evaluation framework through a condensed set of definitions. This section supplies the full formal conventions needed to reproduce our experiments, including the DAG fields, the detailed formulas for the evaluation metrics, and the precise parameters of the spill mechanism.
+This section states the complete contract among the input, output, and evaluator. The distinction matters: P1 logical-lifetime peaks, P2 physical residency segments, and P3 pipelined completion time are different objects and cannot substitute for one another. Likewise, the evaluator's backed/unbacked classification is not a dynamic hardware dirty bit.
 
-\subsection{DAG and Buffer Lifetimes}\label{sec:supp-input}
+\subsection{Input DAG and buffer lifetimes}
 
-The main text gives only an outline of the two node categories; here we spell out the complete field definitions. The input is a directed acyclic graph $\daggraph$. Its nodes fall into two classes:
-
+The input is a directed acyclic graph $G=(N,E)$ with three node classes:
 \begin{enumerate}
-  \item Operation nodes carry $(\ksField{Id},\ksField{Op},\ksField{Pipe},\ksField{Cycles},\ksField{Bufs})$ and represent a compute or data-movement instruction on some hardware pipeline; \ksField{Bufs} lists the logical buffers that the instruction reads and writes.
-  \item Cache-management nodes carry $(\ksField{Id},\ksField{Op},\ksField{BufId},\ksField{Size},\ksField{Type})$, where $\mathrm{Op}\in\{\ksOp{alloc},\ksOp{free}\}$. Every logical buffer $b$ has a unique allocation node $a_b$, a unique free node $f_b$, a size $s_b$, and a cache type $\tau(b)$.
+  \item an \texttt{ALLOC} node creates a buffer;
+  \item a \texttt{FREE} node ends that buffer's logical lifetime; and
+  \item every other node is a compute or transfer operation listing the buffers it accesses, its execution pipeline, and its cycle count.
 \end{enumerate}
+Each buffer $b$ has a unique identifier, size $s_b$, memory type
+$\tau(b)\in\{\mathrm{L1},\mathrm{UB},\mathrm{L0A},\mathrm{L0B},\mathrm{L0C}\}$,
+a unique allocation node $a_b$, and a unique free node $f_b$. We call the occurrences of $b$ at operation nodes, together with $a_b$ and $f_b$, its \emph{mandatory events}. An original schedule
+$\pi=(\pi_0,\ldots,\pi_{|N|-1})$ must contain every original node exactly once and satisfy
+$\operatorname{pos}_\pi(u)<\operatorname{pos}_\pi(v)$ for every $(u,v)\in E$.
 
-Edges encode execution dependencies that must be satisfied. Ignoring the cache-management nodes, a typical sample graph enters through \ksOp{copy-in}, proceeds through on-chip computation or data movement, and finally writes back off-chip via \ksOp{copy-out}; our algorithm, however, does not rely on any specific operator family or motif name. A schedule $S=(v_1,\ldots,v_N)$ is a topological order covering all required nodes.
+Two boundaries are easy to miss. First, the data record only which buffers an operation accesses; it does not expose per-access read/write roles. Second, the canonical evaluator treats \texttt{FREE} as a mandatory-residency event: a previously evicted buffer must be reloaded before it can be freed.
 
-\subsection{Three Evaluation Views}\label{sec:supp-objective}
+\subsection{P1: logical-lifetime peaks}
 
-The main text condenses P1/P2/P3 into a single paragraph; here we expand their mathematical definitions. The three subproblems add constraints incrementally on the same graph. Let the residency increment that node $v$ contributes be
-\begin{equation}\label{eq:supp-mv}
-  M_{v}=
-  \begin{cases}
-    +\,s_b, & v=a_b\ (\ksOp{alloc}),\\
-    -\,s_b, & v=f_b\ (\ksOp{free}),\\
-    0, & \text{otherwise}.
-  \end{cases}
-\end{equation}
+P1 emits neither addresses nor spills. For each memory type, the evaluator scans the original schedule, adding the size at \texttt{ALLOC} (or incrementing a buffer count for an L0 type) and subtracting it at \texttt{FREE}. The L1/UB metrics are therefore maxima of ALLOC/FREE prefix sums; the L0A/L0B/L0C metrics are maximum counts of simultaneously logically live buffers.
 
-\paragraph{\mdseries P1: peak residency.}
-P1 judges only the node order and requires neither physical addresses nor a spill list. Define the prefix sums
-\begin{equation}\label{eq:supp-vstay}
-  V_{\mathrm{stay}}(0)=0,\qquad
-  V_{\mathrm{stay}}(i)=V_{\mathrm{stay}}(i-1)+M_{v_i},\qquad
-  V_{\mathrm{stay}}^{\max}=\max_{0\le i\le N}V_{\mathrm{stay}}(i).
-\end{equation}
-The primary objective is to minimize $\max V_{\mathrm{stay}}$. We also report the per-cache peaks, which help explain the mismatch between the P1 order and P2/P3.
+This is a \emph{logical-lifetime statistic}, not the bytes occupying physical addresses at a P2 instant. A logically live buffer may be temporarily evicted in P2. Conversely, the P1 peak contains neither address fragmentation, spill-out/spill-in nodes, nor address-reuse dependencies. P1 thus describes logical pressure induced by an order; by itself it does not prove that a legal contiguous-address layout exists.
 
-\paragraph{\mdseries P2: extra DDR traffic.}
-Under the capacity constraint, P2 produces physical addresses and a spill list, with the objective of minimizing the extra data movement induced by spilling:
+\subsection{P2: contiguous addresses and explicit spill artifacts}
+
+A P2 artifact has three parts: an augmented schedule $\widehat\pi$ containing synthetic spill-out/spill-in nodes, the initial residency address $m_b$ of every buffer, and an ordered spill table of pairs $(b,m'_b)$. Spill-table entry $j$ corresponds to two deterministically numbered synthetic nodes $o_j$ (spill-out) and $i_j$ (spill-in); $m'_b$ is the address of the new residency segment after reload.
+
+A P2 artifact is legal exactly when it passes all of the following checks:
+\begin{enumerate}
+  \item \textbf{Coverage and topology:} every original and synthetic spill node occurs exactly once, and all original DAG dependencies hold.
+  \item \textbf{Spill order:} $a_b\prec o_j\prec i_j\prec f_b$; no operation accesses $b$ between $o_j$ and $i_j$; and two spill intervals of the same buffer do not overlap.
+  \item \textbf{Address range:} every residency segment occupies a half-open interval $[m_b,m_b+s_b)$ or $[m'_b,m'_b+s_b)$ wholly inside its memory capacity.
+  \item \textbf{Space--time nonoverlap:} residency segments of the same memory type whose lifetimes overlap in schedule position must have disjoint address intervals.
+\end{enumerate}
+The fourth condition expresses both capacity and contiguity. Checking only that total bytes do not exceed capacity is insufficient: several small holes can have enough total space while no single hole fits a new contiguous segment.
+
+\subsection{Static classes and the P2 objective}
+
+The evaluator makes a \emph{static} binary classification. A buffer occurring in any \texttt{COPY-IN} operation is input-backed (abbreviated backed/clean); every other buffer is generated and unbacked (generated/dirty). The classification never changes during execution and does not infer whether an access is a read or a write.
+
+Interrupting a backed buffer requires only a reload of $s_b$ bytes; interrupting an unbacked buffer requires a write-back and a reload, charging $2s_b$. Let $C$ and $D$ be the cumulative raw spill volumes of the two classes and let $V=C+D$. Extra traffic is
 \begin{equation}\label{eq:supp-extra}
-  \extra(S)=\sum_{b\in \mathrm{Spilled}(S)} e_b,\qquad
-  e_b=\kappa_b s_b,\qquad
-  \kappa_b=
-  \begin{cases}
-  1, & b\ \text{is clean},\\
-  2, & b\ \text{is dirty}.
-  \end{cases}
+ E=C+2D=(C+D)+D=V+D.
 \end{equation}
+P2 lexicographically minimizes $K_2=(E,n_{\mathrm{spill}},T)$: extra traffic first, then the number of spill entries, then completion time. Every P2 comparison in the paper uses the matching official P2 artifact; values from official P3 artifacts are never mixed into that comparison.
 
-\paragraph{\mdseries P3: pipeline execution time.}
-After inserting the spill nodes and the address-reuse dependencies, P3 computes the makespan under a multi-pipeline earliest-issue model. Writing $\sigma(v)$ for the start time, $\epsilon(v)$ for the finish time, and $E'$ for the augmented dependency set:
-\begin{equation}\label{eq:supp-time}
-  \sigma(v)\ge 0,\quad
-  \sigma(v)\ge \epsilon(u)\ \ \forall (u,v)\in E',\quad
-  \epsilon(v)=\sigma(v)+\mathrm{Cycles}(v),\quad
-  T=\max_v \epsilon(v).
-\end{equation}
-Cache-management nodes have cycle count $0$; nodes on the same \ksField{Pipe} execute serially in schedule order, and no reordering within a pipeline is permitted.
+\subsection{P3: pipelined time on the augmented DAG}
 
-\paragraph{Lexicographic keys.}
-We compare schedules using the same lexicographic keys as the main text: P1 uses $\bigl(\max\livec_{\mathrm{L1}},\max\livec_{\mathrm{UB}},\mathrm{L0\ count},T\bigr)$; P2 uses $\bigl(\extra,\#\mathrm{spills},T\bigr)$; and P3 uses $\bigl(T,\extra,\#\mathrm{spills}\bigr)$. The benchmark definition provides no single scalar that merges runtime with extra traffic, so for P3 we adopt this lexicographic ordering explicitly as the tie-breaking criterion.
+P3 uses the same physical legality conditions as P2, but makes augmented-schedule completion time the primary objective. For each node, the evaluator takes the maximum of all predecessor completion times, the availability time of the node's hardware pipeline, and the reuse-ready time of every address interval it occupies; it then adds the node's cycle count. Synthetic spill-out/spill-in nodes and their dependencies participate in the simulation. A pipeline is serialized, and a new residency segment reusing an address range waits for the previous segment to finish. The objective key is $K_3=(T,E,n_{\mathrm{spill}})$.
 
-\subsection{Capacity, Address, and Spill Rules}\label{sec:supp-constraints}
+P2 and P3 are therefore not two spellings of the same objective. A wider early-reload window may increase traffic yet hide transfers behind computation and reduce $T$; P3 accepts that exchange when $K_3$ improves. We describe only the observed bounded-portfolio traffic--time tradeoff, not a global Pareto frontier.
 
-The main text briefly states the asymmetric cost of clean/dirty buffers; here we give the full rules for address assignment and the spill mechanism. In P2/P3, a buffer $b$ occupies a contiguous interval $[o_b,o_b+s_b)$ at offset $o_b$ within a single cache. At any instant, the intervals of co-resident buffers belonging to the same cache must not overlap, and they must satisfy $0\le o_b$ and $o_b+s_b\le \Capc_{\tau(b)}$. The capacity parameters are given in Table~\ref{tab:supp-cap}.
+\subsection{Validation, reproduction, and data scope}
 
-\begin{table}[htbp]
+We keep three levels distinct: a model objective, a generated physical artifact, and canonical-evaluator validation. A low relaxation objective is not a submission. We report an artifact as legal only after addresses, spill dependencies, and the schedule are generated and the evaluator returns zero violations. For the fixed-order exact backend, a JSON record together with matching schedule/memory/spill text files forms a replayable certificate; a metric-only ledger requires rerunning the deterministic solver to reconstruct the complete artifact.
+
+Table~\ref{tab:supp-public-size} gives the original-node counts of the six public instances. The repository also contains 36 internal synthetic instances and eight 17-node fixed-order oracle instances. They support boundary and mechanism checks but are not additional public datasets. The solver has no case-name branch. However, the retained P1 fallback contains operation-type-specific tie-breaks, so the solver as a whole is not motif-agnostic; Section~\ref{sec:supp-solution} states the precise boundary.
+
+\begin{table}[H]
 \centering
-\caption{Hardware cache types and capacities (abstract units).}\label{tab:supp-cap}
-\begin{tabular}{lccccc}
+\caption{Original DAG sizes of the six public instances. FA denotes FlashAttention.}
+\label{tab:supp-public-size}
+\begin{tabular}{@{}lrlr@{}}
 \toprule
-Cache type & L1 & UB & L0A & L0B & L0C \\
+Instance & Nodes & Instance & Nodes\\
 \midrule
-Capacity $\Capc$ & 4096 & 1024 & 256 & 256 & 512 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-We call a buffer $b$ clean if and only if it appears in the \ksField{Bufs} of some \ksOp{copy-in} node; in that case an off-chip backing copy already exists, so eviction needs no write-back. All other buffers are dirty. The corresponding spill-cycle model is
-\begin{equation}\label{eq:supp-spillcycle}
-  \mathrm{Cycles}(\mathrm{SPILL\_IN}_b)=2s_b+150,\qquad
-  \mathrm{Cycles}(\mathrm{SPILL\_OUT}_b)=
-  \begin{cases}
-    0, & b\ \text{is clean},\\
-    2s_b+150, & b\ \text{is dirty}.
-  \end{cases}
-\end{equation}
-
-If the original graph has $N$ nodes, the $k$-th spill generates a pair of implicit nodes:
-\begin{equation}\label{eq:supp-spillid}
-  \mathrm{Id}(\mathrm{SPILL\_OUT}_k)=N+2(k-1),\qquad
-  \mathrm{Id}(\mathrm{SPILL\_IN}_k)=N+2(k-1)+1.
-\end{equation}
-The \ksOp{spill-out} uses MTE3 and the \ksOp{spill-in} uses MTE2. The basic dependency chain for the target buffer $b$ is
-\begin{equation}
-  a_b\to \mathrm{SPILL\_OUT}\to \mathrm{SPILL\_IN}\to f_b.
-\end{equation}
-Every operation node that has already used $b$ must precede the \ksOp{spill-out}, and every operation node that has not yet used $b$ must follow the \ksOp{spill-in}. The physical address may change at the \ksOp{spill-in}, so feasibility is checked over residency segments rather than over the logical lifetime $a_b\to f_b$ alone.
-
-Address reuse introduces an additional dependency: if buffer $b$ reuses the physical interval of an earlier buffer $a$, the edge $f_a\to a_b$ is added before timing. This dependency leaves the spill traffic unchanged but may alter the P3 makespan.
-
-\subsection{Benchmark Data Description}\label{sec:supp-data}
-
-The sizes of the six public NPU intra-kernel scheduling instances used in this work are listed in Table~\ref{tab:supp-cases}. All experiments start from the DAG structure and use no rules specialized to Conv, FlashAttention, or Matmul.
-
-\begin{table}[htbp]
-\centering
-\caption{Sizes of the public NPU intra-kernel scheduling instances.}\label{tab:supp-cases}
-\begin{tabular}{lrrrr}
-\toprule
-Task & Nodes & Edges & Buffers & Op.\ nodes \\
-\midrule
-Matmul\_Case0         &  4160 &  7104 &  1216 &  1728 \\
-Matmul\_Case1         & 30976 & 55040 &  8960 & 13056 \\
-FlashAttention\_Case0 &  1716 &  2712 &   572 &   572 \\
-FlashAttention\_Case1 &  6952 & 11184 &  2328 &  2296 \\
-Conv\_Case0           &  2580 &  3869 &   831 &   918 \\
-Conv\_Case1           & 36086 & 85653 & 12013 & 12060 \\
+Conv\_Case0 & 2,580 & Conv\_Case1 & 36,086\\
+FA\_Case0 & 1,716 & FA\_Case1 & 6,952\\
+Matmul\_Case0 & 4,160 & Matmul\_Case1 & 30,976\\
 \bottomrule
 \end{tabular}
 \end{table}

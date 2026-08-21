@@ -1,0 +1,46 @@
+[
+  {
+    "case": "Conv_Case0",
+    "initial": "local_j1_s13",
+    "initial_key": [
+      86124,
+      335
+    ],
+    "rounds_requested": 30,
+    "beam": 400,
+    "trace": [
+      {
+        "round": 0,
+        "key": [
+          86124,
+          335
+        ],
+        "source": "local_j1_s13"
+      },
+      {
+        "round": 1,
+        "key": [
+          85356,
+          334
+        ],
+        "moved_node": 1173,
+        "destination": 2261,
+        "proposals": 2183
+      }
+    ],
+    "search_wall_seconds": 16.906764707528055,
+    "valid_topological": true,
+    "validation_reason": "",
+    "extra": 85356,
+    "clean_bytes": 0,
+    "dirty_bytes": 85356,
+    "clean_count": 0,
+    "dirty_count": 334,
+    "spills": 334,
+    "time": 610954,
+    "time_source": "address",
+    "wall_seconds": 0.01934950053691864,
+    "fallback": false,
+    "policy": "dist_size_cost"
+  }
+]

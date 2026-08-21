@@ -1,0 +1,83 @@
+[
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 2048,
+    "status": "infeasible_pinned_working_set",
+    "full_extra": null,
+    "full_order": null,
+    "blind_extra": null,
+    "blind_over_full": null
+  },
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 2560,
+    "status": "infeasible_pinned_working_set",
+    "full_extra": null,
+    "full_order": null,
+    "blind_extra": null,
+    "blind_over_full": null
+  },
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 3072,
+    "status": "feasible",
+    "full_extra": 200960,
+    "full_order": "capfit_id",
+    "blind_extra": 272010,
+    "blind_over_full": 1.3535529458598725
+  },
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 3584,
+    "status": "feasible",
+    "full_extra": 101924,
+    "full_order": "unlock_frontier",
+    "blind_extra": 244868,
+    "blind_over_full": 2.4024567324673285
+  },
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 4096,
+    "status": "feasible",
+    "full_extra": 66828,
+    "full_order": "unlock_frontier",
+    "blind_extra": 210876,
+    "blind_over_full": 3.155503681091758
+  },
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 6144,
+    "status": "feasible",
+    "full_extra": 20744,
+    "full_order": "unlock_frontier",
+    "blind_extra": 109116,
+    "blind_over_full": 5.260123409178558
+  },
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 8192,
+    "status": "feasible",
+    "full_extra": 576,
+    "full_order": "unlock_frontier",
+    "blind_extra": 71144,
+    "blind_over_full": 123.51388888888889
+  },
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 12288,
+    "status": "feasible",
+    "full_extra": 0,
+    "full_order": "unlock_frontier",
+    "blind_extra": 13830,
+    "blind_over_full": null
+  },
+  {
+    "case": "Conv_Case0",
+    "L1_capacity": 16384,
+    "status": "feasible",
+    "full_extra": 0,
+    "full_order": "unlock_frontier",
+    "blind_extra": 0,
+    "blind_over_full": null
+  }
+]

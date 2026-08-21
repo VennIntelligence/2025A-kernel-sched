@@ -1,0 +1,6 @@
+stage,label,backed_volume,generated_volume,volume,generated_surcharge,extra,spills
+legacy,Legacy iter038,0,44022,44022,44022,88044,
+scalable,Scalable v2,12672,27078,39750,27078,66828,
+repair,Cost-aware repair,12528,26502,39030,26502,65532,
+exact,Fixed-order exact,10944,23232,34176,23232,57408,112.0
+official,Official,11664,30918,42582,30918,73500,141.0

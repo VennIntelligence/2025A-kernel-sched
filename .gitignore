@@ -35,8 +35,12 @@ notebooks/**/*.ipynb
 output/
 
 # ──── Scratch ────
-# One-off throwaway scripts/notes (see AGENTS.md)
-tmp/
+# One-off throwaway scripts/notes (see AGENTS.md).  Keep the three audited
+# research-reproduction entry points referenced by the paper and running guide.
+tmp/*
+!tmp/validate_solver_v2.py
+!tmp/agent_cost_order_search.py
+!tmp/agent_direct_search.py
 
 # ──── Paper build artifacts ────
 paper/*.aux

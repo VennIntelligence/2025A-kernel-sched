@@ -1,0 +1,72 @@
+[
+  {
+    "case": "FlashAttention_Case0",
+    "source": "unlock_frontier",
+    "initial_key": [
+      3584,
+      14
+    ],
+    "iterations": 2000,
+    "seed": 0,
+    "accepted": 0,
+    "trace": [
+      {
+        "iteration": 0,
+        "key": [
+          3584,
+          14
+        ],
+        "source": "unlock_frontier"
+      }
+    ],
+    "search_wall_seconds": 2.3955694995820522,
+    "valid_topological": true,
+    "validation_reason": "",
+    "extra": 3584,
+    "clean_bytes": 0,
+    "dirty_bytes": 3584,
+    "clean_count": 0,
+    "dirty_count": 14,
+    "spills": 14,
+    "time": 45577,
+    "time_source": "address",
+    "wall_seconds": 0.0076739173382520676,
+    "fallback": false,
+    "policy": "share_adaptive_25"
+  },
+  {
+    "case": "FlashAttention_Case1",
+    "source": "unlock_frontier",
+    "initial_key": [
+      32512,
+      127
+    ],
+    "iterations": 2000,
+    "seed": 0,
+    "accepted": 0,
+    "trace": [
+      {
+        "iteration": 0,
+        "key": [
+          32512,
+          127
+        ],
+        "source": "unlock_frontier"
+      }
+    ],
+    "search_wall_seconds": 11.399730124510825,
+    "valid_topological": true,
+    "validation_reason": "",
+    "extra": 32512,
+    "clean_bytes": 8448,
+    "dirty_bytes": 24064,
+    "clean_count": 33,
+    "dirty_count": 94,
+    "spills": 127,
+    "time": 195255,
+    "time_source": "address",
+    "wall_seconds": 0.030973042361438274,
+    "fallback": false,
+    "policy": "share_adaptive_25"
+  }
+]

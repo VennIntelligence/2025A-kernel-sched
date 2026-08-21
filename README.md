@@ -146,7 +146,6 @@ cannot reliably rank orders under asymmetric spill cost.
 | [`algorithms/ours/`](algorithms/ours/) | Public entry point for the production solver |
 | [`results/autoresearch_v2/`](results/autoresearch_v2/) | Audits, repair studies, exact evidence, and claim ledgers |
 | [`experiments/`](experiments/) | YAML experiment runner and configurations |
-| [`notebooks/`](notebooks/) | Fragment-built analysis reports; generated `.ipynb` files are not edited manually |
 | [`paper/`](paper/) | Manuscript sources, tables, figures, and built PDFs |
 | [`web/`](web/) | Bilingual project website and interactive contest explainer |
 | [`docs/`](docs/) | Running guide, problem description, plotting standards, and research summary |
@@ -163,13 +162,13 @@ make test
 uv run python experiments/run_experiment.py experiments/configs/exp001_baseline01.yaml
 
 # Reproduce the audited P2/P3 ledgers.
-uv run python tmp/validate_solver_v2.py \
+uv run python scripts/validate_solver_v2.py \
   --problems 2 --output results/autoresearch_v2/round11_audited_p2.json
-uv run python tmp/validate_solver_v2.py \
+uv run python scripts/validate_solver_v2.py \
   --problems 3 --output results/autoresearch_v2/round6_formal_p3.json
 
 # Reproduce one fixed-order certificate.
-uv run python tmp/agent_direct_search.py \
+uv run python scripts/agent_direct_search.py \
   --cases Conv_Case0 --exact-order unlock_frontier --time-limit 30 \
   --out results/autoresearch_v2/agent_direct
 ```
